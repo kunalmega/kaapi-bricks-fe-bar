@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body{font-family:Arial,sans-serif;max-width:780px;margin:30px auto;padding:20px;color:#333;font-size:0.85rem}
+.header{display:flex;justify-content:space-between;border-bottom:3px solid #2D5016;padding-bottom:12px;margin-bottom:15px}
+.company{font-size:1.5rem;font-weight:bold;color:#2D5016}
+.subtitle{font-size:0.78rem;color:#666;margin-top:2px}
+.inv-title{font-size:1.3rem;font-weight:bold;color:#2D5016;text-align:right}
+.details{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:15px}
+.box{border:1px solid #ddd;padding:10px;border-radius:6px;font-size:0.8rem}
+.box h4{margin:0 0 5px;color:#2D5016;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px}
+table{width:100%;border-collapse:collapse;margin:10px 0}
+th{background:#2D5016;color:white;padding:7px 8px;text-align:left;font-size:0.78rem}
+td{padding:6px 8px;border-bottom:1px solid #eee;font-size:0.8rem}
+.right{text-align:right}
+.center{text-align:center}
+.totals{text-align:right;font-size:0.85rem;margin-top:8px}
+.totals td{padding:3px 8px;border:none}
+.total-final{font-size:1rem;font-weight:bold;color:#2D5016;border-top:2px solid #2D5016}
+.terms{margin-top:15px;padding:10px;background:#f9f9f9;border:1px solid #eee;border-radius:6px;font-size:0.75rem;color:#555}
+.footer{margin-top:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;padding-top:15px;border-top:2px solid #2D5016}
+.footer-box{text-align:center;font-size:0.75rem}
+.footer-box .line{border-top:1px solid #333;margin-top:40px;padding-top:5px}
+.stamp{border:2px solid #2D5016;border-radius:50%;width:80px;height:80px;display:flex;align-items:center;justify-content:center;margin:10px auto;font-size:0.65rem;color:#2D5016;font-weight:bold;text-align:center;transform:rotate(-15deg)}
+.watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:4rem;color:rgba(45,80,22,0.05);font-weight:bold;pointer-events:none;z-index:-1}
+.highlight{background:#FEF3C7;padding:2px 5px;border-radius:3px}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.68rem;font-weight:600}
+.badge-green{background:#DCFCE7;color:#166534}
+.badge-amber{background:#FEF3C7;color:#92400E}
+.notes{margin-top:10px;padding:8px;background:#EFF6FF;border-left:3px solid #3B82F6;font-size:0.78rem}
+</style>
+</head>
+<body>
+<div class="watermark">ORIGINAL</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <div class="company">&#9749; COORG COFFEE ESTATES</div>
+    <div class="subtitle">Premium Single-Origin Coffee &amp; Allied Products Since 1942</div>
+    <div class="subtitle">Survey No. 45/2, Pollibetta Road, Kodagu District, Karnataka 571215</div>
+    <div class="subtitle">CIN: U01132KA1942PLC000845 | PAN: AABCC4521F</div>
+    <div class="subtitle"><strong>GSTIN: 29AABCC4521F1ZP</strong> | FSSAI: 12826027000142</div>
+    <div class="subtitle">Phone: +91 8272 256123 | Email: accounts@coorgcoffee.in</div>
+  </div>
+  <div style="text-align:right">
+    <div class="inv-title">TAX INVOICE</div>
+    <div class="subtitle"><strong>Invoice No:</strong> CCE/BLR/2026-27/0891</div>
+    <div class="subtitle"><strong>Invoice Date:</strong> 02-Apr-2026</div>
+    <div class="subtitle"><strong>Due Date:</strong> 02-May-2026</div>
+    <div class="subtitle"><span class="badge badge-green">ORIGINAL FOR RECIPIENT</span></div>
+  </div>
+</div>
+
+<!-- THREE COLUMN DETAILS -->
+<div class="details">
+  <div class="box">
+    <h4>Bill To</h4>
+    <strong>Kaapi Bricks Pvt. Ltd.</strong><br>
+    Regd Office: #12, Museum Road<br>
+    Bangalore 560001, Karnataka<br>
+    GSTIN: 29AABCK7834M1ZQ<br>
+    PAN: AABCK7834M<br>
+    State: Karnataka (29)
+  </div>
+  <div class="box">
+    <h4>Ship To</h4>
+    <strong>Kaapi Bricks Koramangala</strong><br>
+    Store Code: STR-001<br>
+    #45, 80 Feet Road<br>
+    Koramangala 4th Block<br>
+    Bangalore 560034<br>
+    Contact: Rajesh Kumar (Store Mgr)
+  </div>
+  <div class="box">
+    <h4>Order &amp; Delivery</h4>
+    <strong>PO Ref:</strong> PO-01288<br>
+    <strong>PO Date:</strong> 25-Mar-2026<br>
+    <strong>Delivery Date:</strong> 02-Apr-2026<br>
+    <strong>Vehicle:</strong> KA-12-MN-7834<br>
+    <strong>E-Way Bill:</strong> 391026847291<br>
+    <strong>Transport:</strong> Kodagu Express Cargo
+  </div>
+</div>
+
+<!-- MAIN ITEMS TABLE -->
+<table>
+  <thead>
+    <tr>
+      <th style="width:30px">#</th>
+      <th>HSN/SAC</th>
+      <th>Description</th>
+      <th>Batch No.</th>
+      <th class="center">Qty</th>
+      <th>Unit</th>
+      <th class="right">Rate (₹)</th>
+      <th class="center">Disc%</th>
+      <th class="right">Taxable (₹)</th>
+      <th class="right">GST</th>
+      <th class="right">Amount (₹)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>0901.21</td>
+      <td><strong>Coorg Arabica Beans — Grade AA</strong><br><span style="font-size:0.72rem;color:#888">Single Origin, Shade Grown, Hand Picked<br>Estate: Doddamallur | Altitude: 1100m<br>Roast Date: 28-Mar-2026 | Best Before: 28-Sep-2026</span></td>
+      <td>CCE-ARB-2603-A1</td>
+      <td class="center"><strong>30.00</strong></td>
+      <td>KG</td>
+      <td class="right">1,300.00</td>
+      <td class="center">—</td>
+      <td class="right">39,000.00</td>
+      <td class="center">5%</td>
+      <td class="right">40,950.00</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>0901.21</td>
+      <td><strong>Coorg Arabica Beans — Grade A</strong><br><span style="font-size:0.72rem;color:#888">Single Origin, Monsoon Malabar Process<br>Estate: Suntikoppa | Altitude: 900m<br>Roast Date: 28-Mar-2026 | Best Before: 28-Sep-2026</span></td>
+      <td>CCE-ARB-2603-A2</td>
+      <td class="center"><strong>20.00</strong></td>
+      <td>KG</td>
+      <td class="right">1,150.00</td>
+      <td class="center">—</td>
+      <td class="right">23,000.00</td>
+      <td class="center">5%</td>
+      <td class="right">24,150.00</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>2101.11</td>
+      <td><strong>Premium Chicory Powder</strong><br><span style="font-size:0.72rem;color:#888">Fine Grind, Dark Roast<br>Origin: Salem, Tamil Nadu<br>Mfg Date: 20-Mar-2026 | Best Before: 20-Mar-2027</span></td>
+      <td>CCE-CHC-2603-B1</td>
+      <td class="center"><strong>15.00</strong></td>
+      <td>KG</td>
+      <td class="right">420.00</td>
+      <td class="center">5%</td>
+      <td class="right">5,985.00</td>
+      <td class="center">5%</td>
+      <td class="right">6,284.25</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>0901.90</td>
+      <td><strong>House Blend Pre-Mix (70/30)</strong><br><span style="font-size:0.72rem;color:#888">70% Chikmagalur Robusta + 30% Chicory<br>Custom blend as per Kaapi Bricks spec KB-HB-01<br>Packed in 5kg vacuum sealed bags</span></td>
+      <td>CCE-HBM-2603-C1</td>
+      <td class="center"><strong>25.00</strong></td>
+      <td>KG</td>
+      <td class="right">850.00</td>
+      <td class="center">2%</td>
+      <td class="right">20,825.00</td>
+      <td class="center">5%</td>
+      <td class="right">21,866.25</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>0901.21</td>
+      <td><strong>Araku Valley Special Reserve</strong><br><span style="font-size:0.72rem;color:#888">Limited Edition, Washed Process<br>Tribal Cooperative Source, Organic Certified<br>Roast Date: 30-Mar-2026 | Best Before: 30-Sep-2026</span></td>
+      <td>CCE-ARK-2603-D1</td>
+      <td class="center"><strong>5.00</strong></td>
+      <td>KG</td>
+      <td class="right">2,200.00</td>
+      <td class="center">—</td>
+      <td class="right">11,000.00</td>
+      <td class="center">5%</td>
+      <td class="right">11,550.00</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>0910.99</td>
+      <td><strong>Cardamom — Alleppey Green (8mm+)</strong><br><span style="font-size:0.72rem;color:#888">Kerala Origin, Premium Grade<br>Packed in nitrogen-flushed foil bags</span></td>
+      <td>CCE-CRD-2603-E1</td>
+      <td class="center"><strong>2.00</strong></td>
+      <td>KG</td>
+      <td class="right">3,200.00</td>
+      <td class="center">—</td>
+      <td class="right">6,400.00</td>
+      <td class="center">5%</td>
+      <td class="right">6,720.00</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>4819.20</td>
+      <td><strong>Branded Paper Cups — 200ml</strong><br><span style="font-size:0.72rem;color:#888">Kaapi Bricks logo, double-wall insulated<br>Food-grade, FSSAI compliant<br>Packed: 50 cups per sleeve, 20 sleeves per case</span></td>
+      <td>CCE-CUP-2603-F1</td>
+      <td class="center"><strong>10.00</strong></td>
+      <td>CASE</td>
+      <td class="right">850.00</td>
+      <td class="center">—</td>
+      <td class="right">8,500.00</td>
+      <td class="center">12%</td>
+      <td class="right">9,520.00</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>4823.20</td>
+      <td><strong>Wooden Stirrer Sticks — 140mm</strong><br><span style="font-size:0.72rem;color:#888">Biodegradable, individually wrapped<br>1000 pcs per case</span></td>
+      <td>CCE-STR-2603-G1</td>
+      <td class="center"><strong>5.00</strong></td>
+      <td>CASE</td>
+      <td class="right">320.00</td>
+      <td class="center">—</td>
+      <td class="right">1,600.00</td>
+      <td class="center">12%</td>
+      <td class="right">1,792.00</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- TOTALS -->
+<table class="totals" style="width:350px;margin-left:auto">
+  <tr><td>Subtotal:</td><td class="right">₹1,16,310.00</td></tr>
+  <tr><td>Discount (on item 3 & 4):</td><td class="right">- ₹890.00</td></tr>
+  <tr><td>Taxable Value:</td><td class="right">₹1,15,420.00</td></tr>
+  <tr><td colspan="2" style="height:1px;background:#ddd"></td></tr>
+  <tr><td>CGST @ 2.5% (on ₹99,810):</td><td class="right">₹2,495.25</td></tr>
+  <tr><td>SGST @ 2.5% (on ₹99,810):</td><td class="right">₹2,495.25</td></tr>
+  <tr><td>CGST @ 6% (on ₹10,100):</td><td class="right">₹606.00</td></tr>
+  <tr><td>SGST @ 6% (on ₹10,100):</td><td class="right">₹606.00</td></tr>
+  <tr><td colspan="2" style="height:1px;background:#ddd"></td></tr>
+  <tr><td>Round Off:</td><td class="right">+ ₹0.50</td></tr>
+  <tr class="total-final"><td><strong>Grand Total:</strong></td><td class="right"><strong>₹1,21,633.00</strong></td></tr>
+  <tr><td colspan="2" style="font-size:0.75rem;color:#666;padding-top:5px">Amount in words: Rupees One Lakh Twenty-One Thousand Six Hundred and Thirty-Three Only</td></tr>
+</table>
+
+<!-- TAX BREAKUP -->
+<div style="margin-top:15px">
+  <strong style="font-size:0.78rem">Tax Summary:</strong>
+  <table style="font-size:0.75rem;width:100%">
+    <thead><tr style="background:#f0f0f0"><th>HSN</th><th class="right">Taxable</th><th class="center">CGST%</th><th class="right">CGST</th><th class="center">SGST%</th><th class="right">SGST</th><th class="right">Total Tax</th></tr></thead>
+    <tbody>
+      <tr><td>0901 (Coffee)</td><td class="right">₹93,825.00</td><td class="center">2.5%</td><td class="right">₹2,345.63</td><td class="center">2.5%</td><td class="right">₹2,345.63</td><td class="right">₹4,691.25</td></tr>
+      <tr><td>2101 (Chicory)</td><td class="right">₹5,985.00</td><td class="center">2.5%</td><td class="right">₹149.63</td><td class="center">2.5%</td><td class="right">₹149.63</td><td class="right">₹299.25</td></tr>
+      <tr><td>0910 (Spices)</td><td class="right">₹6,400.00</td><td class="center">2.5%</td><td class="right">₹160.00</td><td class="center">2.5%</td><td class="right">₹160.00</td><td class="right">₹320.00</td></tr>
+      <tr><td>4819/4823 (Packaging)</td><td class="right">₹10,100.00</td><td class="center">6%</td><td class="right">₹606.00</td><td class="center">6%</td><td class="right">₹606.00</td><td class="right">₹1,212.00</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- QUALITY CERTIFICATE -->
+<div class="notes">
+  <strong>Quality Certification:</strong> All coffee products in this consignment have been tested and certified by
+  Coffee Board of India (Lot Ref: CB/KRG/2026/3847). Cupping score: 82+ (Specialty Grade).
+  Organic certification: India Organic (NPOP) — Cert No: ORG/KA/2024/001234. Valid until Dec 2026.
+</div>
+
+<!-- TERMS -->
+<div class="terms">
+  <strong>Terms &amp; Conditions:</strong><br>
+  1. Payment due within 30 days of invoice date. Late payment attracts 1.5% interest per month.<br>
+  2. Goods once sold will not be taken back. Claims for damage/shortage must be filed within 48 hours of delivery.<br>
+  3. All disputes subject to jurisdiction of courts in Madikeri, Kodagu district.<br>
+  4. E&OE — Errors and Omissions Excepted.<br>
+  5. Price revision as per amended contract KB-CCE/2026-27/Rev-02 dated 15-Mar-2026. Previous rates no longer applicable.<br>
+  6. This is a computer-generated invoice and does not require physical signature.
+</div>
+
+<!-- FOOTER WITH SIGNATURES -->
+<div class="footer">
+  <div class="footer-box">
+    <div class="stamp">QUALITY<br>CHECKED<br>&#10003;</div>
+    <div class="line">Quality Inspector</div>
+  </div>
+  <div class="footer-box">
+    <div style="margin-top:20px">
+      <strong>Bank Details:</strong><br>
+      Canara Bank, Madikeri Branch<br>
+      A/C: 0482201012345<br>
+      IFSC: CNRB0000482<br>
+      UPI: coorgcoffee@canara
+    </div>
+  </div>
+  <div class="footer-box">
+    <div style="margin-top:50px"></div>
+    <div class="line">For Coorg Coffee Estates<br>Authorized Signatory</div>
+  </div>
+</div>
+
+<div style="text-align:center;margin-top:15px;font-size:0.7rem;color:#aaa">
+  Page 1 of 1 | Generated: 02-Apr-2026 09:15:42 IST | Doc ID: CCE-INV-0891-BLR-STR001
+</div>
+</body>
+</html>

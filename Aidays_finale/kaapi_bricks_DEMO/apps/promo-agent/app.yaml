@@ -1,0 +1,7 @@
+command: ["python", "app.py"]
+
+env:
+  - name: KAAPI_CATALOG
+    value: "fevm_cme_conde_catalog"
+  - name: KAAPI_WAREHOUSE_ID
+    value: "e755eae9d758fdf7"

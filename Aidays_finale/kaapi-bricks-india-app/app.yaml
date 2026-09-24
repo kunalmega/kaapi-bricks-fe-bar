@@ -1,0 +1,44 @@
+command: ["python", "app.py"]
+
+env:
+  - name: MAS_ENDPOINT_NAME
+    value: "MAS_ENDPOINT_PLACEHOLDER"
+  - name: LAKEBASE_INSTANCE_NAME
+    value: "kaapi-bricks"
+  - name: LAKEBASE_DATABASE_NAME
+    value: "databricks_postgres"
+
+resources:
+  - name: embedding-endpoint
+    serving_endpoint:
+      name: "databricks-bge-large-en"
+      permission: CAN_QUERY
+  - name: lakebase
+    database:
+      instance_name: "kaapi-bricks"
+      database_name: "databricks_postgres"
+      permission: CAN_CONNECT_AND_CREATE
+  - name: sql-warehouse
+    sql_warehouse:
+      id: "13a6b534c35ffbcb"
+      permission: CAN_USE
+  - name: llama-endpoint
+    serving_endpoint:
+      name: "databricks-meta-llama-3-3-70b-instruct"
+      permission: CAN_QUERY
+  - name: claude-endpoint
+    serving_endpoint:
+      name: "databricks-claude-sonnet-4-6"
+      permission: CAN_QUERY
+  - name: gpt-endpoint
+    serving_endpoint:
+      name: "databricks-gpt-5-2"
+      permission: CAN_QUERY
+  - name: gemini-endpoint
+    serving_endpoint:
+      name: "databricks-gemini-3-flash"
+      permission: CAN_QUERY
+  - name: maverick-endpoint
+    serving_endpoint:
+      name: "databricks-llama-4-maverick"
+      permission: CAN_QUERY

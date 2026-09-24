@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:20px;color:#333}
+.header{display:flex;justify-content:space-between;border-bottom:3px solid #1E40AF;padding-bottom:15px;margin-bottom:20px}
+.company{font-size:1.4rem;font-weight:bold;color:#1E40AF}
+.subtitle{font-size:0.85rem;color:#666}
+.details{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px;font-size:0.9rem}
+.box{border:1px solid #ddd;padding:12px;border-radius:6px}
+.box h4{margin:0 0 6px;color:#1E40AF;font-size:0.8rem;text-transform:uppercase}
+table{width:100%;border-collapse:collapse;margin:15px 0}
+th{background:#1E40AF;color:white;padding:10px;text-align:left;font-size:0.85rem}
+td{padding:8px 10px;border-bottom:1px solid #eee;font-size:0.85rem}
+.right{text-align:right}
+.totals{margin-top:10px;text-align:right;font-size:0.9rem}
+.totals div{margin:4px 0}
+.total-line{font-size:1.1rem;font-weight:bold;color:#1E40AF;border-top:2px solid #1E40AF;padding-top:8px;margin-top:8px}
+.footer{margin-top:30px;padding-top:15px;border-top:1px solid #ddd;font-size:0.78rem;color:#888}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="company">NANDINI DAIRY COOPERATIVE</div>
+    <div class="subtitle">Karnataka Milk Federation</div>
+    <div class="subtitle">Dairy Circle, Bangalore 560029</div>
+    <div class="subtitle">GST: 29AAACN8765K1ZR</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:1.2rem;font-weight:bold;color:#1E40AF">TAX INVOICE</div>
+    <div class="subtitle">Invoice No: ND-2026-4521</div>
+    <div class="subtitle">Date: April 2, 2026</div>
+  </div>
+</div>
+
+<div class="details">
+  <div class="box">
+    <h4>Bill To</h4>
+    <strong>Kaapi Bricks Pvt. Ltd.</strong><br>
+    Kaapi Bricks Koramangala<br>
+    #45, 80 Feet Road, Koramangala 4th Block<br>
+    Bangalore 560034, Karnataka<br>
+    GST: 29AABCK7834M1ZQ
+  </div>
+  <div class="box">
+    <h4>Delivery Details</h4>
+    <strong>Kaapi Bricks Koramangala (STR-001)</strong><br>
+    Delivery Date: April 2, 2026<br>
+    Vehicle: KA-01-AB-4521<br>
+    Temperature at delivery: 4°C ✓
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Description</th>
+      <th class="right">Quantity</th>
+      <th>Unit</th>
+      <th class="right">Rate (₹)</th>
+      <th class="right">Amount (₹)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td><strong>Full Cream Milk</strong><br><span style="font-size:0.78rem;color:#888">Pasteurized, 3.5% fat, chilled</span></td>
+      <td class="right">200.0</td>
+      <td>liter</td>
+      <td class="right">58.00</td>
+      <td class="right">11,600.00</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><strong>Toned Milk</strong><br><span style="font-size:0.78rem;color:#888">Pasteurized, 1.5% fat, chilled</span></td>
+      <td class="right">100.0</td>
+      <td>liter</td>
+      <td class="right">48.00</td>
+      <td class="right">4,800.00</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="totals">
+  <div>Subtotal: ₹16,400.00</div>
+  <div>GST (5%): ₹820.00</div>
+  <div class="total-line">Total: ₹17,220.00</div>
+</div>
+
+<div class="footer">
+  <div>Daily delivery — next delivery scheduled: April 3, 2026, 5:30 AM</div>
+  <div style="margin-top:10px">For Nandini Dairy Cooperative | Delivery Executive: Raju M.</div>
+</div>
+</body>
+</html>

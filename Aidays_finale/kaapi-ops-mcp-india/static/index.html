@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaapi Bricks — Operations Advisor MCP Server</title>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#FDFBF7;color:#2D1810;min-height:100vh}
+
+.nav{display:flex;align-items:center;justify-content:space-between;padding:14px 32px;border-bottom:1px solid #E8DDD0;background:white}
+.nav-brand{display:flex;align-items:center;gap:10px}
+.nav-brand span:first-child{font-size:1.3rem}
+.nav-brand span:last-child{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:#3C1810}
+.nav-sub{font-size:0.75rem;color:#8B7355;margin-left:8px}
+.tabs{display:flex;gap:2px;background:#E8DDD0;padding:3px;border-radius:10px}
+.tab{padding:7px 18px;border:none;background:transparent;color:#6B4C3B;font-size:0.82rem;font-weight:600;cursor:pointer;border-radius:8px;transition:all 0.2s;font-family:'Inter',sans-serif}
+.tab.active{background:#3C1810;color:white}
+.tab:hover:not(.active){background:#D4C4B0}
+
+.page{max-width:1100px;margin:0 auto;padding:24px 32px}
+
+/* Admin */
+.card{background:white;border:1.5px solid #E8DDD0;border-radius:14px;padding:24px;margin-bottom:20px}
+.card-dark{background:#1E293B;border-color:#334155;color:white}
+.card h3{font-family:'Playfair Display',serif;font-size:1.05rem;margin-bottom:12px}
+.card p{font-size:0.82rem;color:#6B4C3B;line-height:1.5;margin-bottom:12px}
+.card-dark p{color:#CBD5E1}
+.card-dark .label{color:#94A3B8;font-size:0.72rem;font-weight:600}
+.card-dark .val{font-size:0.82rem;margin-bottom:6px}
+.card-dark code{background:#334155;padding:2px 8px;border-radius:4px;font-size:0.75rem}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot-green{background:#4ADE80}
+
+select.model-sel{width:100%;padding:10px 14px;border:1.5px solid #D4C4B0;border-radius:10px;font-size:0.88rem;background:white;color:#2D1810;font-family:'Inter',sans-serif}
+.btn{padding:10px 24px;background:#3C1810;color:white;border:none;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer}
+.btn:hover{background:#5C2E1A}
+.btn:disabled{background:#C4B5A5;cursor:not-allowed}
+.saved{color:#16A34A;font-size:0.85rem;font-weight:600;margin-left:12px}
+
+.info-box{padding:20px;background:#F5EDE0;border-radius:12px;font-size:0.82rem;color:#6B4C3B;line-height:1.7;margin-top:20px}
+
+/* Compare */
+.compare-controls{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:20px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:0.72rem;font-weight:600;color:#6B4C3B;text-transform:uppercase;letter-spacing:0.5px}
+.field select,.field input{padding:10px 14px;border:1.5px solid #D4C4B0;border-radius:10px;font-size:0.88rem;background:white;color:#2D1810;font-family:'Inter',sans-serif;min-width:220px}
+.field input{min-width:300px}
+.field select:focus,.field input:focus{border-color:#8B5E3C;outline:none}
+
+.panels{display:flex;gap:16px;min-height:400px}
+.panel{flex:1;background:white;border:1.5px solid #E8DDD0;border-radius:14px;padding:20px;display:flex;flex-direction:column;overflow-y:auto}
+.panel.loading{border-color:#8B5E3C;animation:pulse-border 1.5s infinite}
+@keyframes pulse-border{0%,100%{border-color:#E8DDD0}50%{border-color:#8B5E3C}}
+.panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #E8DDD0}
+.panel-model{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:#3C1810}
+.panel-metrics{display:flex;gap:8px}
+.metric{font-size:0.72rem;color:#6B4C3B;background:#F5EDE0;padding:3px 10px;border-radius:8px;font-weight:600}
+.panel-body{flex:1;font-size:0.85rem;line-height:1.6;color:#2D1810;overflow-y:auto}
+.panel-body table{width:100%;border-collapse:collapse;margin:10px 0;font-size:0.8rem}
+.panel-body th{background:#F5EDE0;padding:8px;text-align:left;font-weight:600;border-bottom:2px solid #D4C4B0}
+.panel-body td{padding:6px 8px;border-bottom:1px solid #E8DDD0}
+.empty{display:flex;align-items:center;justify-content:center;flex:1;color:#A89585;font-size:0.9rem}
+.status-text{color:#8B5E3C;font-size:0.85rem;text-align:center;padding:20px}
+
+.examples{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.ex{padding:6px 14px;border:1px solid #D4C4B0;border-radius:18px;background:white;color:#6B4C3B;font-size:0.78rem;cursor:pointer;transition:all 0.15s}
+.ex:hover{background:#3C1810;color:white;border-color:#3C1810}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useEffect}=React;
+
+function App(){
+  const[page,setPage]=useState('admin');
+  const[models,setModels]=useState([]);
+  const[config,setConfig]=useState({operations_model:''});
+  const[saved,setSaved]=useState(false);
+
+  // Compare state
+  const[modelA,setModelA]=useState('');
+  const[modelB,setModelB]=useState('');
+  const[query,setQuery]=useState('What should I prepare for tomorrow?');
+  const[store,setStore]=useState('Koramangala, Bangalore');
+  const[resultA,setResultA]=useState(null);
+  const[resultB,setResultB]=useState(null);
+  const[loading,setLoading]=useState(false);
+  const[statusMsg,setStatusMsg]=useState('');
+
+  useEffect(()=>{
+    fetch('/api/models').then(r=>r.json()).then(d=>{
+      setModels(d.models||[]);
+      if(d.models?.length>1){setModelA(d.models[0]);setModelB(d.models[1]);}
+    });
+    fetch('/api/config').then(r=>r.json()).then(setConfig);
+  },[]);
+
+  const saveConfig=async()=>{
+    await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)});
+    setSaved(true);setTimeout(()=>setSaved(false),3000);
+  };
+
+  const runCompare=async()=>{
+    if(loading||!query.trim())return;
+    setLoading(true);setResultA(null);setResultB(null);setStatusMsg('Starting...');
+    try{
+      const resp=await fetch('/api/compare',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({query,store,model_a:modelA,model_b:modelB})});
+      const reader=resp.body.getReader();
+      const dec=new TextDecoder();
+      let acc='';
+      while(true){
+        const{done,value}=await reader.read();
+        if(done)break;
+        acc+=dec.decode(value,{stream:true});
+        const lines=acc.split('\n');acc=lines.pop();
+        for(const line of lines){
+          if(line.startsWith('data: ')){
+            try{
+              const data=JSON.parse(line.slice(6));
+              if(data.keepalive&&data.status)setStatusMsg(data.status);
+              if(data.done&&data.result){setResultA(data.result.model_a);setResultB(data.result.model_b);setStatusMsg('');}
+            }catch(e){}
+          }
+        }
+      }
+    }catch(e){setResultA({text:'Error: '+e.message});}
+    setLoading(false);setStatusMsg('');
+  };
+
+  const examples=["What should I prepare for tomorrow?","Is there anything special about this weekend?","How should I staff for Friday evening?","What impact will weather have on sales tomorrow?"];
+  const stores=["Koramangala, Bangalore","Indiranagar, Bangalore","T. Nagar, Chennai","Bandra, Mumbai","Connaught Place, Delhi","Banjara Hills, Hyderabad"];
+
+  return(
+    <div>
+      <nav className="nav">
+        <div style={{display:'flex',alignItems:'center'}}>
+          <div className="nav-brand"><span>&#9749;</span><span>Kaapi Bricks</span></div>
+          <span className="nav-sub">Operations Advisor MCP Server</span>
+        </div>
+        <div className="tabs">
+          <button className={`tab ${page==='admin'?'active':''}`} onClick={()=>setPage('admin')}>Settings</button>
+          <button className={`tab ${page==='compare'?'active':''}`} onClick={()=>setPage('compare')}>Compare Models</button>
+        </div>
+      </nav>
+
+      {page==='admin'&&(
+        <div className="page">
+          <div className="card card-dark">
+            <h3><span className="dot dot-green"></span>MCP Server — Active</h3>
+            <div className="label">Endpoint</div>
+            <div className="val"><code>/mcp</code></div>
+            <div className="label">Protocol</div>
+            <div className="val">JSON-RPC 2.0 (MCP)</div>
+            <div className="label">Tool</div>
+            <div className="val"><code>operations_advisor</code> — weather + calendar + LLM reasoning</div>
+            <div className="label">Connected via</div>
+            <div className="val">UC HTTP Connection: <code>kaapi_ops_mcp</code></div>
+            <div className="label" style={{marginTop:'8px'}}>Full URL</div>
+            <div className="val"><code style={{wordBreak:'break-all',fontSize:'0.7rem'}}>{window.location.origin}/mcp</code></div>
+          </div>
+
+          <div className="card">
+            <h3>Operations Advisor Model</h3>
+            <p>The Foundation Model used by the <code>operations_advisor</code> tool when MAS calls it. This model generates the preparation plan from weather + calendar data. Test on the Compare page before changing.</p>
+            <select className="model-sel" value={config.operations_model} onChange={e=>setConfig({...config,operations_model:e.target.value})}>
+              {models.map(m=><option key={m} value={m}>{m.replace('databricks-','')}</option>)}
+            </select>
+          </div>
+
+          <div style={{display:'flex',alignItems:'center'}}>
+            <button className="btn" onClick={saveConfig}>Save Configuration</button>
+            {saved&&<span className="saved">&#10003; Saved — MCP server now uses this model</span>}
+          </div>
+
+          <div className="info-box">
+            <strong>How it works:</strong><br/>
+            1. User asks a question in the main Kaapi Bricks chat app<br/>
+            2. Chat app calls the <strong>MAS Supervisor</strong> endpoint<br/>
+            3. MAS routes planning questions to this <strong>MCP Server</strong> via UC HTTP Connection<br/>
+            4. MCP server checks <strong>weather</strong> (OpenWeatherMap) + <strong>Indian holiday calendar</strong><br/>
+            5. MCP server calls the <strong>model selected above</strong> to generate the preparation plan<br/>
+            6. Result flows back: MCP &#8594; MAS &#8594; Chat app &#8594; User<br/><br/>
+            <strong>To test different models:</strong> Use the <strong>Compare Models</strong> tab to run the same question with two models side-by-side.
+          </div>
+        </div>
+      )}
+
+      {page==='compare'&&(
+        <div className="page">
+          <div className="compare-controls">
+            <div className="field">
+              <label>Model A</label>
+              <select value={modelA} onChange={e=>setModelA(e.target.value)}>
+                {models.map(m=><option key={m} value={m}>{m.replace('databricks-','')}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label>Model B</label>
+              <select value={modelB} onChange={e=>setModelB(e.target.value)}>
+                {models.map(m=><option key={m} value={m}>{m.replace('databricks-','')}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label>Store</label>
+              <select value={store} onChange={e=>setStore(e.target.value)}>
+                {stores.map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div style={{display:'flex',gap:'8px',marginBottom:'16px'}}>
+            <input className="field" style={{flex:1,padding:'10px 14px',border:'1.5px solid #D4C4B0',borderRadius:'10px',fontSize:'0.88rem'}}
+              value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')runCompare();}}
+              placeholder="Ask the Operations Advisor..." />
+            <button className="btn" onClick={runCompare} disabled={loading}>{loading?'Running...':'Run Compare'}</button>
+          </div>
+
+          <div className="examples">
+            {examples.map((ex,i)=><button key={i} className="ex" onClick={()=>setQuery(ex)}>{ex}</button>)}
+          </div>
+
+          {statusMsg&&<div className="status-text">{statusMsg}</div>}
+
+          <div className="panels" style={{marginTop:'16px'}}>
+            <div className={`panel ${loading&&!resultA?'loading':''}`}>
+              <div className="panel-header">
+                <div className="panel-model">{(modelA||'').replace('databricks-','')}</div>
+              </div>
+              <div className="panel-body">
+                {resultA?<div dangerouslySetInnerHTML={{__html:marked.parse(resultA.text||'')}}/>
+                  :loading?<div className="empty">Generating...</div>
+                  :<div className="empty">Select two models and run a query</div>}
+              </div>
+            </div>
+            <div className={`panel ${loading&&!resultB?'loading':''}`}>
+              <div className="panel-header">
+                <div className="panel-model">{(modelB||'').replace('databricks-','')}</div>
+              </div>
+              <div className="panel-body">
+                {resultB?<div dangerouslySetInnerHTML={{__html:marked.parse(resultB.text||'')}}/>
+                  :loading?<div className="empty">Generating...</div>
+                  :<div className="empty">Select two models and run a query</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

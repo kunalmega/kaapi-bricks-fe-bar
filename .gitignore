@@ -1,0 +1,30 @@
+# Secrets / credentials — never commit
+sec
+*.pem
+*.key
+.env
+.env.*
+*secret*
+*token*
+
+# Databricks / terraform state (regeneratable, large)
+.databricks/
+**/.databricks/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Node
+node_modules/
+dist/
+build/
+
+# OS
+.DS_Store
+
+# Archives
+*.zip

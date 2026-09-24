@@ -1,0 +1,55 @@
+command: ["python", "app.py"]
+
+env:
+  - name: MAS_ENDPOINT_NAME
+    value: "mas-3c936239-endpoint"
+  - name: LAKEBASE_INSTANCE_NAME
+    value: "kaapi-bricks"
+  - name: LAKEBASE_DATABASE_NAME
+    value: "databricks_postgres"
+  - name: CHAT_PROXY_TIMEOUT_SECONDS
+    value: "300"
+  - name: HTTP_TIMEOUT
+    value: "300"
+
+resources:
+  - name: mas-endpoint
+    serving_endpoint:
+      name: "mas-3c936239-endpoint"
+      permission: CAN_QUERY
+  - name: embedding-endpoint
+    serving_endpoint:
+      name: "databricks-bge-large-en"
+      permission: CAN_QUERY
+  - name: lakebase
+    database:
+      name: "kaapi-bricks"
+      permission: CAN_CONNECT_AND_CREATE
+  - name: sql-warehouse
+    sql_warehouse:
+      name: "kun"
+      permission: CAN_USE
+  - name: llama-endpoint
+    serving_endpoint:
+      name: "databricks-meta-llama-3-3-70b-instruct"
+      permission: CAN_QUERY
+  - name: claude-endpoint
+    serving_endpoint:
+      name: "databricks-claude-sonnet-4-6"
+      permission: CAN_QUERY
+  - name: gpt-endpoint
+    serving_endpoint:
+      name: "databricks-gpt-5-2"
+      permission: CAN_QUERY
+  - name: gemini-endpoint
+    serving_endpoint:
+      name: "databricks-gemini-3-flash"
+      permission: CAN_QUERY
+  - name: maverick-endpoint
+    serving_endpoint:
+      name: "databricks-llama-4-maverick"
+      permission: CAN_QUERY
+  - name: ai-days-gpt-llama-endpoint
+    serving_endpoint:
+      name: "AI-Days-Gpt-Llama-8020"
+      permission: CAN_QUERY

@@ -1,0 +1,25 @@
+bundle:
+  name: agent_promo_kaapi
+
+resources:
+  apps:
+    agent_promo_kaapi:
+      name: "agent-promo-kaapi-bricks"
+      description: "Kaapi Bricks Promotional Creative Agent — market research, creative brief, copy + image generation"
+      source_code_path: ./
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://fevm-fevm-cme-conde.cloud.databricks.com
+
+  prod:
+    mode: production
+    workspace:
+      host: https://fevm-fevm-cme-conde.cloud.databricks.com
+    resources:
+      apps:
+        agent_promo_kaapi:
+          name: agent-promo-kaapi-bricks

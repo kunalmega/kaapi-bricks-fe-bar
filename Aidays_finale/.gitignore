@@ -1,0 +1,21 @@
+# Secrets
+sec
+*.secret
+*.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# IDE
+.vscode/
+.cursor/
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Databricks
+.databricks/

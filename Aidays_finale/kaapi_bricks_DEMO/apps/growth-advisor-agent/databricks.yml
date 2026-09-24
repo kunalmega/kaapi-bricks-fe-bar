@@ -1,0 +1,25 @@
+bundle:
+  name: agent_kaapi_bricks_growth
+
+resources:
+  apps:
+    agent_kaapi_bricks_growth:
+      name: "agent-kaapi-bricks-growth"
+      description: "Kaapi Bricks Strategic Analyst — combines Genie data with competitive web research"
+      source_code_path: ./
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://fevm-fevm-cme-conde.cloud.databricks.com
+
+  prod:
+    mode: production
+    workspace:
+      host: https://fevm-fevm-cme-conde.cloud.databricks.com
+    resources:
+      apps:
+        agent_kaapi_bricks_growth:
+          name: agent-kaapi-bricks-growth

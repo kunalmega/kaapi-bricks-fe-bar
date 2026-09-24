@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaapi Bricks — Premium South Indian Filter Coffee</title>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#FDFBF7;color:#2D1810;height:100vh;overflow:hidden}
+
+/* ===== LANDING PAGE ===== */
+.landing{height:100vh;display:flex;flex-direction:column;overflow-y:auto}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:14px 48px;border-bottom:1px solid #E8DDD0;background:#FDFBF7;position:sticky;top:0;z-index:50}
+.nav-brand{display:flex;align-items:center;gap:10px;cursor:pointer}
+.nav-brand span:first-child{font-size:1.5rem}
+.nav-brand span:last-child{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:#3C1810}
+.nav-links{display:flex;gap:24px;align-items:center}
+.nav-links a{text-decoration:none;color:#6B4C3B;font-size:0.85rem;font-weight:500;transition:color 0.2s}
+.nav-links a:hover{color:#3C1810}
+.nav-chat{background:#3C1810;color:white!important;padding:7px 18px;border-radius:8px;font-size:0.82rem!important;transition:background 0.2s!important}
+.nav-chat:hover{background:#5C2E1A;color:white!important}
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:48px 24px 28px;background:linear-gradient(180deg,#FDFBF7 0%,#F5EDE0 100%)}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:#E8DDD0;color:#6B4C3B;padding:6px 16px;border-radius:20px;font-size:0.75rem;font-weight:600;margin-bottom:20px;letter-spacing:1px;text-transform:uppercase}
+.hero h1{font-family:'Playfair Display',serif;font-size:2.8rem;font-weight:700;color:#2D1810;line-height:1.15;max-width:600px;margin-bottom:10px}
+.hero p{font-size:0.98rem;color:#6B4C3B;max-width:480px;line-height:1.6;margin-bottom:28px}
+.search-wrap{width:100%;max-width:600px;position:relative}
+.search-input{width:100%;padding:16px 52px 16px 22px;font-size:0.95rem;border:2px solid #D4C4B0;border-radius:14px;background:white;color:#2D1810;outline:none;font-family:'Inter',sans-serif;box-shadow:0 4px 20px rgba(60,24,16,0.06);transition:all 0.3s}
+.search-input:focus{border-color:#8B5E3C;box-shadow:0 4px 28px rgba(60,24,16,0.12)}
+.search-input::placeholder{color:#A89585}
+.search-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:36px;height:36px;background:#3C1810;border:none;border-radius:9px;color:white;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s}
+.search-btn:hover{background:#5C2E1A}
+
+/* Quick questions below search */
+.qp-below{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:12px;max-width:600px}
+
+/* Products section */
+.products-section{padding:32px 48px 40px;max-width:1200px;margin:0 auto;width:100%}
+.products-header{text-align:center;margin-bottom:24px}
+.products-header h2{font-family:'Playfair Display',serif;font-size:1.6rem;color:#2D1810;margin-bottom:4px}
+.products-header p{font-size:0.85rem;color:#8B7355}
+.products-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.prod-card{background:white;border:1px solid #E8DDD0;border-radius:14px;padding:20px 16px;text-align:center;transition:all 0.25s;cursor:default;position:relative;overflow:hidden}
+.prod-card:hover{transform:translateY(-4px);box-shadow:0 8px 28px rgba(60,24,16,0.08);border-color:#D4C4B0}
+.prod-emoji{font-size:2.4rem;margin-bottom:10px;display:block}
+.prod-name{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:600;color:#2D1810;margin-bottom:4px}
+.prod-desc{font-size:0.78rem;color:#8B7355;line-height:1.4}
+.prod-tag{display:inline-block;background:#F5EDE0;color:#8B5E3C;padding:3px 10px;border-radius:10px;font-size:0.68rem;font-weight:600;margin-top:8px;text-transform:uppercase;letter-spacing:0.5px}
+
+/* Highlights bar */
+.highlights{display:flex;justify-content:center;gap:40px;padding:20px 48px;background:#3C1810;color:white}
+.hl{display:flex;align-items:center;gap:8px;font-size:0.82rem;font-weight:500}
+.hl-icon{font-size:1.1rem}
+
+/* Footer */
+.landing-footer{padding:16px 48px;text-align:center;font-size:0.75rem;color:#A89585;border-top:1px solid #E8DDD0;background:#FDFBF7}
+.landing-footer a{color:#8B5E3C;text-decoration:none;font-weight:500}
+
+/* ===== CHAT PAGE ===== */
+.chat-page{display:flex;height:100vh}
+
+/* Left panel */
+.left{width:280px;min-width:280px;background:#F8F3EC;border-right:1px solid #E8DDD0;display:flex;flex-direction:column;padding:16px}
+.back-btn{display:flex;align-items:center;gap:6px;padding:8px 12px;border:none;background:none;color:#6B4C3B;font-size:0.85rem;cursor:pointer;margin-bottom:12px;border-radius:8px}
+.back-btn:hover{background:#E8DDD0}
+
+/* Lakebase card */
+.lb-card{background:#1E293B;border-radius:12px;padding:14px;margin-bottom:14px;color:white}
+.lb-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.lb-title{display:flex;align-items:center;gap:6px;font-weight:700;font-size:0.82rem;letter-spacing:.5px}
+.lb-dot{width:8px;height:8px;background:#4ADE80;border-radius:50%}
+.lb-dot.off{background:#EF4444}
+.lb-status{font-size:0.72rem;color:#4ADE80;font-weight:500}
+.lb-status.off{color:#EF4444}
+.lb-row{margin-bottom:6px}
+.lb-label{font-size:0.62rem;color:#94A3B8;text-transform:uppercase;letter-spacing:.7px}
+.lb-value{font-size:0.85rem;color:#F1F5F9;font-weight:500}
+.stats-row{display:flex;gap:8px;margin-bottom:14px}
+.stat{flex:1;text-align:center;background:white;border:1px solid #E8DDD0;border-radius:10px;padding:10px 4px}
+.stat-num{font-size:1.5rem;font-weight:700;color:#2D1810}
+.stat-lbl{font-size:0.68rem;color:#A89585}
+
+.mem-card{background:white;border:1px solid #E8DDD0;border-radius:10px;padding:12px;margin-bottom:14px}
+.mem-toggle{display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.mem-toggle span{font-weight:600;font-size:0.85rem;color:#2D1810}
+.mem-toggle button{background:none;border:none;font-size:1rem;cursor:pointer;color:#6B4C3B}
+.mem-row{margin-bottom:6px}
+.mem-key{font-size:0.78rem;color:#8B5E3C;font-weight:600}
+.mem-val{font-size:0.78rem;color:#6B4C3B}
+
+.section-lbl{font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#A89585;margin:12px 0 8px}
+.store-sel{width:100%;padding:8px 10px;border:1px solid #D4C4B0;border-radius:8px;background:white;font-size:0.8rem;color:#3C1810;margin-bottom:8px}
+
+/* Cached questions — minimal at bottom */
+.cq{padding:4px 6px;margin-bottom:2px;background:transparent;border:none;border-bottom:1px solid #EDE6DC;border-radius:0;font-size:0.65rem;color:#A89585;cursor:pointer;transition:all 0.15s;line-height:1.25}
+.cq:hover{color:#3C1810;background:#F5EDE0}
+
+.new-btn{margin-top:auto;padding:10px;background:#3C1810;color:white;border:none;border-radius:10px;font-size:0.85rem;font-weight:500;cursor:pointer;width:100%}
+.new-btn:hover{background:#5C2E1A}
+.cq-section{padding-top:6px;border-top:1px solid #E8DDD0;margin-top:8px}
+
+/* Chat center */
+.center{flex:1;display:flex;flex-direction:column;min-width:0}
+.ch-header{padding:12px 24px;border-bottom:1px solid #E8DDD0;display:flex;align-items:center;justify-content:space-between;background:white}
+.ch-header-left{display:flex;align-items:center}
+.ch-title{font-family:'Playfair Display',serif;font-size:1.15rem;color:#2D1810}
+.ch-sub{font-size:0.78rem;color:#A89585;margin-left:10px}
+.ch-powered{font-size:0.75rem;color:#3C1810;display:flex;align-items:center;gap:6px;font-weight:600;letter-spacing:0.3px}
+.ch-powered-dot{width:6px;height:6px;background:#E8653A;border-radius:50%}
+.ch-msgs{flex:1;overflow-y:auto;padding:20px 24px}
+.ch-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center}
+.ch-empty h2{font-family:'Playfair Display',serif;font-size:1.6rem;color:#2D1810;margin-bottom:8px}
+.ch-empty p{color:#A89585;font-size:0.92rem;max-width:380px;line-height:1.6}
+
+.mu{text-align:left;padding:8px 0}
+.mu-b{display:inline-block;background:#F0EAE0;border-radius:14px 14px 14px 4px;padding:10px 14px;max-width:85%;font-size:0.9rem;color:#2D1810}
+.ma{padding:8px 0}
+.ma-c{background:white;border:1px solid #E8DDD0;border-left:3px solid #D4C4B0;border-radius:14px;padding:18px;max-width:92%}
+.ma-h{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #F0E8DC}
+.ma-av{width:28px;height:28px;background:#3C1810;border-radius:7px;display:flex;align-items:center;justify-content:center;color:white;font-size:0.8rem}
+.ma-n{font-weight:600;color:#2D1810;font-size:0.85rem}
+.ma-body{font-size:0.9rem;line-height:1.7;color:#3C1810}
+.ma-body h2{font-family:'Playfair Display',serif;font-size:1.1rem;color:#2D1810;margin:12px 0 6px}
+.ma-body h3{font-family:'Playfair Display',serif;font-size:1rem;color:#2D1810;margin:10px 0 4px}
+.ma-body ul,.ma-body ol{padding-left:18px;margin:6px 0}
+.ma-body li{margin-bottom:3px}
+.ma-body strong{color:#2D1810}
+.ma-body table{width:100%;border-collapse:collapse;margin:10px 0;font-size:0.84rem}
+.ma-body th{background:#F5EDE0;padding:6px 10px;text-align:left;font-weight:600;border-bottom:2px solid #D4C4B0}
+.ma-body td{padding:5px 10px;border-bottom:1px solid #F0E8DC}
+.fb-r{display:flex;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid #F0E8DC}
+.fb{padding:2px 8px;border:1px solid #D4C4B0;border-radius:6px;background:white;cursor:pointer;font-size:0.72rem;transition:all 0.15s}
+.fb:hover{background:#F5EDE0}
+.fb.p{background:#E8F5E9;border-color:#66BB6A}
+.fb.n{background:#FFEBEE;border-color:#EF5350}
+
+/* Brewing animation */
+.brew-wait{display:flex;flex-direction:column;align-items:center;padding:32px 20px;background:white;border:1px solid #E8DDD0;border-radius:14px;margin:8px 0;animation:fadeIn 0.4s}
+.brew-art{font-size:3.5rem;margin-bottom:12px;animation:brew 2s ease-in-out infinite;filter:drop-shadow(0 0 12px rgba(139,94,60,0.3))}
+@keyframes brew{0%{transform:scale(1) rotate(0deg)}25%{transform:scale(1.05) rotate(-3deg)}50%{transform:scale(1) rotate(0deg)}75%{transform:scale(1.05) rotate(3deg)}100%{transform:scale(1) rotate(0deg)}}
+.brew-steam{display:flex;gap:6px;margin-bottom:10px}
+.steam{width:3px;height:18px;background:linear-gradient(to top,#D4C4B0,transparent);border-radius:3px;animation:rise 1.5s ease-in-out infinite}
+.steam:nth-child(2){height:24px;animation-delay:0.3s}
+.steam:nth-child(3){height:14px;animation-delay:0.6s}
+@keyframes rise{0%{opacity:0;transform:translateY(0)}50%{opacity:0.7}100%{opacity:0;transform:translateY(-16px)}}
+.brew-msg{font-size:0.88rem;color:#8B7355;font-weight:500}
+.brew-sub{font-size:0.75rem;color:#A89585;margin-top:4px}
+
+/* Quick prompts row */
+.qp-row{display:flex;flex-wrap:wrap;gap:6px;padding:8px 24px 4px;background:white}
+.qp{padding:6px 14px;border:1px solid #D4C4B0;border-radius:18px;background:white;color:#6B4C3B;font-size:0.78rem;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.qp:hover{background:#3C1810;color:white;border-color:#3C1810}
+.streaming::after{content:'|';animation:bl .8s infinite;color:#8B5E3C}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:0}}
+
+.ch-bar{padding:12px 24px;border-top:1px solid #E8DDD0;background:white}
+.ch-wrap{display:flex;gap:8px}
+.ch-in{flex:1;padding:14px 18px;border:1.5px solid #D4C4B0;border-radius:12px;font-size:0.95rem;background:#FDFBF7;color:#2D1810;outline:none;font-family:'Inter',sans-serif}
+.ch-in:focus{border-color:#8B5E3C;box-shadow:0 0 0 3px rgba(139,94,60,0.1)}
+.ch-in::placeholder{color:#B5A595}
+.ch-send{padding:14px 20px;background:#3C1810;color:white;border:none;border-radius:12px;font-size:0.95rem;font-weight:500;cursor:pointer}
+.ch-send:hover{background:#5C2E1A}
+.ch-send:disabled{background:#C4B5A5;cursor:not-allowed}
+
+.powered{text-align:center;margin-top:12px;font-size:0.72rem;color:#A89585}
+.powered a{color:#8B5E3C;text-decoration:none;font-weight:500}
+
+/* Cache hit badge */
+.cache-badge{display:inline-flex;align-items:center;gap:4px;background:#E0F2FE;color:#0369A1;padding:3px 10px;border-radius:8px;font-size:0.7rem;font-weight:600;margin-left:8px;letter-spacing:0.3px}
+.cache-badge .cb-dot{width:6px;height:6px;background:#0EA5E9;border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== PAGE TABS ===== */
+.page-tabs{display:flex;gap:2px;background:#E8DDD0;padding:3px;border-radius:10px}
+.page-tab{padding:7px 18px;border:none;background:transparent;color:#6B4C3B;font-size:0.82rem;font-weight:600;cursor:pointer;border-radius:8px;transition:all 0.2s;font-family:'Inter',sans-serif}
+.page-tab.active{background:#3C1810;color:white}
+.page-tab:hover:not(.active){background:#D4C4B0}
+
+/* Model selector in left panel */
+.model-sel{width:100%;padding:8px 10px;border:1.5px solid #D4C4B0;border-radius:8px;font-size:0.78rem;background:white;color:#2D1810;font-family:'Inter',sans-serif;margin-top:4px}
+
+/* ===== COMPARE PAGE ===== */
+.compare-page{display:flex;flex-direction:column;height:100vh;background:#FDFBF7}
+.compare-header{display:flex;align-items:center;justify-content:space-between;padding:14px 32px;border-bottom:1px solid #E8DDD0;background:white}
+.compare-header-left{display:flex;align-items:center;gap:16px}
+.compare-title{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:#3C1810}
+.compare-sub{font-size:0.78rem;color:#8B7355}
+
+.compare-body{flex:1;display:flex;flex-direction:column;padding:24px 32px;overflow-y:auto;gap:20px}
+
+.compare-controls{display:flex;gap:16px;align-items:end;flex-wrap:wrap}
+.compare-field{display:flex;flex-direction:column;gap:4px}
+.compare-field label{font-size:0.72rem;font-weight:600;color:#6B4C3B;text-transform:uppercase;letter-spacing:0.5px}
+.compare-field select{padding:10px 14px;border:1.5px solid #D4C4B0;border-radius:10px;font-size:0.88rem;background:white;color:#2D1810;font-family:'Inter',sans-serif;min-width:260px}
+.compare-field select:focus{border-color:#8B5E3C;outline:none}
+.compare-input-wrap{flex:1;min-width:300px;display:flex;flex-direction:column;gap:4px}
+.compare-input{padding:10px 14px;border:1.5px solid #D4C4B0;border-radius:10px;font-size:0.88rem;background:white;color:#2D1810;font-family:'Inter',sans-serif;width:100%}
+.compare-input:focus{border-color:#8B5E3C;outline:none}
+.compare-run{padding:10px 24px;background:#3C1810;color:white;border:none;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer;align-self:end;white-space:nowrap}
+.compare-run:hover{background:#5C2E1A}
+.compare-run:disabled{background:#C4B5A5;cursor:not-allowed}
+
+.compare-results{display:flex;gap:20px;flex:1}
+.compare-panel{flex:1;background:white;border:1.5px solid #E8DDD0;border-radius:14px;padding:20px;display:flex;flex-direction:column;overflow-y:auto;transition:border-color 0.3s}
+.compare-panel.loading{border-color:#8B5E3C;animation:pulse-border 1.5s infinite}
+@keyframes pulse-border{0%,100%{border-color:#E8DDD0}50%{border-color:#8B5E3C}}
+.compare-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #E8DDD0}
+.compare-model-name{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:#3C1810}
+.compare-metrics{display:flex;gap:12px}
+.compare-metric{font-size:0.72rem;color:#6B4C3B;background:#F5EDE0;padding:3px 10px;border-radius:8px;font-weight:600}
+.compare-panel-body{flex:1;font-size:0.88rem;line-height:1.6;color:#2D1810}
+.compare-panel-body table{width:100%;border-collapse:collapse;margin:10px 0;font-size:0.82rem}
+.compare-panel-body th{background:#F5EDE0;padding:8px 10px;text-align:left;font-weight:600;border-bottom:2px solid #D4C4B0}
+.compare-panel-body td{padding:6px 10px;border-bottom:1px solid #E8DDD0}
+.compare-empty{display:flex;align-items:center;justify-content:center;flex:1;color:#A89585;font-size:0.9rem;text-align:center;padding:40px}
+.compare-examples{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useRef,useEffect}=React;
+const THINK_MSGS=["Searching knowledge base...","Consulting operations documents...","Analyzing sales data...","Reviewing recipes...","Composing answer..."];
+
+function BrewingWait(){
+  const[i,set]=useState(0);
+  useEffect(()=>{const t=setInterval(()=>set(p=>(p+1)%THINK_MSGS.length),4000);return()=>clearInterval(t)},[]);
+  return(
+    <div className="brew-wait">
+      <div className="brew-steam"><div className="steam"/><div className="steam"/><div className="steam"/></div>
+      <div className="brew-art">&#9749;</div>
+      <div className="brew-msg">{THINK_MSGS[i]}</div>
+      <div className="brew-sub">Brewing your answer...</div>
+    </div>
+  );
+}
+
+function App(){
+  const[view,setView]=useState('landing'); // 'landing', 'chat', or 'compare'
+  const[query,setQuery]=useState('');
+  const[msgs,setMsgs]=useState([]);
+  const[streaming,setStreaming]=useState(false);
+  const[convId,setConvId]=useState(null);
+  const[store,setStore]=useState('Koramangala, Bangalore');
+  const[stores,setStores]=useState([]);
+  const[examples,setExamples]=useState([]);
+  const[fb,setFb]=useState({});
+  const[stxt,setStxt]=useState('');
+  const[stats,setStats]=useState(null);
+  const[memOpen,setMemOpen]=useState(false);
+  const endRef=useRef(null);
+
+  // Model selection for Operations Advisor
+  const[models,setModels]=useState([]);
+  const[primaryModel,setPrimaryModel]=useState('');
+
+  // Admin config state
+  const[adminConfig,setAdminConfig]=useState({router_model:'',operations_model:''});
+  const[adminSaved,setAdminSaved]=useState(false);
+
+  // Compare page state
+  const[cmpModelA,setCmpModelA]=useState('');
+  const[cmpModelB,setCmpModelB]=useState('');
+  const[cmpQuery,setCmpQuery]=useState('What should I prepare for tomorrow?');
+  const[cmpStore,setCmpStore]=useState('Koramangala, Bangalore');
+  const[cmpResultA,setCmpResultA]=useState(null);
+  const[cmpResultB,setCmpResultB]=useState(null);
+  const[cmpLoading,setCmpLoading]=useState(false);
+
+  const refreshStats=()=>fetch('/api/stats').then(r=>r.json()).then(setStats).catch(()=>{});
+  const parseSseLine=(line,onData)=>{
+    const trimmed=(line||'').trim();
+    if(!trimmed.startsWith('data: '))return;
+    try{onData(JSON.parse(trimmed.slice(6)));}catch(e){}
+  };
+  useEffect(()=>{
+    fetch('/api/stores').then(r=>r.json()).then(d=>setStores(d.stores));
+    fetch('/api/examples').then(r=>r.json()).then(d=>setExamples(d.examples));
+    fetch('/api/models').then(r=>r.json()).then(d=>{
+      setModels(d.models);
+      if(d.models.length){
+        setPrimaryModel(d.models[0]);
+        setCmpModelA(d.models[0]);
+        setCmpModelB(d.models[1]||d.models[0]);
+      }
+    });
+    fetch('/api/admin/config').then(r=>r.json()).then(c=>{
+      setAdminConfig(c);
+    }).catch(()=>{});
+    refreshStats();
+    const t=setInterval(refreshStats,15000);
+    return()=>clearInterval(t);
+  },[]);
+  useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'})},[msgs,stxt]);
+
+  const typeOut=(text,cb)=>{
+    const words=text.split(/(\s+)/);
+    let shown='',wi=0,batch=4;
+    const t=setInterval(()=>{
+      const end=Math.min(wi+batch,words.length);
+      for(let w=wi;w<end;w++)shown+=words[w];
+      wi=end; setStxt(shown);
+      if(wi>=words.length){clearInterval(t);setStxt('');cb();}
+    },25);
+  };
+
+  const sendCached=async(idx)=>{
+    if(streaming)return;
+    const prompt=examples[idx]; if(!prompt)return;
+    setView('chat');
+    setMsgs(prev=>[...prev,{role:'user',content:prompt}]);
+    setStreaming(true); setStxt('');
+    try{
+      const c=await fetch(`/api/cached/${idx}`).then(r=>r.json());
+      if(c.cached){typeOut(c.answer,()=>{setMsgs(prev=>[...prev,{role:'assistant',content:c.answer}]);setStreaming(false);refreshStats();});return;}
+    }catch(e){}
+    sendLive(prompt,true);
+  };
+
+  const sendLive=async(text,alreadyAdded)=>{
+    const userMsg=(text||query).trim();
+    if(!userMsg||streaming)return;
+    if(!text)setQuery('');
+    setView('chat');
+    if(!alreadyAdded)setMsgs(prev=>[...prev,{role:'user',content:userMsg}]);
+    setStreaming(true); setStxt('');
+    const history=msgs.map(m=>({role:m.role,content:m.content}));
+    try{
+      const resp=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({query:userMsg,conversation_id:convId,store_location:store,history})});
+      const newId=resp.headers.get('X-Conversation-Id');
+      if(newId)setConvId(newId);
+      const reader=resp.body.getReader();
+      const dec=new TextDecoder();
+      let acc='',full='';
+      const handleEvent=(data)=>{
+        if(data.keepalive)return;
+        if(data.status){setStxt(data.status);return;}
+        if(data.done){
+          full=data.full_text;
+          const fromCache=data.from_cache||false;
+          const matchType=data.match_type||'';
+          const similarity=data.similarity||0;
+          setStxt('');
+          typeOut(full,()=>{setMsgs(prev=>[...prev,{role:'assistant',content:full,fromCache,matchType,similarity}]);setStreaming(false);refreshStats();});
+          return true;
+        }
+        if(data.delta){full+=data.delta;setStxt(full);}
+        return false;
+      };
+      while(true){
+        const{done,value}=await reader.read();
+        if(done)break;
+        acc+=dec.decode(value,{stream:true});
+        const lines=acc.split('\n'); acc=lines.pop();
+        for(const line of lines){
+          let completed=false;
+          parseSseLine(line,data=>{completed=handleEvent(data)===true;});
+          if(completed)return;
+        }
+      }
+      // Flush any final SSE event that arrived without trailing newline.
+      let completed=false;
+      parseSseLine(acc,data=>{completed=handleEvent(data)===true;});
+      if(completed)return;
+    }catch(err){
+      // Stream could fail even if backend eventually saved assistant message.
+      let recovered=false;
+      try{
+        if(convId){
+          const d=await fetch(`/api/conversations/${convId}/messages`).then(r=>r.json());
+          const items=d?.messages||[];
+          const last=[...items].reverse().find(m=>m.role==='assistant');
+          if(last?.content){
+            setMsgs(prev=>[...prev,{role:'assistant',content:last.content}]);
+            recovered=true;
+          }
+        }
+      }catch(_e){}
+      if(!recovered)setMsgs(prev=>[...prev,{role:'assistant',content:`Error: ${err.message}`}]);
+    }
+    setStreaming(false); refreshStats();
+  };
+
+  const handleKey=(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendLive();}};
+  const doFb=async(i,val)=>{setFb(prev=>({...prev,[i]:val}));await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conversation_id:convId,value:val})});refreshStats();};
+  const newChat=()=>{setMsgs([]);setConvId(null);setStxt('');setQuery('');};
+  const md=(t)=>({__html:marked.parse(t||'')});
+
+  // ===== LANDING PAGE =====
+  if(view==='landing'){
+    return(
+      <div className="landing">
+        <nav className="nav">
+          <div className="nav-brand"><span>&#9749;</span><span>Kaapi Bricks</span></div>
+          <div className="nav-links">
+            <a href="#menu">Menu</a>
+            <a href="#about">About</a>
+            <a href="#" className="nav-chat" onClick={e=>{e.preventDefault();setView('chat')}}>Ask AI Assistant</a>
+            <a href="#" style={{color:'#6B4C3B',fontSize:'0.85rem',fontWeight:500,textDecoration:'none',cursor:'pointer'}} onClick={e=>{e.preventDefault();setView('admin')}}>Admin</a>
+            <a href="#" className="nav-chat" style={{background:'#5C2E1A'}} onClick={e=>{e.preventDefault();setView('compare')}}>Compare Models</a>
+          </div>
+        </nav>
+        <section className="hero">
+          <div className="hero-badge">&#9733; 37 Stores Across India &amp; Worldwide</div>
+          <h1>Authentic South Indian Filter Coffee</h1>
+          <p>From the plantations of Coorg and Chikmagalur to your tumbler-davara. Ask our AI assistant anything.</p>
+          <div className="search-wrap">
+            <input className="search-input" value={query} onChange={e=>setQuery(e.target.value)}
+              onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();sendLive();}}}
+              placeholder="Ask about recipes, sales, inventory, operations..." />
+            <button className="search-btn" onClick={()=>sendLive()}>&#8594;</button>
+          </div>
+          <div className="qp-below">
+            {examples.map((ex,i)=><button key={i} className="qp" onClick={()=>sendLive(ex)}>{ex}</button>)}
+          </div>
+        </section>
+
+        <div className="highlights">
+          <div className="hl"><span className="hl-icon">&#127811;</span>Single-Origin Beans</div>
+          <div className="hl"><span className="hl-icon">&#9749;</span>Brass Filter Brewed</div>
+          <div className="hl"><span className="hl-icon">&#127758;</span>37 Locations</div>
+          <div className="hl"><span className="hl-icon">&#128150;</span>Tumbler-Davara Served</div>
+        </div>
+
+        <section className="products-section" id="menu">
+          <div className="products-header">
+            <h2>Our Menu</h2>
+            <p>Handcrafted beverages rooted in South Indian tradition</p>
+          </div>
+          <div className="products-grid">
+            <div className="prod-card"><span className="prod-emoji">&#9749;</span><div className="prod-name">Classic Filter Coffee</div><div className="prod-desc">Our signature — 70% Chikmagalur Robusta, 30% Chicory, tumbler-davara pour</div><span className="prod-tag">Bestseller</span></div>
+            <div className="prod-card"><span className="prod-emoji">&#128293;</span><div className="prod-name">Strong Decoction</div><div className="prod-desc">Double-strength decoction for the bold coffee lover</div><span className="prod-tag">Popular</span></div>
+            <div className="prod-card"><span className="prod-emoji">&#127855;</span><div className="prod-name">Bella Kaapi</div><div className="prod-desc">Filter coffee sweetened with authentic palm jaggery</div><span className="prod-tag">Filter Coffee</span></div>
+            <div className="prod-card"><span className="prod-emoji">&#127774;</span><div className="prod-name">Degree Coffee</div><div className="prod-desc">Made with farm-fresh full cream milk, old-style recipe</div><span className="prod-tag">Filter Coffee</span></div>
+            <div className="prod-card"><span className="prod-emoji">&#129482;</span><div className="prod-name">Sukku Kaapi</div><div className="prod-desc">Traditional dry ginger coffee — warming and aromatic</div><span className="prod-tag">Traditional</span></div>
+            <div className="prod-card"><span className="prod-emoji">&#10052;</span><div className="prod-name">Cold Coffee</div><div className="prod-desc">Chilled decoction blended smooth with ice cream</div><span className="prod-tag">Specialty</span></div>
+            <div className="prod-card"><span className="prod-emoji">&#127861;</span><div className="prod-name">Masala Chai</div><div className="prod-desc">Kerala spice blend — cardamom, ginger, cinnamon</div><span className="prod-tag">Traditional</span></div>
+            <div className="prod-card"><span className="prod-emoji">&#127822;</span><div className="prod-name">Kaapi Frappe</div><div className="prod-desc">Iced blended coffee with caramel swirl</div><span className="prod-tag">Specialty</span></div>
+            <div className="prod-card"><span className="prod-emoji">&#127802;</span><div className="prod-name">Rose Milk</div><div className="prod-desc">Chilled rose-scented milk, a South Indian classic</div><span className="prod-tag">Traditional</span></div>
+            <div className="prod-card"><span className="prod-emoji">&#129381;</span><div className="prod-name">Badam Milk</div><div className="prod-desc">Rich almond paste milk with saffron and cardamom</div><span className="prod-tag">Traditional</span></div>
+            <div className="prod-card"><span className="prod-emoji">&#129472;</span><div className="prod-name">Mango Lassi</div><div className="prod-desc">Seasonal Alphonso mango blended with fresh yogurt</div><span className="prod-tag">Seasonal</span></div>
+            <div className="prod-card"><span className="prod-emoji">&#127849;</span><div className="prod-name">Jaggery Cold Brew</div><div className="prod-desc">18-hour cold brew sweetened with organic jaggery</div><span className="prod-tag">Seasonal</span></div>
+          </div>
+        </section>
+
+        <div className="landing-footer" id="about">
+          Kaapi Bricks Pvt. Ltd. &bull; Flagship: Koramangala, Bangalore &bull; Powered by <a href="#">Databricks AI</a>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== ADMIN PAGE =====
+  const saveAdminConfig=async()=>{
+    try{
+      const resp=await fetch('/api/admin/config',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(adminConfig)});
+      await resp.json();
+      setAdminSaved(true);
+      setTimeout(()=>setAdminSaved(false),3000);
+    }catch(e){console.error(e);}
+  };
+
+  if(view==='admin'){
+    return(
+      <div className="chat-page">
+        <div className="left">
+          <button className="back-btn" onClick={()=>setView('landing')}>&#8592; Back to Home</button>
+          <div className="page-tabs" style={{marginBottom:'12px'}}>
+            <button className={`page-tab ${view==='chat'?'active':''}`} onClick={()=>setView('chat')}>Main Chat</button>
+            <button className={`page-tab ${view==='admin'?'active':''}`} onClick={()=>setView('admin')}>Admin</button>
+            <button className={`page-tab ${view==='compare'?'active':''}`} onClick={()=>setView('compare')}>Compare</button>
+          </div>
+          <div className="lb-card" style={{background:'#1a1a2e'}}>
+            <div className="lb-top">
+              <div className="lb-title"><div className="lb-dot" style={{background:'#F59E0B'}}/>ADMIN</div>
+              <span className="lb-status" style={{color:'#F59E0B'}}>Settings</span>
+            </div>
+            <div className="lb-row"><div className="lb-label">Purpose</div><div className="lb-value" style={{fontSize:'0.75rem'}}>Configure AI models for the chat system</div></div>
+          </div>
+        </div>
+        <div className="center" style={{display:'flex',flexDirection:'column'}}>
+          <div className="ch-header">
+            <div className="ch-header-left">
+              <span className="ch-title">&#9881; Admin Settings</span>
+              <span className="ch-sub">Configure which AI models power the system</span>
+            </div>
+          </div>
+          <div style={{padding:'32px',maxWidth:'700px'}}>
+            <div style={{background:'white',border:'1.5px solid #E8DDD0',borderRadius:'14px',padding:'28px',marginBottom:'20px'}}>
+              <h3 style={{fontFamily:'Playfair Display,serif',fontSize:'1.1rem',color:'#3C1810',marginBottom:'16px'}}>Router Model</h3>
+              <p style={{fontSize:'0.82rem',color:'#6B4C3B',marginBottom:'12px',lineHeight:1.5}}>
+                Decides which agent handles each question. A fast, cheap model works best here — it only classifies the query as "operations", "data/knowledge", or "both".
+              </p>
+              <select className="compare-field" style={{width:'100%',padding:'10px 14px',border:'1.5px solid #D4C4B0',borderRadius:'10px',fontSize:'0.88rem',background:'white'}}
+                value={adminConfig.router_model} onChange={e=>setAdminConfig({...adminConfig,router_model:e.target.value})}>
+                {models.map(m=><option key={m} value={m}>{m.replace('databricks-','')}</option>)}
+              </select>
+            </div>
+
+            <div style={{background:'white',border:'1.5px solid #E8DDD0',borderRadius:'14px',padding:'28px',marginBottom:'20px'}}>
+              <h3 style={{fontFamily:'Playfair Display,serif',fontSize:'1.1rem',color:'#3C1810',marginBottom:'16px'}}>Operations Advisor Model</h3>
+              <p style={{fontSize:'0.82rem',color:'#6B4C3B',marginBottom:'12px',lineHeight:1.5}}>
+                Generates operational recommendations (weather impact, staffing, demand forecasting). A more capable model gives better analysis. Test models on the Compare page before changing this.
+              </p>
+              <select style={{width:'100%',padding:'10px 14px',border:'1.5px solid #D4C4B0',borderRadius:'10px',fontSize:'0.88rem',background:'white'}}
+                value={adminConfig.operations_model} onChange={e=>setAdminConfig({...adminConfig,operations_model:e.target.value})}>
+                {models.map(m=><option key={m} value={m}>{m.replace('databricks-','')}</option>)}
+              </select>
+            </div>
+
+            <div style={{display:'flex',gap:'12px',alignItems:'center'}}>
+              <button className="compare-run" onClick={saveAdminConfig}>Save Configuration</button>
+              {adminSaved&&<span style={{color:'#16A34A',fontSize:'0.85rem',fontWeight:600}}>&#10003; Saved successfully</span>}
+            </div>
+
+            <div style={{marginTop:'28px',padding:'20px',background:'#F5EDE0',borderRadius:'12px',fontSize:'0.82rem',color:'#6B4C3B',lineHeight:1.6}}>
+              <strong>How it works:</strong><br/>
+              1. Every question goes through the <strong>Router Model</strong> first — it decides: operations, data/knowledge, or both.<br/>
+              2. Data/knowledge questions go to <strong>MAS</strong> (Knowledge Assistant + Genie) — models are managed by Databricks.<br/>
+              3. Operations questions use the <strong>Operations Advisor Model</strong> you select above.<br/>
+              4. "Both" questions call MAS and Operations Advisor in parallel, then combine the answers.<br/>
+              5. Use the <strong>Compare</strong> page to test different operations models before changing this setting.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== COMPARE PAGE =====
+  const runCompare=async()=>{
+    if(cmpLoading||!cmpQuery.trim())return;
+    setCmpLoading(true);setCmpResultA(null);setCmpResultB(null);
+    try{
+      const resp=await fetch('/api/ops-advisor/compare',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({query:cmpQuery,store_location:cmpStore,model_a:cmpModelA,model_b:cmpModelB})});
+      if(!resp.ok){
+        let serverMsg=`HTTP ${resp.status}`;
+        try{
+          const txt=await resp.text();
+          if(txt&&txt.trim())serverMsg=txt.trim().slice(0,240);
+        }catch(_e){}
+        throw new Error(serverMsg);
+      }
+      const data=await resp.json();
+      if(!data?.result?.model_a||!data?.result?.model_b){
+        throw new Error('Compare API returned invalid result');
+      }
+      setCmpResultA(data.result.model_a);
+      setCmpResultB(data.result.model_b);
+    }catch(e){
+      const msg=e?.message||'Unknown compare error';
+      setCmpResultA({text:`Error: ${msg}`,latency_ms:0,model:cmpModelA,input_tokens:0,output_tokens:0,error:msg});
+      setCmpResultB({text:`Error: ${msg}`,latency_ms:0,model:cmpModelB,input_tokens:0,output_tokens:0,error:msg});
+    }
+    setCmpLoading(false);
+  };
+
+  const cmpExamples=["What should I prepare for tomorrow?","Is there anything special about this weekend?","How should I staff for Friday evening?","Should I order extra milk for next week?"];
+
+  if(view==='compare'){
+    return(
+      <div className="chat-page">
+        {/* LEFT: Same left panel for navigation */}
+        <div className="left">
+          <button className="back-btn" onClick={()=>setView('landing')}>&#8592; Back to Home</button>
+          <div className="page-tabs" style={{marginBottom:'12px'}}>
+            <button className={`page-tab ${view==='chat'?'active':''}`} onClick={()=>setView('chat')}>Main Chat</button>
+            <button className={`page-tab ${view==='compare'?'active':''}`} onClick={()=>setView('compare')}>Compare</button>
+          </div>
+
+          <div className="lb-card" style={{background:'#1a1a2e'}}>
+            <div className="lb-top">
+              <div className="lb-title"><div className="lb-dot"/>COMPARE MODE</div>
+              <span className="lb-status">Testing</span>
+            </div>
+            <div className="lb-row"><div className="lb-label">Purpose</div><div className="lb-value" style={{fontSize:'0.75rem'}}>Test models before production</div></div>
+          </div>
+
+          <div className="section-lbl">Store</div>
+          <select className="store-sel" value={cmpStore} onChange={e=>setCmpStore(e.target.value)}>
+            {stores.map(s=><option key={s} value={s}>{s}</option>)}
+          </select>
+
+          <div className="cq-section">
+            <div className="section-lbl" style={{margin:'8px 0 4px',opacity:0.5}}>Try asking...</div>
+            {cmpExamples.map((ex,i)=><div key={i} className="cq" onClick={()=>{setCmpQuery(ex);}}>{ex}</div>)}
+          </div>
+        </div>
+
+        {/* CENTER: Compare UI */}
+        <div className="center" style={{display:'flex',flexDirection:'column'}}>
+          <div className="ch-header">
+            <div className="ch-header-left">
+              <span className="ch-title">&#128200; Compare &amp; Test</span>
+              <span className="ch-sub">Operations Advisor — Side-by-Side Model Comparison</span>
+            </div>
+          </div>
+
+          <div style={{padding:'16px 24px',borderBottom:'1px solid #E8DDD0',background:'white'}}>
+            <div style={{display:'flex',gap:'12px',alignItems:'end',flexWrap:'wrap'}}>
+              <div className="compare-field">
+                <label>Model A</label>
+                <select value={cmpModelA} onChange={e=>setCmpModelA(e.target.value)}>
+                  {models.map(m=><option key={m} value={m}>{m.replace('databricks-','')}</option>)}
+                </select>
+              </div>
+              <div className="compare-field">
+                <label>Model B</label>
+                <select value={cmpModelB} onChange={e=>setCmpModelB(e.target.value)}>
+                  {models.map(m=><option key={m} value={m}>{m.replace('databricks-','')}</option>)}
+                </select>
+              </div>
+              <div style={{flex:1,minWidth:'200px',display:'flex',flexDirection:'column',gap:'4px'}}>
+                <label style={{fontSize:'0.72rem',fontWeight:600,color:'#6B4C3B',textTransform:'uppercase',letterSpacing:'0.5px'}}>Question</label>
+                <div style={{display:'flex',gap:'8px'}}>
+                  <input className="compare-input" value={cmpQuery} onChange={e=>setCmpQuery(e.target.value)}
+                    onKeyDown={e=>{if(e.key==='Enter')runCompare();}}
+                    placeholder="Ask the Operations Advisor..." />
+                  <button className="compare-run" onClick={runCompare} disabled={cmpLoading}>{cmpLoading?'Running...':'Run Compare'}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{flex:1,display:'flex',gap:'16px',padding:'16px 24px',overflow:'hidden'}}>
+            {/* Model A Panel */}
+            <div className={`compare-panel ${cmpLoading&&!cmpResultA?'loading':''}`}>
+              <div className="compare-panel-header">
+                <div className="compare-model-name">{(cmpModelA||'').replace('databricks-','')}</div>
+                {cmpResultA&&!cmpResultA.error&&<div className="compare-metrics">
+                  <span className="compare-metric">{(cmpResultA.latency_ms/1000).toFixed(1)}s</span>
+                  <span className="compare-metric">{(cmpResultA.input_tokens||0)+(cmpResultA.output_tokens||0)} tokens</span>
+                </div>}
+              </div>
+              <div className="compare-panel-body" style={{overflowY:'auto'}}>
+                {cmpResultA?<div dangerouslySetInnerHTML={{__html:marked.parse(cmpResultA.text||'')}}/>
+                  :cmpLoading?<BrewingWait/>
+                  :<div className="compare-empty">Select two models and run a query to compare</div>}
+              </div>
+            </div>
+
+            {/* Model B Panel */}
+            <div className={`compare-panel ${cmpLoading&&!cmpResultB?'loading':''}`}>
+              <div className="compare-panel-header">
+                <div className="compare-model-name">{(cmpModelB||'').replace('databricks-','')}</div>
+                {cmpResultB&&!cmpResultB.error&&<div className="compare-metrics">
+                  <span className="compare-metric">{(cmpResultB.latency_ms/1000).toFixed(1)}s</span>
+                  <span className="compare-metric">{(cmpResultB.input_tokens||0)+(cmpResultB.output_tokens||0)} tokens</span>
+                </div>}
+              </div>
+              <div className="compare-panel-body" style={{overflowY:'auto'}}>
+                {cmpResultB?<div dangerouslySetInnerHTML={{__html:marked.parse(cmpResultB.text||'')}}/>
+                  :cmpLoading?<BrewingWait/>
+                  :<div className="compare-empty">Select two models and run a query to compare</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== CHAT PAGE =====
+  return(
+    <div className="chat-page">
+      {/* LEFT: Lakebase + Store + Cached Questions */}
+      <div className="left">
+        <button className="back-btn" onClick={()=>setView('landing')}>&#8592; Back to Home</button>
+
+        {/* Page tabs */}
+        <div className="page-tabs" style={{marginBottom:'12px'}}>
+          <button className={`page-tab ${view==='chat'?'active':''}`} onClick={()=>setView('chat')}>Main Chat</button>
+          <button className={`page-tab ${view==='admin'?'active':''}`} onClick={()=>setView('admin')}>Admin</button>
+          <button className={`page-tab ${view==='compare'?'active':''}`} onClick={()=>setView('compare')}>Compare</button>
+        </div>
+
+        {/* Lakebase card */}
+        <div className="lb-card">
+          <div className="lb-top">
+            <div className="lb-title"><div className={`lb-dot ${stats?.connected?'':'off'}`}/>LAKEBASE</div>
+            <span className={`lb-status ${stats?.connected?'':'off'}`}>{stats?.connected?'Connected':'Disconnected'}</span>
+          </div>
+          <div className="lb-row"><div className="lb-label">Instance</div><div className="lb-value">{stats?.instance||'...'}</div></div>
+          <div className="lb-row"><div className="lb-label">Database</div><div className="lb-value">{stats?.database||'...'}</div></div>
+        </div>
+
+        {/* Stats */}
+        <div className="stats-row">
+          <div className="stat"><div className="stat-num">{stats?.chats||0}</div><div className="stat-lbl">Chats</div></div>
+          <div className="stat"><div className="stat-num">{stats?.messages||0}</div><div className="stat-lbl">Messages</div></div>
+          <div className="stat"><div className="stat-num">{stats?.cache_entries||0}</div><div className="stat-lbl">Cached</div></div>
+        </div>
+
+        {/* Memory */}
+        <div className="mem-card">
+          <div className="mem-toggle" onClick={()=>setMemOpen(!memOpen)}>
+            <span>View Memory Summary</span>
+            <button>{memOpen?'\u25B2':'\u25BC'}</button>
+          </div>
+          {memOpen&&stats&&<div style={{animation:'fadeIn 0.2s',marginTop:'8px'}}>
+            <div className="mem-row"><span className="mem-key">Engine: </span><span className="mem-val">{stats.engine}</span></div>
+            <div className="mem-row"><span className="mem-key">Instance: </span><span className="mem-val">{stats.instance}</span></div>
+            <div className="mem-row"><span className="mem-key">Database: </span><span className="mem-val">{stats.database}</span></div>
+            <div className="mem-row"><span className="mem-key">Auth: </span><span className="mem-val">{stats.auth}</span></div>
+            <div className="mem-row"><span className="mem-key">Tables: </span><span className="mem-val">{stats.tables}</span></div>
+            <div className="mem-row"><span className="mem-key">Total stored: </span><span className="mem-val">{stats.chats} conversations, {stats.messages} messages</span></div>
+          </div>}
+        </div>
+
+        {/* Store selector */}
+        <div className="section-lbl">Store</div>
+        <select className="store-sel" value={store} onChange={e=>setStore(e.target.value)}>
+          {stores.map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
+
+        <button className="new-btn" onClick={newChat}>+ New Chat</button>
+
+        {/* Cached questions — pushed to very bottom */}
+        <div className="cq-section">
+          <div className="section-lbl" style={{margin:'8px 0 4px',opacity:0.5}}>Try asking...</div>
+          {examples.map((ex,i)=><div key={i} className="cq" onClick={()=>sendCached(i)}>{ex}</div>)}
+        </div>
+      </div>
+
+      {/* CENTER: Chat */}
+      <div className="center">
+        <div className="ch-header">
+          <div className="ch-header-left">
+            <span className="ch-title">&#9749; Kaapi Bricks HQ</span>
+            <span className="ch-sub">Multi-Agent Supervisor</span>
+          </div>
+          <div className="ch-powered"><span className="ch-powered-dot"/>Powered by Databricks Agents</div>
+        </div>
+        <div className="ch-msgs">
+          {msgs.length===0&&!streaming&&<div className="ch-empty">
+            <h2>Namaskara!</h2>
+            <p>Ask anything about Kaapi Bricks — recipes, sales, inventory, suppliers, or operations. Click a quick question on the left, or type below.</p>
+          </div>}
+          {msgs.map((m,i)=>m.role==='user'?
+            <div key={i} className="mu"><div className="mu-b">{m.content}</div></div>
+            :<div key={i} className="ma" style={{animation:'slideUp 0.3s'}}>
+              <div className="ma-c">
+                <div className="ma-h">
+                  <div className="ma-av">&#9749;</div>
+                  <span className="ma-n">Kaapi Bricks HQ</span>
+                  {m.fromCache&&<span className="cache-badge"><span className="cb-dot"/>From Memory{m.matchType==='semantic'?` (${Math.round((m.similarity||0)*100)}% match)`:''}</span>}
+                </div>
+                <div className="ma-body" dangerouslySetInnerHTML={md(m.content)}/>
+                <div className="fb-r">
+                  <button className={`fb ${fb[i]==='positive'?'p':''}`} onClick={()=>doFb(i,'positive')}>&#128077;</button>
+                  <button className={`fb ${fb[i]==='negative'?'n':''}`} onClick={()=>doFb(i,'negative')}>&#128078;</button>
+                </div>
+              </div>
+            </div>
+          )}
+          {streaming&&stxt&&<div className="ma" style={{animation:'fadeIn 0.3s'}}><div className="ma-c">
+            <div className="ma-h"><div className="ma-av">&#9749;</div><span className="ma-n">Kaapi Bricks HQ</span></div>
+            <div className="ma-body streaming" dangerouslySetInnerHTML={md(stxt)}/>
+          </div></div>}
+          {streaming&&!stxt&&<BrewingWait/>}
+          <div ref={endRef}/>
+        </div>
+        <div className="ch-bar">
+          <div className="ch-wrap">
+            <input className="ch-in" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={handleKey}
+              placeholder="Ask about coffee, recipes, sales, inventory, or operations..." disabled={streaming}/>
+            <button className="ch-send" onClick={()=>sendLive()} disabled={streaming||!query.trim()}>{streaming?'...':'Send'}</button>
+          </div>
+          {!streaming&&<div className="qp-row" style={{paddingLeft:0,paddingRight:0,paddingTop:'8px'}}>
+            {examples.map((ex,i)=><button key={i} className="qp" onClick={()=>sendLive(ex)}>{ex}</button>)}
+          </div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
