@@ -1,0 +1,15 @@
+resources:
+  pipelines:
+    kaapi_bricks_medallion:
+      name: kaapi_bricks_medallion
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+      serverless: true
+      continuous: false          # triggered; set true only for always-on ingestion
+      root_path: "../src/pipeline"
+      libraries:
+        - glob:
+            include: ../src/pipeline/**
+      configuration:
+        # Raw landing zone written by scripts/generate_data.py (one folder per entity).
+        source_volume: /Volumes/${var.catalog}/${var.schema}/raw_data

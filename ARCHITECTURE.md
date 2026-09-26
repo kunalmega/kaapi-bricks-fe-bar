@@ -3,7 +3,8 @@
 > **Living document.** Updated as the build progresses. Legend:
 > ✅ built & verified · 🟡 exists, needs rework · 🔴 to build · ⬜ planned
 
-_Last updated: 2026-09-26 — repo flattened so the project is the repo root; scaffold dirs created._
+_Last updated: 2026-09-26 — Lakeflow medallion CODE WRITTEN (bundle + bronze/silver/gold SQL);
+generator now lands raw per-entity; awaiting `databricks auth login` → deploy + run._
 
 ## Repository layout (submission root)
 
@@ -12,10 +13,10 @@ FEbar_copy_bricks/            ← git root = the submission
   ARCHITECTURE.md             ← this file (living diagram)
   febar.md                    ← working plan + gap checklist
   README.md  DEMO.md  DEMO_SCRIPT.md
-  databricks.yml              🔴 bundle root (to create)
-  resources/                  🔴 pipeline + job definitions
-  src/pipeline/               🔴 bronze / silver / gold declarative code
-  scripts/                    ✅ generate_data.py, create_agents.py, evals …
+  databricks.yml              ✅ bundle root (catalog/schema vars, dev target)
+  resources/                  ✅ kaapi_pipeline.pipeline.yml (serverless LDP)
+  src/pipeline/               🟡 01_bronze.sql 02_silver.sql 03_gold.sql (written; deploy pending)
+  scripts/                    ✅ generate_data.py (lands raw per-entity), drop_legacy_tables.sql, evals …
   apps/                       ✅ main-chat-app, growth-advisor-agent, promo-agent, mcp-server
   sample-invoices/            ✅ PDFs for the doc-AI demo
   evidence/                   🔴 committed text execution evidence
@@ -45,13 +46,13 @@ avoid stockouts — replacing a ~30-minute manual cross-check with a few seconds
                                            │  writes raw Parquet (one dir per entity)
                                            ▼
   ┌─────────────────────────────────────────────────────────────────────────────┐
-  │  UNITY CATALOG VOLUME  (raw landing zone)                            🟡→🔴     │
+  │  UNITY CATALOG VOLUME  (raw landing zone)                            🟡 ready  │
   │  /Volumes/fevm_cme_conde_catalog/kaapi_bricks/raw_data/<entity>/*.parquet     │
   └───────────────────────────────────────┬───────────────────────────────────────┘
                                            │  Auto Loader (cloudFiles)
                                            ▼
   ┌─────────────────────────────────────────────────────────────────────────────┐
-  │  LAKEFLOW  ·  Spark Declarative Pipeline (serverless)               🔴 BUILD  │
+  │  LAKEFLOW  ·  Spark Declarative Pipeline (serverless)          🟡 CODE READY  │
   │                                                                               │
   │   BRONZE  (streaming tables, raw + ingest metadata)                           │
   │     bronze_stores  bronze_products  bronze_customers  bronze_orders  …(13)    │
@@ -104,7 +105,7 @@ avoid stockouts — replacing a ~30-minute manual cross-check with a few seconds
 
 | # | Layer | Status | Where (paths are repo-root relative) |
 |---|-------|--------|--------------------------------------|
-| 1 | **Lakeflow** | 🔴 to build | `databricks.yml`, `resources/kaapi_pipeline.pipeline.yml`, `src/pipeline/0{1,2,3}_*.py` (see `LAKEFLOW_PLAN.md`) |
+| 1 | **Lakeflow** | 🟡 code written, deploy pending | `databricks.yml`, `resources/kaapi_pipeline.pipeline.yml`, `src/pipeline/01_bronze.sql·02_silver.sql·03_gold.sql` (see `LAKEFLOW_PLAN.md`) |
 | 2 | **Unity Catalog** | ✅ / 🔴 lineage | `scripts/generate_data.py`; pipeline adds layered lineage + comments |
 | 3 | **Lakebase** | 🟡 → 🔴 | today: chat memory/cache in `apps/main-chat-app/app.py`. Add: `scripts/sync_gold_to_lakebase.py` + app reads gold |
 | 4 | **ML / GenAI** | ✅ | KA + MAS + `ai_parse_document` + `scripts/run_{ka,mas}_evaluation.ipynb` |

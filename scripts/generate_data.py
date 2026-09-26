@@ -130,25 +130,20 @@ def run_sql(statement, catalog=None, schema=None):
     return resp
 
 
-def upload_and_create_table(table_name, df):
-    """Upload a pandas DataFrame as Parquet to a Volume, then create a Delta table."""
+def land_raw_files(table_name, df):
+    """Land a pandas DataFrame as Parquet into a per-entity folder in the raw Volume.
+
+    One folder per entity (raw_data/<table>/<table>.parquet) so the Lakeflow
+    medallion pipeline can ingest each source with Auto Loader. Delta table
+    creation is owned by the Lakeflow pipeline, NOT this script.
+    """
     parquet_buffer = io.BytesIO()
     df.to_parquet(parquet_buffer, index=False, engine="pyarrow")
     parquet_buffer.seek(0)
 
-    volume_path = f"/Volumes/{CATALOG}/{SCHEMA}/raw_data/{table_name}.parquet"
+    volume_path = f"/Volumes/{CATALOG}/{SCHEMA}/raw_data/{table_name}/{table_name}.parquet"
     w.files.upload(volume_path, parquet_buffer, overwrite=True)
-    print(f"    Uploaded {table_name}.parquet ({len(df):,} rows)")
-
-    sql = f"""
-    CREATE OR REPLACE TABLE {CATALOG}.{SCHEMA}.{table_name}
-    AS SELECT * FROM read_files(
-        '{volume_path}',
-        format => 'parquet'
-    )
-    """
-    run_sql(sql)
-    print(f"    Created table {CATALOG}.{SCHEMA}.{table_name}")
+    print(f"    Landed raw_data/{table_name}/{table_name}.parquet ({len(df):,} rows)")
 
 # =============================================================================
 # CREATE INFRASTRUCTURE
@@ -872,7 +867,7 @@ inference_logs_pdf = pd.DataFrame({
 # =============================================================================
 # 13. UPLOAD & CREATE DELTA TABLES
 # =============================================================================
-print(f"\nUploading data and creating Delta tables in {CATALOG}.{SCHEMA}...")
+print(f"\nLanding raw Parquet into the Volume (tables are built by the Lakeflow pipeline)...")
 
 tables = {
     "stores": stores_pdf,
@@ -891,8 +886,8 @@ tables = {
 }
 
 for table_name, df in tables.items():
-    upload_and_create_table(table_name, df)
-    print(f"  Saved {table_name}: {len(df):,} rows")
+    land_raw_files(table_name, df)
+    print(f"  Landed {table_name}: {len(df):,} rows")
 
 # Create inference_logs table via SQL (empty schema)
 run_sql(f"""
@@ -928,10 +923,15 @@ print(f"Loyalty tier distribution:\n{customers_pdf['loyalty_tier'].value_counts(
 promo_rate = orders_pdf["promotion_id"].notna().mean() * 100
 print(f"Promotion redemption rate: {promo_rate:.1f}%")
 
-# Remote verification
-print("\n=== REMOTE VERIFICATION ===")
-all_tables = list(tables.keys()) + ["inference_logs"]
-for table_name in all_tables:
-    resp = run_sql(f"SELECT COUNT(*) as cnt FROM {CATALOG}.{SCHEMA}.{table_name}")
+# Remote verification — confirm raw files landed (Delta tables are built by the Lakeflow pipeline)
+print("\n=== REMOTE VERIFICATION (raw landing zone) ===")
+for table_name in tables.keys():
+    resp = run_sql(
+        f"SELECT COUNT(*) AS cnt FROM read_files("
+        f"'/Volumes/{CATALOG}/{SCHEMA}/raw_data/{table_name}/', format => 'parquet')"
+    )
     count = resp.result.data_array[0][0] if resp.result and resp.result.data_array else "?"
-    print(f"  {table_name}: {count} rows")
+    print(f"  raw_data/{table_name}: {count} rows landed")
+print("\nNext: run the Lakeflow pipeline to build bronze -> silver -> gold:")
+print("  databricks bundle deploy -t dev --profile DEFAULT")
+print("  databricks bundle run kaapi_bricks_medallion -t dev --profile DEFAULT")

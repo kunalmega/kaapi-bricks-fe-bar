@@ -1,0 +1,27 @@
+# Databricks Asset Bundle — Kaapi Bricks
+# Bundle root for the Lakeflow medallion pipeline (and future jobs).
+# Deploy:  databricks bundle validate --profile DEFAULT
+#          databricks bundle deploy -t dev --profile DEFAULT
+#          databricks bundle run kaapi_bricks_medallion -t dev --profile DEFAULT
+bundle:
+  name: kaapi_bricks
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog for Kaapi Bricks
+    default: fevm_cme_conde_catalog
+  schema:
+    description: Schema that holds the medallion tables
+    default: kaapi_bricks
+
+targets:
+  dev:
+    mode: development
+    default: true
+    # host is taken from the --profile you pass; set it here to pin a workspace.
+    variables:
+      catalog: fevm_cme_conde_catalog
+      schema: kaapi_bricks

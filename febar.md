@@ -46,15 +46,20 @@ has 5 of the 6 mandatory layers built.
 
 ## Gap checklist to pass (ordered by priority)
 
-### 1. Lakeflow pipeline — the one true product gap  ⬅ START HERE
+### 1. Lakeflow pipeline — the one true product gap  🟡 CODE WRITTEN, DEPLOY PENDING
 **Full design in `LAKEFLOW_PLAN.md`** (13 bronze → 13 silver → 7 gold, mapped to the real schema).
-- [ ] Edit `scripts/generate_data.py`: land raw per-entity dirs, remove the `read_files()` CTAS
-- [ ] Create `databricks.yml` (bundle root)
-- [ ] Create `resources/kaapi_pipeline.pipeline.yml` (serverless LDP, UC-enabled)
-- [ ] `src/pipeline/01_bronze.py` — 13 Auto Loader streaming tables
-- [ ] `src/pipeline/02_silver.py` — 13 conformed tables + expectations
-- [ ] `src/pipeline/03_gold.py` — 7 operational/KPI tables
+- [x] Edit `scripts/generate_data.py`: land raw per-entity dirs, remove the `read_files()` CTAS
+- [x] Create `databricks.yml` (bundle root)
+- [x] Create `resources/kaapi_pipeline.pipeline.yml` (serverless LDP, UC-enabled)
+- [x] `src/pipeline/01_bronze.sql` — 13 Auto Loader streaming tables
+- [x] `src/pipeline/02_silver.sql` — 13 conformed tables + expectations
+- [x] `src/pipeline/03_gold.sql` — 7 operational/KPI tables
+- [x] `scripts/drop_legacy_tables.sql` — one-time migration so the pipeline owns the 13 names
+- [ ] **DEPLOY & RUN** (needs `databricks auth login` first):
+      `databricks bundle deploy -t dev --profile DEFAULT` → `... run kaapi_bricks_medallion ...`
+- [ ] Re-run `scripts/generate_data.py` so raw lands in per-entity dirs
 - [ ] Confirm the same entities/keys flow raw → bronze → silver → gold (one integrated journey)
+- [ ] Point Genie Space + app at the pipeline-owned silver/gold tables (names unchanged, should just work)
 
 ### 2. Lakebase operational serving (make it unambiguous)
 - [ ] Sync/write selected gold operational data (current inventory, open POs, delivery exceptions, recommended prep qty) to Lakebase
@@ -84,7 +89,7 @@ has 5 of the 6 mandatory layers built.
 
 ### 6. Repo readiness
 - [x] Fresh working copy created, secret scrubbed, `.gitignore` added
-- [ ] `git init` + first commit (this copy — makes `kaapi_bricks_DEMO` tracked)
+- [x] `git init` + commits (repo flattened; project is now the tracked submission root)
 - [ ] Push to a public (or submission-connected) GitHub repo
 - [ ] Verify repo is readable by the submission form
 
