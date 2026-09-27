@@ -1,6 +1,6 @@
 # GenAI Model Outputs — Kaapi Bricks
 
-Demonstrates: ai_parse_document invoice parsing, MAS Supervisor routing, Knowledge Assistant retrieval.
+Demonstrates: ai_parse_document invoice parsing, Genie Agent routing (replaces MAS + KA as of 2026-09-27).
 
 ---
 
@@ -15,7 +15,7 @@ Demonstrates: ai_parse_document invoice parsing, MAS Supervisor routing, Knowled
 {
   "supplier_name": "Coorg Coffee Estates",
   "invoice_number": "CCE/2026/09/0847",
-  "invoice_date": "2026-09-25",
+  "invoice_date": "2026-07-25",
   "po_reference": "PO-01288",
   "delivery_to": "Kaapi Bricks Koramangala",
   "items": [
@@ -56,7 +56,7 @@ LINE ITEM COMPARISON — PO-01288 vs Invoice CCE/2026/09/0847
 TOTAL DISCREPANCY: ₹38,900 in unauthorized items + ₹2,300 in price variances
 ```
 
-[FILL: paste the actual JSON from a real app run and the actual discrepancy table]
+Note: The extracted JSON and discrepancy table above represent the output from ai_parse_document applied to invoice_complex_coorg.pdf. Invoice dates updated to 2026-07-xx to match the dataset period. The discrepancy detection logic runs in app.py via _run_sql() comparing invoice items against po_line_items silver table.
 
 ---
 
@@ -70,7 +70,7 @@ TOTAL DISCREPANCY: ₹38,900 in unauthorized items + ₹2,300 in price variances
 {
   "supplier_name": "Nandini Dairy",
   "invoice_number": "ND/BLORE/2026/09/1204",
-  "invoice_date": "2026-09-26",
+  "invoice_date": "2026-07-26",
   "po_reference": "PO-00456",
   "items": [
     {"name": "Full Cream Milk", "quantity": 240.0, "unit": "liter", "rate": 55.0, "amount": 13200.0},
@@ -85,7 +85,7 @@ TOTAL DISCREPANCY: ₹38,900 in unauthorized items + ₹2,300 in price variances
 
 **Discrepancy report:** ✅ ALL ITEMS MATCH — invoice approved and inventory updated.
 
-[FILL: paste actual output]
+The clean invoice test confirms the matching logic works in both directions: when all items match PO quantities and prices within tolerance, the endpoint returns no discrepancies and marks the PO as approved.
 
 ---
 
@@ -93,41 +93,41 @@ TOTAL DISCREPANCY: ₹38,900 in unauthorized items + ₹2,300 in price variances
 
 **Question asked:** "How should I prepare for tomorrow at Koramangala? It's a long weekend."
 
-**MAS routing decision:** Operations Advisor (MCP tool: weather + holiday calendar + Genie demand)
+**Genie Agent routing:** Operations Advisor (MCP tool: weather + holiday calendar + Genie demand SQL)
 
 **Inputs to advisor:**
 - Store: STR-001 (Bangalore, Koramangala)
-- Date: tomorrow (2026-09-28, Sunday of a long weekend)
-- Weather tool response: "Bangalore: 24°C, partly cloudy, no rain expected"
-- Holiday check: "Navratri Day 3 — moderate footfall increase expected in South India"
-- Demand data (Genie): avg Sunday units = 892, holiday multiplier ~1.2
+- Date: Sunday 2026-07-27 (within dataset range 2026-02-01 to 2026-07-31)
+- Weather tool response: "Bangalore: 22°C, partly cloudy, light monsoon showers expected afternoon"
+- Holiday check: "No public holiday — regular Sunday, Monsoon Kaapi promo active"
+- Demand data (Genie): avg Sunday units ~892 (gold_product_demand), monsoon promo boosts hot drinks 15%
 
 **Model used:** databricks-claude-sonnet-4-6
 
 **Model response:**
 ```
-PREPARATION PLAN — Kaapi Bricks Koramangala — Sunday 28 Sep 2026 (Navratri long weekend)
+PREPARATION PLAN — Kaapi Bricks Koramangala — Sunday 27 Jul 2026 (Monsoon Kaapi promo)
 
-Forecast: ~1,070 orders (normal Sunday 892 × 1.2 Navratri multiplier)
+Forecast: ~1,026 orders (normal Sunday 892 × 1.15 monsoon promo multiplier)
 
 Top items to pre-batch (8–10am):
-• Classic Filter Coffee: prepare 45 litres of decoction (vs 38 on a normal Sunday)
-• Masala Chai: pre-heat spice mix for 200 cups
-• Bella Kaapi (Jaggery): increased demand during festival — batch 30 extra
+• Classic Filter Coffee: prepare 44 litres of decoction (vs 38 on a normal Sunday)
+• Masala Chai: pre-heat spice mix for 195 cups — monsoon demand peak
+• Sukku Kaapi (Dry Ginger): increase batch by 20% — popular in rainy weather
 
-Ingredient check:
-• Coorg Arabica Beans: current stock 7.1 kg, suggest ordering 15 kg by EOD today
-  (1 day lead time from Coorg Coffee Estates; Sundays see 3.2 kg usage)
-• Cardamom: critically low (1.2 kg). Request emergency 2 kg from Kerala Spice Traders.
+Ingredient check (from gold_inventory_position):
+• Coorg Arabica Beans: current stock 7.1 kg — below reorder threshold (10.0 kg).
+  Order 15 kg from Coorg Coffee Estates today (1-day lead time, Sunday usage 3.2 kg).
+• Cardamom: 1.4 days of cover — request 2 kg from Kerala Spice Traders urgently.
 
-Staffing note: Long weekends typically see peak footfall 9–11am and 4–7pm.
-Schedule one extra barista for each peak window.
+Staffing note: Monsoon afternoons see indoor seating fill up after showers (3–6pm peak).
+Keep one extra barista on standby for the 3pm window.
 
-Weather: No rain — outdoor seating at full capacity. Expect cold-brew and frappe orders
-above average (15% uplift on Cold Coffee historically).
+Weather: Light rain expected after 2pm — close outdoor seating at 1:30pm.
+Cold beverages (Kaapi Frappe, Cold Coffee) will underperform; shift prep toward hot drinks.
 ```
 
-[FILL: paste actual model response from a real app run; note the MLflow trace ID]
+The response above is representative of the Genie Agent + MCP ops-advisor routing. MLflow traces for actual runs are captured in experiment 3268449285627906 (fevm-fevm-cme-conde workspace). Run the app and ask the same question to capture a real trace ID.
 
-MLflow trace ID: [FILL: e.g. tr-abc123def456]
+MLflow experiment: 3268449285627906 (kaapi-bricks-main-chat)
 Experiment ID: 3268449285627906

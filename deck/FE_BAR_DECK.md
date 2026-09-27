@@ -204,7 +204,7 @@ Test dataset (10 KA queries + 5 MAS routing tests)
 | **Total annual value** | **₹2,22,27,120** | **~$264,500** | |
 | Platform cost (est.) | — | $60,000/year | Serverless + apps + FMAPI at demo scale |
 | Payback period | — | ~3.6 months | |
-| 3-year ROI | — | 5.7× | Net of platform cost |
+| 3-year ROI | — | 2.6× | $573,500 value / $220,000 investment (platform $150k + impl $70k) [ASSUMPTION] |
 
 *All assumptions labeled. Replace with actual Kaapi Bricks operational data before a live business case.*
 

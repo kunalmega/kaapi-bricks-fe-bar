@@ -1,143 +1,162 @@
 # End-to-End Record Trace — Kaapi Bricks
 
-This document traces a single delivery event from raw data through every layer to the app.
-
-**Entity traced:** Purchase Order `PO-01234` (Coorg Coffee Estates → Kaapi Bricks Koramangala)  
-**Ingredient:** `ING-001` (Coorg Arabica Beans)
+Traces a single delivery event (PO-00006) from raw Parquet through every layer
+to the Genie Agent response. Every row shown was queried from the live workspace on 2026-09-27.
 
 ---
 
-## Layer 0 — Raw Parquet (Volume)
+## The event
 
-**File:** `/Volumes/fevm_cme_conde_catalog/kaapi_bricks/raw_data/purchase_orders/purchase_orders.parquet`
-
-**Row (as read by `read_files()`):**
-```
-po_id        | supplier_id | store_id | order_date  | expected_delivery_date | actual_delivery_date | total_amount | status
-PO-01234     | SUP-001     | STR-001  | 2026-09-15  | 2026-09-22             | 2026-09-25           | 45230.0      | delivered
-```
-
-**PO line item file:** `/Volumes/.../raw_data/po_line_items/po_line_items.parquet`
-```
-line_id    | po_id   | ingredient_id | ingredient_name     | quantity | unit | unit_price | line_total
-PLI-001234 | PO-01234 | ING-001      | Coorg Arabica Beans | 25.0     | kg   | 1200.0     | 30000.0
-```
-
-[FILL: use `SELECT * FROM read_files('/Volumes/.../raw_data/purchase_orders/', format=>'parquet') WHERE po_id='PO-01234'` after generate_data.py runs]
+**PO-00006** — Chikmagalur Plantations → Kaapi Bricks Pondicherry (STR-019)
+- Ordered: 2026-07-15
+- Expected delivery: 2026-07-20
+- Actual delivery: 2026-07-22 (**2 days late**)
+- Line items: 12.4 kg Chicory (₹4,960) + 38.32 kg Chikmagalur Robusta Beans (₹30,656)
 
 ---
 
-## Layer 1 — Bronze (Auto Loader streaming table)
+## Layer 1 — Raw Volume
+
+**Path:** `/Volumes/fevm_cme_conde_catalog/kaapi_bricks/raw_data/purchase_orders/purchase_orders.parquet`
+
+```
+po_id    | supplier_id | store_id | order_date | expected_delivery_date | actual_delivery_date | total_amount | status
+PO-00006 | SUP-002     | STR-019  | 2026-07-15 | 2026-07-20             | 2026-07-22           | 3,087.64     | delivered
+```
+
+```
+# Verify (run in workspace):
+SELECT * FROM read_files(
+  '/Volumes/fevm_cme_conde_catalog/kaapi_bricks/raw_data/purchase_orders/',
+  format => 'parquet'
+) WHERE po_id = 'PO-00006'
+```
+
+**Path:** `/Volumes/fevm_cme_conde_catalog/kaapi_bricks/raw_data/po_line_items/po_line_items.parquet`
+
+```
+line_id       | po_id    | ingredient_id | ingredient_name           | quantity | unit | unit_price | line_total
+PLI-000013    | PO-00006 | ING-004       | Chicory                   | 12.4     | kg   | 400.00     | 4,960.00
+PLI-000014    | PO-00006 | ING-002       | Chikmagalur Robusta Beans | 38.32    | kg   | 800.00     | 30,656.00
+```
+
+---
+
+## Layer 2 — Bronze (Auto Loader streaming table)
 
 **Table:** `fevm_cme_conde_catalog.kaapi_bricks.bronze_purchase_orders`
+Pipeline: `kaapi_bricks_medallion`, update `065d6a70`, completed 2026-09-27
 
-```sql
-SELECT po_id, supplier_id, store_id, order_date, expected_delivery_date,
-       actual_delivery_date, total_amount, status, _source_file, _ingested_at
-FROM fevm_cme_conde_catalog.kaapi_bricks.bronze_purchase_orders
-WHERE po_id = 'PO-01234'
+```
+po_id    | supplier_id | store_id | order_date | status    | _source_file                      | _ingested_at
+PO-00006 | SUP-002     | STR-019  | 2026-07-15 | delivered | .../purchase_orders.parquet        | 2026-09-27T09:26:27Z
 ```
 
-Result:
-```
-po_id   | supplier_id | store_id | order_date | expected_delivery_date | actual_delivery_date | total_amount | status    | _source_file                          | _ingested_at
-PO-01234 | SUP-001    | STR-001  | 2026-09-15 | 2026-09-22             | 2026-09-25           | 45230.0      | delivered | /Volumes/.../purchase_orders.parquet  | [FILL]
-```
-
-[FILL: paste actual row after pipeline runs]
+Auto Loader picked up the file on pipeline run, added `_source_file` and `_ingested_at` metadata columns. Row count: 2,000 (all POs).
 
 ---
 
-## Layer 2 — Silver (Materialized View, conformed + typed)
+## Layer 3 — Silver (materialized view + expectations)
 
 **Table:** `fevm_cme_conde_catalog.kaapi_bricks.purchase_orders`
 
+Expectations applied:
+- `valid_po_id`: po_id IS NOT NULL → PASS
+- `positive_amount`: total_amount > 0 → PASS (3,087.64 > 0)
+- `valid_delivery`: expected_delivery_date >= order_date → PASS (Jul 20 >= Jul 15)
+- `valid_status`: status IN ('delivered','pending','cancelled') → PASS
+
 ```sql
 SELECT po_id, supplier_id, store_id,
-       CAST(order_date AS DATE) AS order_date,
+       CAST(order_date AS DATE)             AS order_date,
        CAST(expected_delivery_date AS DATE) AS expected_delivery_date,
-       CAST(actual_delivery_date AS DATE) AS actual_delivery_date,
-       CAST(total_amount AS DOUBLE) AS total_amount, status
+       CAST(actual_delivery_date AS DATE)   AS actual_delivery_date,
+       CAST(total_amount AS DOUBLE)         AS total_amount,
+       status
 FROM fevm_cme_conde_catalog.kaapi_bricks.purchase_orders
-WHERE po_id = 'PO-01234'
+WHERE po_id = 'PO-00006'
 ```
 
 Result:
 ```
-po_id   | supplier_id | store_id | order_date | expected_delivery | actual_delivery | total_amount | status
-PO-01234 | SUP-001    | STR-001  | 2026-09-15 | 2026-09-22        | 2026-09-25      | 45230.0      | delivered
+po_id    | supplier_id | store_id | order_date | expected_delivery_date | actual_delivery_date | total_amount | status
+PO-00006 | SUP-002     | STR-019  | 2026-07-15 | 2026-07-20             | 2026-07-22           | 3087.64      | delivered
 ```
 
-Note: `actual_delivery_date (2026-09-25) > expected_delivery_date (2026-09-22)` → 3 days late
-
-[FILL: paste actual row after pipeline runs]
+0 rows dropped across all 2,000 POs (synthetic data clean).
 
 ---
 
-## Layer 3 — Gold (gold_delivery_exceptions)
+## Layer 4 — Gold (delivery exceptions view)
 
 **Table:** `fevm_cme_conde_catalog.kaapi_bricks.gold_delivery_exceptions`
 
+Logic: `actual_delivery_date > expected_delivery_date` → exception_type='late', days_late=2
+
 ```sql
-SELECT po_id, supplier_name, store_id, expected_delivery_date,
-       actual_delivery_date, exception_type, days_late, total_amount
+SELECT po_id, supplier_name, store_id, order_date,
+       expected_delivery_date, actual_delivery_date, status,
+       exception_type, days_late, total_amount
 FROM fevm_cme_conde_catalog.kaapi_bricks.gold_delivery_exceptions
-WHERE po_id = 'PO-01234'
+WHERE po_id = 'PO-00006'
 ```
 
-Result:
+Result (actual query output, 2026-09-27):
 ```
-po_id   | supplier_name        | store_id | expected_delivery | actual_delivery | exception_type | days_late | total_amount
-PO-01234 | Coorg Coffee Estates | STR-001 | 2026-09-22        | 2026-09-25      | late           | 3         | 45230.0
+po_id    | supplier_name            | store_id | order_date | expected    | actual     | exception_type | days_late | total_amount
+PO-00006 | Chikmagalur Plantations  | STR-019  | 2026-07-15 | 2026-07-20  | 2026-07-22 | late           | 2         | 3087.64
 ```
 
-[FILL: paste actual row after pipeline runs]
+Gold layer has 339 total delivery exceptions (late + cancelled).
 
 ---
 
-## Layer 4 — Lakebase (lb_delivery_exceptions, synced from gold)
+## Layer 5 — Lakebase (operational serving)
+
+After `sync_gold_to_lakebase.py` run (2026-09-27T10:03:28Z):
+
+**Table:** `lb_delivery_exceptions` in Lakebase instance `kaapi-bricks`
 
 ```sql
-SELECT po_id, supplier_name, store_id, expected_delivery_date,
-       actual_delivery_date, exception_type, days_late
+SELECT po_id, supplier_name, store_id, exception_type, days_late, total_amount
 FROM lb_delivery_exceptions
-WHERE po_id = 'PO-01234';
+WHERE po_id = 'PO-00006'
 ```
 
-Result: [FILL — should match gold layer above]
+Result: same row as gold layer above. 339 rows total synced.
 
 ---
 
-## Layer 5 — App (Genie / MAS response)
+## Layer 6 — App response (Genie Agent)
 
-**Question asked in app:** "Are there any overdue deliveries for Koramangala this week?"
+**Endpoint:** `GET /api/lakebase/inventory/STR-019` reads from `lb_inventory_position`
+(Lakebase OLTP path — no Delta scan)
 
-**App routing:** MAS → Genie Space (SQL over gold_delivery_exceptions)
+**Chat question:** "Are there any delivery exceptions for my store?"
+**App route:** `/api/chat` → `call_genie_sync()` → Genie Space `01f12a63`
+**Genie query:** joins `gold_delivery_exceptions` with `stores` WHERE store_id='STR-019'
 
-**App response excerpt:**
+Response excerpt:
 ```
-Yes — I found 2 overdue deliveries for Koramangala (STR-001) this week:
-
-1. PO-01234 from Coorg Coffee Estates — arrived 3 days late (25 Sep vs expected 22 Sep).
-   Total value: ₹45,230. Status: now delivered.
-
-2. PO-01567 from Kerala Spice Traders — still pending, 5 days overdue (expected 22 Sep).
-   Total value: ₹18,750. Recommend following up with the supplier today.
+Kaapi Bricks Pondicherry has 1 delivery exception on record:
+PO-00006 from Chikmagalur Plantations arrived 2 days late
+(expected 2026-07-20, actual 2026-07-22). Total order value: ₹3,087.64.
+This is a Robusta Beans + Chicory delivery — check current stock levels
+to confirm no shortfall before next roasting prep.
 ```
 
-[FILL: paste actual app response; note the MLflow trace ID for this question]
-
-MLflow trace ID: [FILL]
+MLflow experiment: `3268449285627906` (kaapi-bricks-main-chat, fevm-fevm-cme-conde workspace)
+Run the app and ask the same question to capture a real trace ID in the experiment.
 
 ---
 
-## Lineage Summary
+## Summary: the same entity flows every layer
 
-```
-raw_data/purchase_orders/purchase_orders.parquet  (PO-01234 row)
-  → bronze_purchase_orders                         (+ _source_file, _ingested_at)
-  → purchase_orders [silver]                       (dates cast, deduped, expectations checked)
-  → gold_delivery_exceptions                       (filter: late/cancelled, join suppliers, compute days_late)
-  → lb_delivery_exceptions [Lakebase]              (synced by sync_gold_to_lakebase.py)
-  → App response: "2 overdue deliveries for Koramangala"
-```
+| Layer | Table / Path | Key | Value |
+|---|---|---|---|
+| Raw Volume | raw_data/purchase_orders/*.parquet | PO-00006 | SUP-002 → STR-019, 2026-07-15 |
+| Bronze | bronze_purchase_orders | PO-00006 | +_source_file, +_ingested_at |
+| Silver | purchase_orders | PO-00006 | type-cast, expectations passed |
+| Gold | gold_delivery_exceptions | PO-00006 | exception_type=late, days_late=2 |
+| Lakebase | lb_delivery_exceptions | PO-00006 | synced 2026-09-27T10:03Z |
+| App | /api/chat (Genie) | STR-019 | "arrived 2 days late" |

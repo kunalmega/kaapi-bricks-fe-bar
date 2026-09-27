@@ -109,13 +109,17 @@ Annual value at ₹800/hr         : ₹2,707,200 (~₹27 lakhs/year)
 ## Payback Estimate
 
 ```
-Databricks platform cost (est.) : $60,000/year  [ASSUMPTION: serverless + apps + FMAPI at demo scale]
-Implementation cost (one-time)  : $40,000  [ASSUMPTION: 4-week pilot + data eng + app setup]
+Databricks platform cost        : $50,000/year  [ASSUMPTION: serverless pipelines + Lakebase + FMAPI + apps at 37-store scale]
+3-year platform cost            : $150,000
+Implementation cost (one-time)  : $70,000  [ASSUMPTION: 8-week implementation — data eng, app setup, training, change management]
 ---------------------------------------------------------------------------
-Year-1 net benefit              : $264,500 - $60,000 - $40,000 = $164,500
-Year-2+ net benefit/year        : $264,500 - $60,000 = $204,500
-Payback period                  : ~3.6 months
-3-year ROI                      : ($164,500 + $204,500 × 2) / $100,000 total investment = 5.7×
+Total 3-year investment         : $220,000  [ASSUMPTION: $150k platform + $70k implementation]
+
+Year-1 net benefit              : $264,500 - $50,000 - $70,000 = $144,500
+Year-2+ net benefit/year        : $264,500 - $50,000 = $214,500
+Payback period                  : ~4.8 months
+3-year total value              : $144,500 + $214,500 + $214,500 = $573,500
+3-year ROI                      : $573,500 / $220,000 = 2.6×
 ```
 
 ---
@@ -127,7 +131,7 @@ Payback period                  : ~3.6 months
 | Invoice exception rate | 12% | < 3% |
 | Stockout rate (store-days) | 3.5% | < 1.5% |
 | Waste rate (% of ingredient cost) | ~4% | < 3% |
-| Supplier on-time rate | [FILL from gold_supplier_performance] | > 92% |
+| Supplier on-time rate | 80–86% (range across 8 suppliers, per gold_supplier_performance) | > 92% |
 | Manager minutes per delivery reconciliation | 25 min | < 2 min |
 | Genie answer latency | N/A (manual) | < 5 sec |
 | Forecast error (MAPE) | no forecast | < 15% |
