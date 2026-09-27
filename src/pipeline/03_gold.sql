@@ -32,6 +32,7 @@ LEFT JOIN item_units u ON o.store_id = u.store_id AND o.order_date = u.order_dat
 GROUP BY o.store_id, o.order_date;
 
 -- 2. Current inventory position per store x ingredient (⭐ served via Lakebase).
+-- Unions the pipeline silver MV (historical) with app_inventory_receipts (live app writes).
 CREATE OR REFRESH MATERIALIZED VIEW gold_inventory_position
 COMMENT 'Current stock per store x ingredient with below-reorder flag and days of cover.'
 AS
@@ -41,7 +42,13 @@ WITH pos AS (
          SUM(CASE WHEN transaction_type = 'usage' THEN -quantity ELSE 0 END)    AS total_usage,
          COUNT(DISTINCT CASE WHEN transaction_type = 'usage' THEN transaction_date END) AS usage_days,
          MAX(transaction_date)                                                  AS last_txn_date
-  FROM inventory_transactions
+  FROM (
+    SELECT store_id, ingredient_id, quantity, transaction_type, transaction_date
+    FROM inventory_transactions
+    UNION ALL
+    SELECT store_id, ingredient_id, quantity, 'purchase' AS transaction_type, receipt_date AS transaction_date
+    FROM app_inventory_receipts
+  ) combined
   GROUP BY store_id, ingredient_id
 )
 SELECT
@@ -56,9 +63,13 @@ FROM pos p
 JOIN ingredients i ON p.ingredient_id = i.ingredient_id;
 
 -- 3. Open (pending) purchase orders with overdue flag (⭐ Lakebase).
+-- Excludes POs that the app has approved via app_po_approvals.
 CREATE OR REFRESH MATERIALIZED VIEW gold_open_purchase_orders
 COMMENT 'Pending supplier POs with overdue flag and days overdue.'
 AS
+WITH approved AS (
+  SELECT DISTINCT po_id FROM app_po_approvals
+)
 SELECT
   po.po_id, po.supplier_id, s.name AS supplier_name, po.store_id,
   po.order_date, po.expected_delivery_date, po.total_amount, s.lead_time_days,
@@ -66,7 +77,8 @@ SELECT
   GREATEST(datediff(current_date(), po.expected_delivery_date), 0)      AS days_overdue
 FROM purchase_orders po
 JOIN suppliers s ON po.supplier_id = s.supplier_id
-WHERE po.status = 'pending';
+WHERE po.status = 'pending'
+  AND po.po_id NOT IN (SELECT po_id FROM approved);
 
 -- 4. Delivery exceptions: late or cancelled POs (⭐ Lakebase).
 CREATE OR REFRESH MATERIALIZED VIEW gold_delivery_exceptions

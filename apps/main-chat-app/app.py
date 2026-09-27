@@ -1013,7 +1013,12 @@ async def parse_invoice(file: UploadFile = File(...), store: str = Form("Koraman
 
 @app.post("/api/approve-invoice")
 async def approve_invoice(request: Request):
-    """Approve invoice → insert inventory transactions + update PO status."""
+    """Approve invoice → write to app_inventory_receipts + record PO approval.
+
+    Writes to app-managed Delta tables (not the pipeline-owned silver MVs) so
+    the medallion architecture stays intact. gold_inventory_position and
+    gold_open_purchase_orders union these in on the next pipeline refresh.
+    """
     body = await request.json()
     items = body.get("items", [])
     store_id = body.get("store_id", "STR-001")
@@ -1023,35 +1028,57 @@ async def approve_invoice(request: Request):
     for item in items:
         if not item.get("ingredient_id") or not item.get("invoice_qty"):
             continue
-        txn_id = f"INV-PARSED-{uuid.uuid4().hex[:8]}"
-        sql = f"""INSERT INTO {CATALOG_SCHEMA}.inventory_transactions
-            (transaction_id, store_id, ingredient_id, transaction_date, transaction_type, quantity, unit_cost)
-            VALUES ('{txn_id}', '{store_id}', '{item['ingredient_id']}', CURRENT_DATE(), 'purchase', {item['invoice_qty']}, {item.get('invoice_rate', 0)})"""
+        receipt_id = f"RCP-{uuid.uuid4().hex[:8]}"
+        sql = f"""INSERT INTO {CATALOG_SCHEMA}.app_inventory_receipts
+            (receipt_id, store_id, ingredient_id, receipt_date, quantity, unit_cost)
+            VALUES ('{receipt_id}', '{store_id}', '{item['ingredient_id']}', CURRENT_DATE(), {item['invoice_qty']}, {item.get('invoice_rate', 0)})"""
         _run_sql(sql)
         inserted += 1
 
-    # Update PO status
+    # Record PO approval (gold_open_purchase_orders excludes approved POs)
     if po_id:
-        _run_sql(f"UPDATE {CATALOG_SCHEMA}.purchase_orders SET status = 'delivered', actual_delivery_date = CAST(CURRENT_DATE() AS STRING) WHERE po_id = '{po_id}'")
+        approval_id = f"APR-{uuid.uuid4().hex[:8]}"
+        _run_sql(f"""INSERT INTO {CATALOG_SCHEMA}.app_po_approvals
+            (approval_id, po_id, actual_delivery)
+            VALUES ('{approval_id}', '{po_id}', CURRENT_DATE())""")
 
     return {"ok": True, "inserted": inserted, "po_updated": po_id}
 
 
 @app.get("/api/inventory/{store_id}")
 def get_inventory(store_id: str):
-    """Get current inventory levels for a store — sum of all transactions."""
+    """Get current inventory from the gold operational view (unions pipeline + app receipts)."""
     sql = f"""
-    SELECT i.ingredient_id, ing.name, ing.unit,
-           ROUND(SUM(i.quantity), 2) as current_stock,
-           ing.reorder_threshold
-    FROM {CATALOG_SCHEMA}.inventory_transactions i
-    JOIN {CATALOG_SCHEMA}.ingredients ing ON i.ingredient_id = ing.ingredient_id
-    WHERE i.store_id = '{store_id}'
-    GROUP BY i.ingredient_id, ing.name, ing.unit, ing.reorder_threshold
-    ORDER BY ing.name
+    SELECT ingredient_id, ingredient_name, unit,
+           current_stock, reorder_threshold, below_reorder, days_cover
+    FROM {CATALOG_SCHEMA}.gold_inventory_position
+    WHERE store_id = '{store_id}'
+    ORDER BY ingredient_name
     """
     rows = _run_sql(sql)
     return {"store_id": store_id, "inventory": rows}
+
+
+@app.get("/api/lakebase/inventory/{store_id}")
+def get_lakebase_inventory(store_id: str):
+    """Get current inventory from Lakebase (OLTP latency) — operational serving path.
+
+    Reads lb_inventory_position synced from gold_inventory_position via
+    scripts/sync_gold_to_lakebase.py. Lower latency than scanning Delta.
+    """
+    try:
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT ingredient_id, ingredient_name, unit, current_stock, reorder_threshold, "
+            "below_reorder, days_cover FROM lb_inventory_position WHERE store_id = %s ORDER BY ingredient_name",
+            (store_id,)
+        )
+        cols = [d[0] for d in cur.description]
+        rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+        return {"store_id": store_id, "source": "lakebase", "inventory": rows}
+    except Exception as e:
+        return {"store_id": store_id, "source": "lakebase", "error": str(e), "inventory": []}
 
 
 # Serve static files and index.html
