@@ -1,112 +1,80 @@
-# Unity Catalog Tables and Lineage — Kaapi Bricks
+# Unity Catalog Tables and Lineage
 
 Catalog: `fevm_cme_conde_catalog`  Schema: `kaapi_bricks`
+Pipeline: `kaapi_bricks_medallion` (update 065d6a70, 2026-09-27)
 
-## Complete Table Inventory
+## Table Inventory
 
-| Full Table Name | Layer | Description | Row Count |
-|---|---|---|---|
-| fevm_cme_conde_catalog.kaapi_bricks.raw_data (volume) | RAW | Parquet landing zone | — |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_stores | BRONZE | Raw stores, Auto Loader | 37 |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_products | BRONZE | Raw products | 28 |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_toppings | BRONZE | Raw toppings | 12 |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_ingredients | BRONZE | Raw ingredients | 22 |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_suppliers | BRONZE | Raw suppliers | 8 |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_promotions | BRONZE | Raw promotions | 15 |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_customers | BRONZE | Raw customers | 15,000 |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_orders | BRONZE | Raw orders | 200,000 |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_order_items | BRONZE | Raw order line items | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_order_item_toppings | BRONZE | Raw topping lines | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_purchase_orders | BRONZE | Raw supplier POs | 2,000 |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_inventory_transactions | BRONZE | Raw inventory movements | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_promotion_redemptions | BRONZE | Raw promo redemptions | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.bronze_po_line_items | BRONZE | Raw PO line items | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.stores | SILVER | Conformed store master | 37 |
-| fevm_cme_conde_catalog.kaapi_bricks.products | SILVER | Conformed products | 28 |
-| fevm_cme_conde_catalog.kaapi_bricks.toppings | SILVER | Conformed toppings | 12 |
-| fevm_cme_conde_catalog.kaapi_bricks.ingredients | SILVER | Conformed ingredients | 22 |
-| fevm_cme_conde_catalog.kaapi_bricks.suppliers | SILVER | Conformed suppliers | 8 |
-| fevm_cme_conde_catalog.kaapi_bricks.promotions | SILVER | Conformed promotions | 15 |
-| fevm_cme_conde_catalog.kaapi_bricks.customers | SILVER | Conformed customers | 15,000 |
-| fevm_cme_conde_catalog.kaapi_bricks.orders | SILVER | Conformed orders + order_ts | 200,000 |
-| fevm_cme_conde_catalog.kaapi_bricks.order_items | SILVER | Conformed order lines | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.order_item_toppings | SILVER | Conformed topping lines | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.purchase_orders | SILVER | Conformed POs | 2,000 |
-| fevm_cme_conde_catalog.kaapi_bricks.inventory_transactions | SILVER | Conformed inventory movements | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.promotion_redemptions | SILVER | Conformed redemptions | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.po_line_items | SILVER | Conformed PO line items | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.gold_store_daily_kpis | GOLD | Store × day KPIs | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.gold_inventory_position | GOLD | Current stock per store × ingredient | 814 |
-| fevm_cme_conde_catalog.kaapi_bricks.gold_open_purchase_orders | GOLD | Pending POs with overdue flag | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.gold_delivery_exceptions | GOLD | Late/cancelled deliveries | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.gold_product_demand | GOLD | Daily demand + 28d rolling avg | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.gold_supplier_performance | GOLD | Supplier fill rate, on-time % | 8 |
-| fevm_cme_conde_catalog.kaapi_bricks.gold_waste_summary | GOLD | Waste qty + cost per store | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.app_inventory_receipts | APP | Invoice-approved receipts (app writes) | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.app_po_approvals | APP | PO approval events (app writes) | [FILL] |
-| fevm_cme_conde_catalog.kaapi_bricks.inference_logs | APP | MLflow/app observability | [FILL] |
+| Layer | Full Table Name | Rows | Type |
+|---|---|---:|---|
+| Raw Volume | raw_data/stores/ | 37 | Parquet file |
+| Raw Volume | raw_data/orders/ | 200,000 | Parquet file |
+| Raw Volume | raw_data/inventory_transactions/ | 171,163 | Parquet file |
+| Raw Volume | raw_data/purchase_orders/ | 2,000 | Parquet file |
+| Raw Volume | raw_data/po_line_items/ | 3,493 | Parquet file |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_stores | 37 | Streaming Table |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_products | 28 | Streaming Table |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_toppings | 12 | Streaming Table |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_ingredients | 22 | Streaming Table |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_suppliers | 8 | Streaming Table |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_promotions | 15 | Streaming Table |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_customers | 15,000 | Streaming Table |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_orders | 200,000 | Streaming Table |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_order_items | 325,765 | Streaming Table |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_order_item_toppings | 261,124 | Streaming Table |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_purchase_orders | 2,000 | Streaming Table |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_inventory_transactions | 171,163 | Streaming Table |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_promotion_redemptions | 35,969 | Streaming Table |
+| Bronze | fevm_cme_conde_catalog.kaapi_bricks.bronze_po_line_items | 3,493 | Streaming Table |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.stores | 37 | Materialized View |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.products | 28 | Materialized View |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.toppings | 12 | Materialized View |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.ingredients | 22 | Materialized View |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.suppliers | 8 | Materialized View |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.promotions | 15 | Materialized View |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.customers | 15,000 | Materialized View |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.orders | 200,000 | Materialized View |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.order_items | 325,765 | Materialized View |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.order_item_toppings | 261,124 | Materialized View |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.purchase_orders | 2,000 | Materialized View |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.inventory_transactions | 171,163 | Materialized View |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.promotion_redemptions | 35,969 | Materialized View |
+| Silver | fevm_cme_conde_catalog.kaapi_bricks.po_line_items | 3,493 | Materialized View |
+| Gold | fevm_cme_conde_catalog.kaapi_bricks.gold_store_daily_kpis | 3,693 | Materialized View |
+| Gold | fevm_cme_conde_catalog.kaapi_bricks.gold_inventory_position | 814 | Materialized View |
+| Gold | fevm_cme_conde_catalog.kaapi_bricks.gold_open_purchase_orders | 147 | Materialized View |
+| Gold | fevm_cme_conde_catalog.kaapi_bricks.gold_delivery_exceptions | 339 | Materialized View |
+| Gold | fevm_cme_conde_catalog.kaapi_bricks.gold_product_demand | 85,710 | Materialized View |
+| Gold | fevm_cme_conde_catalog.kaapi_bricks.gold_supplier_performance | 8 | Materialized View |
+| Gold | fevm_cme_conde_catalog.kaapi_bricks.gold_waste_summary | 810 | Materialized View |
+| App write | fevm_cme_conde_catalog.kaapi_bricks.app_inventory_receipts | 0 | Delta Table |
+| App write | fevm_cme_conde_catalog.kaapi_bricks.app_po_approvals | 0 | Delta Table |
 
-## Lineage Trace: Orders Entity (raw → bronze → silver → gold)
+## Lineage Traces
 
-```
-/Volumes/fevm_cme_conde_catalog/kaapi_bricks/raw_data/orders/orders.parquet
-  │  (Auto Loader — STREAM read_files, format=parquet)
-  ▼
-fevm_cme_conde_catalog.kaapi_bricks.bronze_orders
-  │  columns: order_id, customer_id, store_id, order_date, order_time, channel,
-  │           subtotal, discount, order_total, tax, promotion_id, status,
-  │           _source_file, _ingested_at
-  │  (MATERIALIZED VIEW — ROW_NUMBER dedup on order_id, type casting, derive order_ts)
-  ▼
-fevm_cme_conde_catalog.kaapi_bricks.orders    [silver]
-  │  columns: order_id, customer_id, store_id, order_date, order_time, order_ts,
-  │           channel, subtotal, discount, order_total, tax, promotion_id, status
-  │  expectations enforced: valid_order_id (DROP), valid_keys (DROP),
-  │                          non_neg_total (DROP), valid_status (WARN)
-  │
-  ├─► fevm_cme_conde_catalog.kaapi_bricks.gold_store_daily_kpis
-  │     (aggregated: store_id × order_date → orders, revenue, AOV, refund_rate, promo_orders)
-  │
-  └─► fevm_cme_conde_catalog.kaapi_bricks.gold_product_demand
-        (joined with order_items → store_id × product_id × order_date → units, revenue, 28d avg)
-```
-
-## Lineage Trace: Inventory Entity (raw → bronze → silver → gold)
+### Orders end-to-end
 
 ```
-/Volumes/.../raw_data/inventory_transactions/inventory_transactions.parquet
-  ▼  Auto Loader
-fevm_cme_conde_catalog.kaapi_bricks.bronze_inventory_transactions
-  ▼  MV + expectations (valid_txn_id, valid_type DROP, non_neg_cost WARN)
-fevm_cme_conde_catalog.kaapi_bricks.inventory_transactions    [silver]
-  ▼  + UNION fevm_cme_conde_catalog.kaapi_bricks.app_inventory_receipts (app writes)
-fevm_cme_conde_catalog.kaapi_bricks.gold_inventory_position
-  ▼  synced to Lakebase table: lb_inventory_position
-  ▼  read by app endpoint: GET /api/lakebase/inventory/{store_id}
+raw_data/orders/orders.parquet
+  → fevm_cme_conde_catalog.kaapi_bricks.bronze_orders          (Auto Loader, 200,000 rows)
+  → fevm_cme_conde_catalog.kaapi_bricks.orders                 (silver MV, 200,000 rows — QUALIFY dedup)
+  → fevm_cme_conde_catalog.kaapi_bricks.gold_store_daily_kpis  (gold MV, 3,693 rows — grouped by store×day)
+  → fevm_cme_conde_catalog.kaapi_bricks.gold_product_demand    (gold MV, 85,710 rows — grouped by store×product×day)
 ```
 
-## Verification Queries (run after pipeline completes)
+### Inventory / delivery end-to-end
 
-```sql
--- Confirm lineage registered in system tables
-SELECT source_table_full_name, target_table_full_name, created_by
-FROM system.access.table_lineage
-WHERE source_table_full_name LIKE 'fevm_cme_conde_catalog.kaapi_bricks.%'
-  AND created_by LIKE '%pipeline%'
-ORDER BY source_table_full_name;
-
--- Row count snapshot across layers
-SELECT table_name,
-       CASE
-         WHEN table_name LIKE 'bronze_%' THEN '1_bronze'
-         WHEN table_name LIKE 'gold_%'   THEN '3_gold'
-         WHEN table_name LIKE 'app_%'    THEN '4_app'
-         ELSE '2_silver'
-       END AS layer
-FROM information_schema.tables
-WHERE table_catalog = 'fevm_cme_conde_catalog'
-  AND table_schema  = 'kaapi_bricks'
-ORDER BY layer, table_name;
 ```
+raw_data/inventory_transactions/inventory_transactions.parquet
+  → fevm_cme_conde_catalog.kaapi_bricks.bronze_inventory_transactions   (171,163 rows)
+  → fevm_cme_conde_catalog.kaapi_bricks.inventory_transactions          (171,163 rows)
+  → fevm_cme_conde_catalog.kaapi_bricks.gold_inventory_position         (814 rows — current stock per store×ingredient)
+  → lb_inventory_position (Lakebase)                                    (814 rows — OLTP serving)
+  → GET /api/lakebase/inventory/{store_id}                              (app response)
 
-[FILL: Paste the query results above after the pipeline runs and commit this file.]
+raw_data/purchase_orders/purchase_orders.parquet
+  → fevm_cme_conde_catalog.kaapi_bricks.bronze_purchase_orders
+  → fevm_cme_conde_catalog.kaapi_bricks.purchase_orders
+  → fevm_cme_conde_catalog.kaapi_bricks.gold_delivery_exceptions        (339 rows — late/cancelled)
+  → fevm_cme_conde_catalog.kaapi_bricks.gold_open_purchase_orders       (147 rows — pending, not approved)
+```
