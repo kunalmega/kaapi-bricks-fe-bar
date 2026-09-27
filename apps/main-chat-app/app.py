@@ -29,7 +29,8 @@ import psycopg
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
-MAS_ENDPOINT_NAME = os.environ.get("MAS_ENDPOINT_NAME", "mas-3c936239-endpoint")
+GENIE_SPACE_ID = os.environ.get("GENIE_SPACE_ID", "01f12a63ec1011e0acbb09158eda7634")
+MCP_SERVER_URL = os.environ.get("MCP_SERVER_URL", "")
 LAKEBASE_INSTANCE_NAME = os.environ.get("LAKEBASE_INSTANCE_NAME", "kaapi-bricks")
 LAKEBASE_DATABASE_NAME = os.environ.get("LAKEBASE_DATABASE_NAME", "databricks_postgres")
 SQL_WAREHOUSE_ID = os.environ.get("SQL_WAREHOUSE_ID", "e755eae9d758fdf7")
@@ -329,7 +330,7 @@ def save_to_cache(question, answer, embedding, store, latency_ms):
 
 
 # =============================================================================
-# MAS ENDPOINT — STREAMING
+# GENIE AGENT — conversation API (replaces MAS + KA)
 # =============================================================================
 def clean_response(text):
     """Clean MAS response: extract only the final HQ supervisor summary."""
@@ -456,75 +457,65 @@ def _extract_token_usage(data):
     return int(input_tokens), int(output_tokens)
 
 
-@mlflow.trace(name="mas_call", span_type=SpanType.CHAT_MODEL)
-def call_mas_sync(messages, store_location):
-    """MAS call with auto-approval loop for MCP tools."""
+@mlflow.trace(name="genie_call", span_type=SpanType.CHAT_MODEL)
+def call_genie_sync(messages, store_location):
+    """Call Genie Agent conversation API (replaces MAS + KA)."""
     w = _get_workspace_client()
-    url = f"{w.config.host.rstrip('/')}/serving-endpoints/{MAS_ENDPOINT_NAME}/invocations"
+    host = w.config.host.rstrip("/")
     headers = w.config.authenticate()
     headers["Content-Type"] = "application/json"
 
-    input_messages = _prepare_messages(messages, store_location)
-    conversation = input_messages
+    user_query = messages[-1]["content"] if messages else ""
+    db_name = STORE_DB_NAMES.get(store_location, f"Kaapi Bricks {store_location}")
+    content = f"[Store: {db_name}] {user_query}"
 
     start_time = time.time()
-    max_loops = 5  # Safety: max approval loops
-
     try:
-        prev_response_id = None
+        resp = http_requests.post(
+            f"{host}/api/2.0/genie/spaces/{GENIE_SPACE_ID}/start-conversation",
+            headers=headers,
+            json={"content": content},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        conversation_id = data["conversation_id"]
+        message_id = data["message_id"]
 
-        for loop in range(max_loops):
-            print(f"[MAS] Loop {loop+1}")
+        status = ""
+        msg = {}
+        for _ in range(60):
+            poll = http_requests.get(
+                f"{host}/api/2.0/genie/spaces/{GENIE_SPACE_ID}/conversations/{conversation_id}/messages/{message_id}",
+                headers=headers, timeout=30,
+            )
+            poll.raise_for_status()
+            msg = poll.json()
+            status = msg.get("status", "")
+            print(f"[Genie] status={status}")
+            if status in ("COMPLETED", "FAILED", "CANCELLED"):
+                break
+            time.sleep(2)
 
-            if prev_response_id is None:
-                # First call — send the user's question
-                payload = {"input": conversation, "databricks_options": {"return_trace": True}}
-            else:
-                # Subsequent call — send previous_response_id + output items + approvals as input
-                payload = {"previous_response_id": prev_response_id, "input": approval_input, "databricks_options": {"return_trace": True}}
-
-            resp = http_requests.post(url, headers=headers, json=payload, timeout=300)
-            print(f"[MAS] Status: {resp.status_code}, Body: {resp.text[:300]}")
-            resp.raise_for_status()
-            data = resp.json()
-
-            prev_response_id = data.get("id")
-            output_items = data.get("output", [])
-
-            # Check for MCP approval requests
-            mcp_requests = [item for item in output_items if item.get("type") == "mcp_approval_request"]
-
-            if not mcp_requests:
-                # No approval needed — extract final answer
-                latency_ms = (time.time() - start_time) * 1000
-                raw_text = _extract_text_from_output(data)
-                cleaned = clean_response(raw_text)
-                input_tokens, output_tokens = _extract_token_usage(data)
-                print(f"[MAS] Done in {loop+1} loops, {latency_ms:.0f}ms")
-                return {
-                    "text": cleaned, "latency_ms": latency_ms,
-                    "input_tokens": input_tokens, "output_tokens": output_tokens, "error": None,
-                }
-
-            # Auto-approve all MCP tool requests
-            print(f"[MAS] Auto-approving {len(mcp_requests)} MCP tool(s): {[r.get('name') for r in mcp_requests]}")
-            approval_items = []
-            for req in mcp_requests:
-                approval_items.append({
-                    "type": "mcp_approval_response",
-                    "id": f"auto-{req['id']}",
-                    "approval_request_id": req["id"],
-                    "approve": True,
-                    "reason": "Auto-approved by Kaapi Bricks App",
-                })
-
-            # Build input for next call: original output items + approval responses
-            approval_input = output_items + approval_items
-
-        # If we exhausted loops
         latency_ms = (time.time() - start_time) * 1000
-        return {"text": "Error: too many MCP approval loops", "latency_ms": latency_ms,
-                "input_tokens": 0, "output_tokens": 0, "error": "max_loops"}
+
+        if status != "COMPLETED":
+            return {"text": "Sorry, I couldn't get an answer right now. Please try again.",
+                    "latency_ms": latency_ms, "input_tokens": 0, "output_tokens": 0, "error": status}
+
+        answer_parts = []
+        for attachment in msg.get("attachments", []):
+            if attachment.get("text"):
+                answer_parts.append(attachment["text"]["content"])
+            elif attachment.get("query"):
+                q = attachment["query"]
+                if q.get("description"):
+                    answer_parts.append(q["description"])
+        answer = "\n\n".join(answer_parts) if answer_parts else "I don't have specific data on that. Try asking about sales, inventory, or purchase orders."
+
+        print(f"[Genie] Done in {latency_ms:.0f}ms")
+        return {"text": answer, "latency_ms": latency_ms,
+                "input_tokens": 0, "output_tokens": 0, "error": None}
 
     except Exception as e:
         latency_ms = (time.time() - start_time) * 1000
@@ -546,7 +537,7 @@ def log_inference(trace_id, conv_id, store, query_text, response, latency_ms,
         (trace_id, request_id, timestamp, conversation_id, store_location, query, response_summary, latency_ms, agent_name, endpoint_name, input_tokens, output_tokens, error)
         VALUES ('{trace_id or ""}', '{str(uuid.uuid4())}', current_timestamp(), '{conv_id or ""}',
                 '{store or ""}', '{query_escaped}', '{summary}', {latency_ms:.1f},
-                'MAS', '{MAS_ENDPOINT_NAME}', {input_tokens}, {output_tokens}, '{error or ""}')"""
+                'Genie', '{GENIE_SPACE_ID}', {input_tokens}, {output_tokens}, '{error or ""}')"""
         http_requests.post(url, headers=headers, json={"warehouse_id": SQL_WAREHOUSE_ID, "statement": sql, "wait_timeout": "10s"})
     except Exception as e:
         print(f"[Inference log] error: {e}")
@@ -720,9 +711,9 @@ def process_chat(query, store, history, conv_id):
             "error": None,
         }
 
-    # 2. Call MAS endpoint (traced)
+    # 2. Call Genie Agent (replaces MAS + KA)
     messages = history + [{"role": "user", "content": query}]
-    result = call_mas_sync(messages, store)
+    result = call_genie_sync(messages, store)
 
     # 3. Update trace metadata with token usage
     trace_id = None
@@ -731,7 +722,7 @@ def process_chat(query, store, history, conv_id):
         if span:
             trace_id = span.request_id
             mlflow.update_current_trace(
-                tags={"cache_hit": "false", "endpoint": MAS_ENDPOINT_NAME},
+                tags={"cache_hit": "false", "endpoint": GENIE_SPACE_ID},
                 metadata={
                     "input_tokens": str(result["input_tokens"]),
                     "output_tokens": str(result["output_tokens"]),
