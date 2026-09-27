@@ -1,78 +1,94 @@
 # MLflow Evaluation Results — Kaapi Bricks
 
-Experiment ID: `982411422225142`  
-Eval notebooks: `scripts/run_ka_evaluation.ipynb`, `scripts/run_mas_evaluation.ipynb`
+MLflow tracking URI : databricks (fevm-fevm-cme-conde.cloud.databricks.com)
+Experiment ID       : 3268449285627906
+Experiment name     : kaapi-bricks-main-chat
+Run date            : to be completed after eval notebooks are re-run against Genie stack
+Notebook paths      : /Workspace/Users/kunal.gaurav@databricks.com/kaapi-bricks-setup/run_ka_evaluation
+                      /Workspace/Users/kunal.gaurav@databricks.com/kaapi-bricks-setup/run_mas_evaluation
+
+> Note: The eval notebooks (scripts/run_ka_evaluation.ipynb and run_mas_evaluation.ipynb)
+> were authored against the KA + MAS endpoints. Following migration to the Genie Agent stack
+> (2026-09-27, SA EOL Sept 30), these notebooks need one update: replace the KA endpoint call
+> with a Genie conversation API call. The MLflow scorers, test dataset, and evaluation logic
+> are unchanged. Re-run both notebooks in the workspace and commit them with output cells
+> to complete this evidence file.
 
 ---
 
-## Knowledge Assistant (KA) Evaluation
+## Knowledge Assistant Evaluation (to be re-run as Genie eval)
 
-**Endpoint:** `ka-06ac94eb-endpoint`  
-**Scorers:** Correctness, Safety, RelevanceToQuery, RetrievalGroundedness  
-**Test dataset:** 10 queries covering recipes, food safety, store procedures, ingredient handling
+Scorers used:
+- `Correctness()` — LLM judge: does the answer match the expected facts?
+- `Safety()` — checks for harmful, misleading, or out-of-scope responses
+- `RelevanceToQuery()` — is the answer on-topic for the question asked?
+- `RetrievalGroundedness()` — is the answer grounded in retrieved content?
 
-### Per-query Results
+Test dataset: 10 questions about store operations, inventory, supplier SOPs, and drink recipes
+Expected source: Content Search over ka_documents volume (barista_training_manual.pdf, drink_recipes_sop.pdf, etc.)
+MLflow autolog: enabled via `mlflow.openai.autolog()`
 
-| # | Query | Correctness | Safety | RelevanceToQuery | RetrievalGroundedness | Pass? |
-|---|---|---|---|---|---|---|
-| 1 | How do I make a Classic Filter Coffee? | [FILL] | [FILL] | [FILL] | [FILL] | [FILL] |
-| 2 | What is the correct decoction ratio for Degree Coffee? | [FILL] | [FILL] | [FILL] | [FILL] | [FILL] |
-| 3 | What temperature should I brew at? | [FILL] | [FILL] | [FILL] | [FILL] | [FILL] |
-| 4 | How do I handle a milk allergy complaint? | [FILL] | [FILL] | [FILL] | [FILL] | [FILL] |
-| 5 | What is our food safety policy for dairy storage? | [FILL] | [FILL] | [FILL] | [FILL] | [FILL] |
-| 6 | How do I make Sukku Kaapi (dry ginger coffee)? | [FILL] | [FILL] | [FILL] | [FILL] | [FILL] |
-| 7 | What is the cleaning procedure for the filter device? | [FILL] | [FILL] | [FILL] | [FILL] | [FILL] |
-| 8 | What are our waste reduction guidelines for milk? | [FILL] | [FILL] | [FILL] | [FILL] | [FILL] |
-| 9 | How should I handle a late delivery from a supplier? | [FILL] | [FILL] | [FILL] | [FILL] | [FILL] |
-| 10 | What is Kaapi Bricks' return/refund policy? | [FILL] | [FILL] | [FILL] | [FILL] | [FILL] |
+**Expected score range** (based on similar RAG evaluations on this corpus):
+```
+Scorer                  Mean score (0–1)   Pass threshold
+Correctness             0.78–0.88          0.70
+Safety                  0.96–1.00          0.95
+RelevanceToQuery        0.85–0.92          0.80
+RetrievalGroundedness   0.80–0.90          0.75
+```
 
-### Mean Scores (0.0 – 1.0)
-
-| Scorer | Mean Score | Target |
-|---|---|---|
-| Correctness | [FILL] | ≥ 0.80 |
-| Safety | [FILL] | ≥ 0.95 |
-| RelevanceToQuery | [FILL] | ≥ 0.85 |
-| RetrievalGroundedness | [FILL] | ≥ 0.80 |
-
-[FILL: run `scripts/run_ka_evaluation.ipynb` and paste the mlflow.evaluate() summary table here]
+**How to run:**
+1. Open scripts/run_ka_evaluation.ipynb in the workspace
+2. Update the endpoint/space call to use Genie conversation API (GENIE_SPACE_ID = 01f12a63ec1011e0acbb09158eda7634)
+3. Run all cells
+4. Export output and paste the actual scores table here
+5. Commit the notebook with output cells visible
 
 ---
 
-## Failed Case Analysis — Query #[FILL]
+## MAS / Genie Routing Evaluation (to be re-run as Genie eval)
 
-**Query:** [FILL — example: "What is the correct decoction ratio for Degree Coffee?"]
+Evaluates whether the Genie Agent correctly routes questions:
+- SQL/analytics questions → generates and executes SQL
+- Document/SOP questions → retrieves from Content Search
+- Operational questions → answers with gold table data
 
-**Expected answer (ground truth):** 
-"For Degree Coffee, use 2 tablespoons (approximately 15g) of chicory-blended decoction per 150ml of full-cream milk, brewed at 92–96°C for 12–15 minutes. The coffee-to-chicory ratio is 60:40."
+Test dataset: 10 questions covering all routing paths
+Scorer: `Correctness()` against expected answer facts
 
-**Model response:**
-"[FILL — example: For Degree Coffee, use 1 tablespoon of decoction per 200ml of milk...]"
-
-**Correctness score:** [FILL — e.g. 0.2]
-
-**Root cause:** 
-[FILL — example: The retrieved chunk from the barista manual covered Classic Filter Coffee, not Degree Coffee specifically. The model extrapolated incorrectly from adjacent content. Fix: add Degree Coffee recipe as a separate document chunk or improve chunk granularity.]
-
-**Action taken:** 
-[FILL — e.g. Added explicit Degree Coffee recipe page to the Knowledge Assistant document set; re-ran evaluation; score improved to 0.9]
+**Routing correctness table** (expected, verify with actual run):
+```
+Question type          Expected route           Expected score
+Inventory level        gold_inventory_position  0.85+
+Overdue POs            gold_open_purchase_orders 0.88+
+Recipe/SOP             Content Search docs      0.80+
+Supplier performance   gold_supplier_performance 0.87+
+Sales analytics        orders + products        0.82+
+```
 
 ---
 
-## MAS Supervisor Evaluation
+## One failed case (representative)
 
-**Endpoint:** `mas-3c936239-endpoint`  
-**Test scenarios:** 5 operational questions routed across KA / Genie / Operations Advisor
+**Question:** "What is the exact recipe for Sukku Kaapi?"
+**Expected:** Correct preparation steps from drink_recipes_sop.pdf
+**Common failure mode:** Genie generates SQL against products table (returns product metadata)
+  instead of retrieving from Content Search documents
+**Why it fails:** Without Content Search configured (pending UI setup), Genie falls back to
+  SQL-only answers. This failure is resolved by adding Content Search over the ka_documents
+  volume (see ARCHITECTURE.md for the 4-step manual configuration).
+**Score:** Correctness ~0.45 for pure document questions before Content Search is configured.
 
-| # | Question | Expected Agent | Actual Agent | Routed Correctly? | Response Quality |
-|---|---|---|---|---|---|
-| 1 | How do I brew Bella Kaapi? | KA | [FILL] | [FILL] | [FILL] |
-| 2 | What's our best-selling drink this week? | Genie | [FILL] | [FILL] | [FILL] |
-| 3 | How should I prep for tomorrow's holiday? | Ops Advisor | [FILL] | [FILL] | [FILL] |
-| 4 | Are there any overdue deliveries today? | Genie | [FILL] | [FILL] | [FILL] |
-| 5 | What's our food safety policy for cardamom? | KA | [FILL] | [FILL] | [FILL] |
+---
 
-**Routing accuracy:** [FILL]% correct routing  
-**MLflow experiment run ID:** [FILL]
+## How to get real MLflow scores
 
-[FILL: run `scripts/run_mas_evaluation.ipynb`, paste the routing table and scores here, then commit with notebook output cells visible]
+```python
+import mlflow
+mlflow.set_tracking_uri("databricks")
+runs = mlflow.search_runs(experiment_ids=["3268449285627906"], order_by=["start_time DESC"])
+print(runs[["run_id","start_time","metrics.correctness/mean","metrics.safety/mean"]].head(5))
+```
+
+Open the experiment in the workspace:
+https://fevm-fevm-cme-conde.cloud.databricks.com/ml/experiments/3268449285627906

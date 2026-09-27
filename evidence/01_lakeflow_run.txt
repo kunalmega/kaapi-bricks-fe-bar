@@ -87,4 +87,5 @@ inventory_transactions        171,163
 promotion_redemptions          35,969
 Total revenue in orders: ₹29,575,938.50
 Avg order value: ₹147.88
-Date range: 2026-02-01 to 2026-07-31
+Orders date range  : 2026-02-01 to 2026-05-14 (200k order cap reached)
+PO + inventory     : 2026-02-01 to 2026-07-31
