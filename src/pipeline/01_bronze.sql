@@ -69,3 +69,8 @@ CREATE OR REFRESH STREAMING TABLE bronze_promotion_redemptions
 COMMENT 'Raw promotion redemptions (Auto Loader).'
 AS SELECT *, _metadata.file_path AS _source_file, current_timestamp() AS _ingested_at
 FROM STREAM read_files('${source_volume}/promotion_redemptions/', format => 'parquet');
+
+CREATE OR REFRESH STREAMING TABLE bronze_po_line_items
+COMMENT 'Raw purchase-order line items (Auto Loader).'
+AS SELECT *, _metadata.file_path AS _source_file, current_timestamp() AS _ingested_at
+FROM STREAM read_files('${source_volume}/po_line_items/', format => 'parquet');

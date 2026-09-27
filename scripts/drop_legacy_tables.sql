@@ -17,3 +17,4 @@ DROP TABLE IF EXISTS fevm_cme_conde_catalog.kaapi_bricks.order_item_toppings;
 DROP TABLE IF EXISTS fevm_cme_conde_catalog.kaapi_bricks.purchase_orders;
 DROP TABLE IF EXISTS fevm_cme_conde_catalog.kaapi_bricks.inventory_transactions;
 DROP TABLE IF EXISTS fevm_cme_conde_catalog.kaapi_bricks.promotion_redemptions;
+DROP TABLE IF EXISTS fevm_cme_conde_catalog.kaapi_bricks.po_line_items;

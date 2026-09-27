@@ -712,7 +712,58 @@ purchase_orders_pdf = pd.DataFrame(po_data)
 print(f"  Created {len(purchase_orders_pdf):,} purchase orders")
 
 # =============================================================================
-# 10. INVENTORY TRANSACTIONS (realistic: initial stock + daily usage + weekly restocking)
+# 10. PO LINE ITEMS (1–4 ingredient lines per purchase order)
+# =============================================================================
+print("Generating po_line_items...")
+
+SUPPLIER_INGREDIENTS = {
+    "SUP-001": ["ING-001"],
+    "SUP-002": ["ING-002", "ING-004"],
+    "SUP-003": ["ING-003", "ING-019"],
+    "SUP-004": ["ING-008", "ING-009", "ING-012"],
+    "SUP-005": ["ING-006", "ING-007", "ING-015", "ING-016", "ING-020"],
+    "SUP-006": ["ING-005", "ING-013", "ING-014", "ING-017", "ING-018"],
+    "SUP-007": ["ING-021", "ING-022"],
+    "SUP-008": ["ING-010", "ING-011"],
+}
+# daily usage defined later but needed here — use a local copy
+_DAILY_USAGE = {
+    "ING-001": 3.0, "ING-002": 4.0, "ING-003": 1.5, "ING-004": 1.5,
+    "ING-005": 1.0, "ING-006": 0.15, "ING-007": 0.2, "ING-008": 25.0,
+    "ING-009": 10.0, "ING-010": 3.0, "ING-011": 2.5, "ING-012": 2.0,
+    "ING-013": 0.5, "ING-014": 0.3, "ING-015": 0.3, "ING-016": 0.5,
+    "ING-017": 5.0, "ING-018": 0.5, "ING-019": 0.2, "ING-020": 0.05,
+    "ING-021": 2.0, "ING-022": 1.0,
+}
+_ing_lookup = {r["ingredient_id"]: r for r in ingredients_data}
+
+pli_data = []
+pli_idx = 0
+for po in po_data:
+    sup_ings = SUPPLIER_INGREDIENTS.get(po["supplier_id"], ["ING-001"])
+    n_lines = np.random.randint(1, min(5, len(sup_ings) + 1))
+    chosen = np.random.choice(sup_ings, size=n_lines, replace=False)
+    for ing_id in chosen:
+        ing = _ing_lookup[ing_id]
+        qty = round(_DAILY_USAGE[ing_id] * np.random.uniform(7, 14), 2)
+        unit_price = ing["unit_cost"]
+        pli_data.append({
+            "line_id": f"PLI-{pli_idx:06d}",
+            "po_id": po["po_id"],
+            "ingredient_id": ing_id,
+            "ingredient_name": ing["name"],
+            "quantity": qty,
+            "unit": ing["unit"],
+            "unit_price": unit_price,
+            "line_total": round(qty * unit_price, 2),
+        })
+        pli_idx += 1
+
+po_line_items_pdf = pd.DataFrame(pli_data)
+print(f"  Created {len(po_line_items_pdf):,} po_line_items")
+
+# =============================================================================
+# 11. INVENTORY TRANSACTIONS (realistic: initial stock + daily usage + weekly restocking)
 # =============================================================================
 print("Generating inventory transactions...")
 
@@ -881,6 +932,7 @@ tables = {
     "order_items": order_items_pdf,
     "order_item_toppings": order_item_toppings_pdf,
     "purchase_orders": purchase_orders_pdf,
+    "po_line_items": po_line_items_pdf,
     "inventory_transactions": inventory_transactions_pdf,
     "promotion_redemptions": promotion_redemptions_pdf,
 }

@@ -180,3 +180,17 @@ AS SELECT redemption_id, promotion_id, order_id, customer_id, store_id,
           CAST(discount_applied AS DOUBLE) AS discount_applied
 FROM bronze_promotion_redemptions
 QUALIFY ROW_NUMBER() OVER (PARTITION BY redemption_id ORDER BY _ingested_at DESC) = 1;
+
+CREATE OR REFRESH MATERIALIZED VIEW po_line_items (
+  CONSTRAINT valid_line_id  EXPECT (line_id IS NOT NULL) ON VIOLATION DROP ROW,
+  CONSTRAINT valid_po_id    EXPECT (po_id IS NOT NULL) ON VIOLATION DROP ROW,
+  CONSTRAINT positive_qty   EXPECT (quantity > 0) ON VIOLATION DROP ROW,
+  CONSTRAINT positive_price EXPECT (unit_price >= 0)
+)
+COMMENT 'Conformed purchase-order line items (silver).'
+AS SELECT line_id, po_id, ingredient_id, ingredient_name,
+          CAST(quantity AS DOUBLE)   AS quantity, unit,
+          CAST(unit_price AS DOUBLE) AS unit_price,
+          CAST(line_total AS DOUBLE) AS line_total
+FROM bronze_po_line_items
+QUALIFY ROW_NUMBER() OVER (PARTITION BY line_id ORDER BY _ingested_at DESC) = 1;
