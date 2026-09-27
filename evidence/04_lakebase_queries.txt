@@ -1,0 +1,137 @@
+================================================================================
+LAKEBASE OPERATIONAL SERVING — KAAPI BRICKS
+Instance: kaapi-bricks   Database: databricks_postgres
+Sync script: scripts/sync_gold_to_lakebase.py
+================================================================================
+
+--- TABLE SCHEMAS ---
+
+\d lb_inventory_position
+  store_id         TEXT
+  ingredient_id    TEXT
+  ingredient_name  TEXT
+  unit             TEXT
+  current_stock    DOUBLE PRECISION
+  reorder_threshold DOUBLE PRECISION
+  below_reorder    BOOLEAN
+  avg_daily_usage  DOUBLE PRECISION
+  days_cover       DOUBLE PRECISION
+  last_txn_date    DATE
+  PRIMARY KEY (store_id, ingredient_id)
+
+\d lb_open_purchase_orders
+  po_id                   TEXT PRIMARY KEY
+  supplier_id             TEXT
+  supplier_name           TEXT
+  store_id                TEXT
+  order_date              DATE
+  expected_delivery_date  DATE
+  total_amount            DOUBLE PRECISION
+  lead_time_days          INTEGER
+  is_overdue              BOOLEAN
+  days_overdue            INTEGER
+
+\d lb_delivery_exceptions
+  po_id                   TEXT PRIMARY KEY
+  supplier_id             TEXT
+  supplier_name           TEXT
+  store_id                TEXT
+  order_date              DATE
+  expected_delivery_date  DATE
+  actual_delivery_date    DATE
+  status                  TEXT
+  total_amount            DOUBLE PRECISION
+  exception_type          TEXT
+  days_late               INTEGER
+
+\d lb_product_demand
+  store_id        TEXT
+  product_id      TEXT
+  product_name    TEXT
+  category        TEXT
+  order_date      DATE
+  units           INTEGER
+  revenue         DOUBLE PRECISION
+  units_28d_avg   DOUBLE PRECISION
+  PRIMARY KEY (store_id, product_id, order_date)
+
+--- ROW COUNTS AFTER SYNC ---
+[FILL: Run after scripts/sync_gold_to_lakebase.py]
+
+SELECT 'lb_inventory_position'    AS tbl, COUNT(*) FROM lb_inventory_position
+UNION ALL
+SELECT 'lb_open_purchase_orders'  AS tbl, COUNT(*) FROM lb_open_purchase_orders
+UNION ALL
+SELECT 'lb_delivery_exceptions'   AS tbl, COUNT(*) FROM lb_delivery_exceptions
+UNION ALL
+SELECT 'lb_product_demand'        AS tbl, COUNT(*) FROM lb_product_demand;
+
+Expected results:
+  lb_inventory_position    | 814  (37 stores × 22 ingredients)
+  lb_open_purchase_orders  | [FILL — ~140 pending POs]
+  lb_delivery_exceptions   | [FILL — ~360 late/cancelled]
+  lb_product_demand        | [FILL — ~180 days × 37 stores × 28 products subset]
+
+--- SAMPLE OPERATIONAL QUERY 1: Ingredients below reorder level (STR-001) ---
+
+SELECT ingredient_name, unit, current_stock, reorder_threshold, days_cover
+FROM lb_inventory_position
+WHERE store_id = 'STR-001' AND below_reorder = TRUE
+ORDER BY days_cover ASC;
+
+Expected output:
+  ingredient_name          | unit  | current_stock | reorder_threshold | days_cover
+  Cardamom                 | kg    |          1.2  |               2.0 |        0.8
+  Araku Valley Blend       | kg    |          3.8  |               5.0 |        2.5
+  Coorg Arabica Beans      | kg    |          7.1  |              10.0 |        2.4
+[FILL: paste actual rows after sync]
+
+--- SAMPLE OPERATIONAL QUERY 2: Overdue open POs ---
+
+SELECT po_id, supplier_name, store_id, expected_delivery_date, days_overdue, total_amount
+FROM lb_open_purchase_orders
+WHERE is_overdue = TRUE
+ORDER BY days_overdue DESC
+LIMIT 5;
+
+Expected output:
+  po_id   | supplier_name            | store_id | expected_delivery_date | days_overdue | total_amount
+  PO-01234 | Coorg Coffee Estates    | STR-001  | 2026-09-20             |            7 |     45230.00
+  PO-01567 | Kerala Spice Traders    | STR-014  | 2026-09-22             |            5 |     18750.00
+[FILL: paste actual rows after sync]
+
+--- SAMPLE OPERATIONAL QUERY 3: Top waste by cost (all stores, last 30 days) ---
+
+SELECT store_id, ingredient_name, ROUND(waste_qty::numeric, 2) AS waste_qty,
+       ROUND(waste_cost::numeric, 2) AS waste_cost_inr
+FROM lb_inventory_position     -- [NOTE: actual waste comes from gold_waste_summary; amend query if separate table]
+ORDER BY waste_cost_inr DESC
+LIMIT 5;
+
+[FILL: paste actual results after sync]
+
+--- APP LAKEBASE ENDPOINT TEST ---
+curl http://localhost:8000/api/lakebase/inventory/STR-001
+
+Expected response:
+{
+  "store_id": "STR-001",
+  "source": "lakebase",
+  "inventory": [
+    {"ingredient_id": "ING-001", "ingredient_name": "Coorg Arabica Beans",
+     "unit": "kg", "current_stock": 7.1, "reorder_threshold": 10.0,
+     "below_reorder": true, "days_cover": 2.4},
+    ...
+  ]
+}
+[FILL: paste actual curl response after app is running]
+
+================================================================================
+HOW TO FILL:
+1. Run:  python scripts/sync_gold_to_lakebase.py --profile DEFAULT
+2. Connect to Lakebase:
+   psql "host=<lb_host> port=5432 dbname=databricks_postgres user=<email> sslmode=require"
+   (token from: databricks auth token --profile DEFAULT)
+3. Run the SELECT queries above and paste results here.
+4. Run the curl against the running app and paste the JSON response.
+================================================================================

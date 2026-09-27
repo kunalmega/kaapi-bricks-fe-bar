@@ -1,0 +1,64 @@
+================================================================================
+LAKEFLOW PIPELINE RUN — KAAPI BRICKS MEDALLION
+================================================================================
+Pipeline name : kaapi_bricks_medallion
+Pipeline ID   : [FILL: e.g. 12345678-abcd-efgh-ijkl-000000000001]
+Update ID     : [FILL: e.g. 00000001-0000-0000-0000-000000000001]
+Trigger       : TRIGGERED (databricks bundle run kaapi_bricks_medallion)
+Status        : [FILL: COMPLETED]
+Start time    : [FILL: 2026-09-27 10:04:23 UTC]
+End time      : [FILL: 2026-09-27 10:19:41 UTC]
+Duration      : [FILL: ~15 min 18 sec]
+Compute       : SERVERLESS
+
+--- BRONZE LAYER (streaming tables, Auto Loader ingestion) ---
+Table                           Rows ingested    Files read
+fevm_cme_conde_catalog.kaapi_bricks.bronze_stores                  37             1
+fevm_cme_conde_catalog.kaapi_bricks.bronze_products                28             1
+fevm_cme_conde_catalog.kaapi_bricks.bronze_toppings                12             1
+fevm_cme_conde_catalog.kaapi_bricks.bronze_ingredients             22             1
+fevm_cme_conde_catalog.kaapi_bricks.bronze_suppliers                8             1
+fevm_cme_conde_catalog.kaapi_bricks.bronze_promotions              15             1
+fevm_cme_conde_catalog.kaapi_bricks.bronze_customers           15,000             1
+fevm_cme_conde_catalog.kaapi_bricks.bronze_orders             200,000             1
+fevm_cme_conde_catalog.kaapi_bricks.bronze_order_items        [FILL]             1
+fevm_cme_conde_catalog.kaapi_bricks.bronze_order_item_toppings [FILL]            1
+fevm_cme_conde_catalog.kaapi_bricks.bronze_purchase_orders      2,000             1
+fevm_cme_conde_catalog.kaapi_bricks.bronze_inventory_transactions [FILL]         1
+fevm_cme_conde_catalog.kaapi_bricks.bronze_promotion_redemptions  [FILL]         1
+fevm_cme_conde_catalog.kaapi_bricks.bronze_po_line_items        [FILL]           1
+
+--- SILVER LAYER (materialized views, conformed + expectations) ---
+Table                                Rows output    Rows dropped (expect_or_drop)
+fevm_cme_conde_catalog.kaapi_bricks.stores                37            0
+fevm_cme_conde_catalog.kaapi_bricks.products              28            0
+fevm_cme_conde_catalog.kaapi_bricks.toppings              12            0
+fevm_cme_conde_catalog.kaapi_bricks.ingredients           22            0
+fevm_cme_conde_catalog.kaapi_bricks.suppliers              8            0
+fevm_cme_conde_catalog.kaapi_bricks.promotions            15            0
+fevm_cme_conde_catalog.kaapi_bricks.customers         15,000            0
+fevm_cme_conde_catalog.kaapi_bricks.orders           200,000            0
+fevm_cme_conde_catalog.kaapi_bricks.order_items       [FILL]            0
+fevm_cme_conde_catalog.kaapi_bricks.order_item_toppings [FILL]          0
+fevm_cme_conde_catalog.kaapi_bricks.purchase_orders    2,000            0
+fevm_cme_conde_catalog.kaapi_bricks.inventory_transactions [FILL]       0
+fevm_cme_conde_catalog.kaapi_bricks.promotion_redemptions [FILL]        0
+fevm_cme_conde_catalog.kaapi_bricks.po_line_items      [FILL]           0
+
+--- GOLD LAYER (materialized views, operational + KPI) ---
+Table                                   Rows output
+fevm_cme_conde_catalog.kaapi_bricks.gold_store_daily_kpis        [FILL]
+fevm_cme_conde_catalog.kaapi_bricks.gold_inventory_position       814   (37 stores × 22 ingredients)
+fevm_cme_conde_catalog.kaapi_bricks.gold_open_purchase_orders    [FILL]
+fevm_cme_conde_catalog.kaapi_bricks.gold_delivery_exceptions     [FILL]
+fevm_cme_conde_catalog.kaapi_bricks.gold_product_demand          [FILL]
+fevm_cme_conde_catalog.kaapi_bricks.gold_supplier_performance       8
+fevm_cme_conde_catalog.kaapi_bricks.gold_waste_summary           [FILL]
+
+--- HOW TO FILL THIS FILE ---
+After running: databricks bundle run kaapi_bricks_medallion -t dev --profile DEFAULT
+Query system tables or the pipeline UI for the update record:
+  SELECT * FROM system.lakeflow.pipeline_run_events WHERE pipeline_id = '<id>' ORDER BY event_time DESC LIMIT 50;
+  SELECT * FROM system.lakeflow.pipeline_tables WHERE pipeline_id = '<id>';
+Copy pipeline_id, update_id, start/end times, and per-table row counts into this file, then commit.
+================================================================================

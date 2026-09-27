@@ -1,0 +1,85 @@
+================================================================================
+APP HEALTH AND API TESTS — KAAPI BRICKS
+App: kaapi-bricks-finale (main-chat-app)
+URL: [FILL: e.g. https://kaapi-bricks-finale-<workspace>.aws.databricksapps.com]
+================================================================================
+
+--- APP STARTUP LOG ---
+[FILL: paste from `databricks apps get-deployment kaapi-bricks-finale --profile DEFAULT`]
+
+Example expected output:
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Lakebase connected: kaapi-bricks / databricks_postgres
+INFO:     SQL warehouse: e755eae9d758fdf7 (RUNNING)
+INFO:     MLflow tracking URI: databricks
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000
+
+--- HEALTH CHECK ---
+curl -s https://<app-url>/health
+
+Expected:
+{"status": "ok", "lakebase": "connected", "warehouse": "running"}
+
+Actual: [FILL]
+
+--- API TEST 1: GET /api/inventory/{store_id} (Delta SQL path) ---
+curl -s "https://<app-url>/api/inventory/STR-001" | python3 -m json.tool | head -30
+
+Expected structure:
+{
+  "store_id": "STR-001",
+  "inventory": [
+    {"ingredient_id": "ING-001", "ingredient_name": "Coorg Arabica Beans",
+     "unit": "kg", "current_stock": 7.1, "reorder_threshold": 10.0,
+     "below_reorder": true, "days_cover": 2.4},
+    ...
+  ]
+}
+HTTP status: 200
+Actual: [FILL]
+
+--- API TEST 2: GET /api/lakebase/inventory/{store_id} (Lakebase OLTP path) ---
+curl -s "https://<app-url>/api/lakebase/inventory/STR-001" | python3 -m json.tool | head -30
+
+Expected structure:
+{
+  "store_id": "STR-001",
+  "source": "lakebase",
+  "inventory": [
+    {"ingredient_id": "ING-001", "ingredient_name": "Coorg Arabica Beans",
+     "unit": "kg", "current_stock": 7.1, "reorder_threshold": 10.0,
+     "below_reorder": true, "days_cover": 2.4},
+    ...
+  ]
+}
+HTTP status: 200
+Latency vs SQL path: [FILL — Lakebase should be ~10-50ms vs ~500-2000ms for warehouse cold start]
+Actual: [FILL]
+
+--- API TEST 3: POST /api/chat (MAS Supervisor) ---
+curl -s -X POST "https://<app-url>/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What are the top 3 selling drinks today?", "store": "Koramangala, Bangalore"}' \
+  | python3 -m json.tool | head -20
+
+Expected: streaming SSE or JSON with agent response referencing order data.
+HTTP status: 200
+Actual: [FILL]
+
+--- API TEST 4: GET /api/stores ---
+curl -s "https://<app-url>/api/stores" | python3 -m json.tool | head -30
+
+Expected: list of 37 stores with store_id, name, city, state
+HTTP status: 200
+Actual: [FILL]
+
+================================================================================
+HOW TO FILL:
+1. Deploy app: databricks bundle deploy -t dev --profile DEFAULT
+   Then: databricks apps deploy kaapi-bricks-finale --source-code-path <ws-path> --profile DEFAULT
+2. Get app URL: databricks apps get kaapi-bricks-finale --profile DEFAULT
+3. Run each curl command above and paste the response.
+4. For startup logs: databricks apps logs kaapi-bricks-finale --profile DEFAULT | head -30
+================================================================================

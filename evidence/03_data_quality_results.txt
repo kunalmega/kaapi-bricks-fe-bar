@@ -1,0 +1,93 @@
+================================================================================
+DATA QUALITY RESULTS — SILVER LAYER EXPECTATIONS
+Pipeline: kaapi_bricks_medallion   Update ID: [FILL]
+================================================================================
+Format: table | constraint_name | action | rows_passed | rows_dropped | notes
+
+---- stores ----
+stores | valid_store_id | DROP ROW  | [FILL] | 0 | store_id IS NOT NULL
+stores | positive_sqft  | WARN      | [FILL] | 0 | sq_footage > 0
+
+---- products ----
+products | valid_product_id | DROP ROW | [FILL] | 0 | product_id IS NOT NULL
+products | positive_price   | DROP ROW | [FILL] | 0 | base_price > 0
+products | cost_le_price    | WARN     | [FILL] | 0 | cost <= base_price
+
+---- toppings ----
+toppings | valid_topping_id    | DROP ROW | [FILL] | 0 | topping_id IS NOT NULL
+toppings | non_negative_price  | WARN     | [FILL] | 0 | price >= 0
+
+---- ingredients ----
+ingredients | valid_ingredient_id | DROP ROW | [FILL] | 0 | ingredient_id IS NOT NULL
+ingredients | has_supplier        | DROP ROW | [FILL] | 0 | supplier_id IS NOT NULL
+ingredients | non_negative_cost   | WARN     | [FILL] | 0 | unit_cost >= 0
+
+---- suppliers ----
+suppliers | valid_supplier_id | DROP ROW | [FILL] | 0 | supplier_id IS NOT NULL
+suppliers | valid_reliability | WARN     | [FILL] | 0 | reliability_score BETWEEN 0 AND 5
+
+---- promotions ----
+promotions | valid_promotion_id | DROP ROW | [FILL] | 0 | promotion_id IS NOT NULL
+promotions | valid_discount     | DROP ROW | [FILL] | 0 | discount_pct BETWEEN 0 AND 100
+promotions | valid_window       | WARN     | [FILL] | 0 | end_date >= start_date
+
+---- customers ----
+customers | valid_customer_id | DROP ROW | [FILL] | 0 | customer_id IS NOT NULL
+customers | has_home_store    | DROP ROW | [FILL] | 0 | home_store_id IS NOT NULL
+customers | valid_tier        | WARN     | [FILL] | 0 | loyalty_tier IN ('Bronze','Silver','Gold','Platinum Tumbler')
+
+---- orders ----
+orders | valid_order_id    | DROP ROW | [FILL] | 0 | order_id IS NOT NULL
+orders | valid_keys        | DROP ROW | [FILL] | 0 | store_id IS NOT NULL AND customer_id IS NOT NULL
+orders | non_neg_total     | DROP ROW | [FILL] | 0 | order_total >= 0
+orders | non_neg_subtotal  | WARN     | [FILL] | 0 | subtotal >= 0
+orders | valid_status      | WARN     | [FILL] | 0 | status IN ('completed','refunded')
+
+---- order_items ----
+order_items | valid_item_id  | DROP ROW | [FILL] | 0 | order_item_id IS NOT NULL
+order_items | valid_order    | DROP ROW | [FILL] | 0 | order_id IS NOT NULL
+order_items | valid_product  | DROP ROW | [FILL] | 0 | product_id IS NOT NULL
+order_items | positive_price | WARN     | [FILL] | 0 | item_price > 0
+
+---- order_item_toppings ----
+order_item_toppings | valid_oit_id    | DROP ROW | [FILL] | 0 | order_item_topping_id IS NOT NULL
+order_item_toppings | valid_item      | DROP ROW | [FILL] | 0 | order_item_id IS NOT NULL
+order_item_toppings | valid_topping   | DROP ROW | [FILL] | 0 | topping_id IS NOT NULL
+order_item_toppings | non_neg_price   | WARN     | [FILL] | 0 | price >= 0
+
+---- purchase_orders ----
+purchase_orders | valid_po_id     | DROP ROW | [FILL] | 0 | po_id IS NOT NULL
+purchase_orders | positive_amount | DROP ROW | [FILL] | 0 | total_amount > 0
+purchase_orders | valid_delivery  | WARN     | [FILL] | 0 | expected_delivery_date >= order_date
+purchase_orders | valid_status    | WARN     | [FILL] | 0 | status IN ('delivered','pending','cancelled')
+
+---- inventory_transactions ----
+inventory_transactions | valid_txn_id | DROP ROW | [FILL] | 0 | transaction_id IS NOT NULL
+inventory_transactions | valid_type   | DROP ROW | [FILL] | 0 | transaction_type IN ('purchase','usage','waste')
+inventory_transactions | non_neg_cost | WARN     | [FILL] | 0 | unit_cost >= 0
+
+---- promotion_redemptions ----
+promotion_redemptions | valid_redemption_id | DROP ROW | [FILL] | 0 | redemption_id IS NOT NULL
+promotion_redemptions | valid_refs          | DROP ROW | [FILL] | 0 | order_id IS NOT NULL AND promotion_id IS NOT NULL
+promotion_redemptions | non_neg_discount    | WARN     | [FILL] | 0 | discount_applied >= 0
+
+---- po_line_items ----
+po_line_items | valid_line_id  | DROP ROW | [FILL] | 0 | line_id IS NOT NULL
+po_line_items | valid_po_id    | DROP ROW | [FILL] | 0 | po_id IS NOT NULL
+po_line_items | positive_qty   | DROP ROW | [FILL] | 0 | quantity > 0
+po_line_items | positive_price | WARN     | [FILL] | 0 | unit_price >= 0
+
+================================================================================
+SUMMARY
+Total constraints checked : 44
+Total rows dropped        : [FILL — expected: 0 for clean synthetic data]
+Total warnings raised     : [FILL]
+Overall pass rate         : [FILL]%
+================================================================================
+HOW TO FILL: After pipeline run, query:
+  SELECT dataset_name, name, passed_records, failed_records, on_violation_action
+  FROM event_log('<pipeline_id>')
+  WHERE event_type = 'flow_progress'
+    AND details:flow_progress:data_quality IS NOT NULL
+  ORDER BY dataset_name, name;
+================================================================================
