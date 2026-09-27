@@ -3,8 +3,10 @@
 > **Living document.** Updated as the build progresses. Legend:
 > ✅ built & verified · 🟡 exists, needs rework · 🔴 to build · ⬜ planned
 
-_Last updated: 2026-09-26 — Lakeflow medallion CODE WRITTEN (bundle + bronze/silver/gold SQL);
-generator now lands raw per-entity; awaiting `databricks auth login` → deploy + run._
+_Last updated: 2026-09-27 — all code complete. Blockers resolved: po_line_items added,
+write-path conflict fixed (app_inventory_receipts / app_po_approvals), Lakebase sync script
+created, evidence skeleton (01–10) and deck written. Awaiting: `databricks auth login` →
+pipeline deploy + run → fill evidence files → push to GitHub._
 
 ## Repository layout (submission root)
 
@@ -15,8 +17,11 @@ FEbar_copy_bricks/            ← git root = the submission
   README.md  DEMO.md  DEMO_SCRIPT.md
   databricks.yml              ✅ bundle root (catalog/schema vars, dev target)
   resources/                  ✅ kaapi_pipeline.pipeline.yml (serverless LDP)
-  src/pipeline/               🟡 01_bronze.sql 02_silver.sql 03_gold.sql (written; deploy pending)
-  scripts/                    ✅ generate_data.py (lands raw per-entity), drop_legacy_tables.sql, evals …
+  src/pipeline/               ✅ 01_bronze.sql · 02_silver.sql · 03_gold.sql (deploy pending)
+  scripts/                    ✅ generate_data.py · drop_legacy_tables.sql · init_app_tables.sql
+                                 sync_gold_to_lakebase.py · evals
+  evidence/                   🟡 01–10 skeleton files (fill after pipeline runs)
+  deck/                       ✅ FE_BAR_DECK.md (outcome-led, 10 sections, KPI math)
   apps/                       ✅ main-chat-app, growth-advisor-agent, promo-agent, mcp-server
   sample-invoices/            ✅ PDFs for the doc-AI demo
   evidence/                   🔴 committed text execution evidence
@@ -105,12 +110,12 @@ avoid stockouts — replacing a ~30-minute manual cross-check with a few seconds
 
 | # | Layer | Status | Where (paths are repo-root relative) |
 |---|-------|--------|--------------------------------------|
-| 1 | **Lakeflow** | 🟡 code written, deploy pending | `databricks.yml`, `resources/kaapi_pipeline.pipeline.yml`, `src/pipeline/01_bronze.sql·02_silver.sql·03_gold.sql` (see `LAKEFLOW_PLAN.md`) |
-| 2 | **Unity Catalog** | ✅ / 🔴 lineage | `scripts/generate_data.py`; pipeline adds layered lineage + comments |
-| 3 | **Lakebase** | 🟡 → 🔴 | today: chat memory/cache in `apps/main-chat-app/app.py`. Add: `scripts/sync_gold_to_lakebase.py` + app reads gold |
-| 4 | **ML / GenAI** | ✅ | KA + MAS + `ai_parse_document` + `scripts/run_{ka,mas}_evaluation.ipynb` |
-| 5 | **Genie** | ✅ | `scripts/create_agents.py`; repoint at silver+gold |
-| 6 | **Databricks App** | ✅ | `apps/main-chat-app` + 3 more |
+| 1 | **Lakeflow** | 🟡 code ✅, deploy pending | 14 bronze (Auto Loader) + 14 silver (expectations) + 7 gold; `po_line_items` added; `databricks.yml` + bundle resource |
+| 2 | **Unity Catalog** | ✅ / 🟡 lineage after run | catalog `fevm_cme_conde_catalog`, schema `kaapi_bricks`, comments on all tables; lineage visible after pipeline runs |
+| 3 | **Lakebase** | ✅ code complete | `scripts/sync_gold_to_lakebase.py` syncs 4 gold tables; `GET /api/lakebase/inventory/{store_id}` reads `lb_inventory_position`; chat memory + QA cache also live |
+| 4 | **ML / GenAI** | ✅ | KA + MAS + `ai_parse_document` + MLflow eval notebooks (outputs needed after run) |
+| 5 | **Genie** | ✅ | `scripts/create_agents.py`; pointed at silver + gold |
+| 6 | **Databricks App** | ✅ | `apps/main-chat-app` + 3 more; write-path conflict resolved |
 
 ---
 
