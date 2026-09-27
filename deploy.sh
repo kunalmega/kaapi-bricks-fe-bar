@@ -297,21 +297,9 @@ if [ -n "$MCP_SP" ]; then
 fi
 echo "  ✓ App permissions set"
 
-# ---- Step 10: Create po_line_items table ----
+# ---- Step 10: po_line_items — now owned by the Lakeflow pipeline (silver MV, 3493 rows) ----
 echo ""
-echo "→ Creating po_line_items table..."
-databricks api post "/api/2.0/sql/statements" --profile "$PROFILE" --json "{
-  \"warehouse_id\": \"$WAREHOUSE_ID\",
-  \"statement\": \"CREATE TABLE IF NOT EXISTS $CATALOG.kaapi_bricks.po_line_items (line_id STRING, po_id STRING, ingredient_id STRING, ingredient_name STRING, quantity DOUBLE, unit STRING, unit_price DOUBLE, line_total DOUBLE)\",
-  \"wait_timeout\": \"30s\"
-}" 2>/dev/null | python3 -c "import sys,json; print(f'  {json.load(sys.stdin).get(\"status\",{}).get(\"state\",\"?\")}')" 2>/dev/null
-
-# Insert PO line items for demo
-databricks api post "/api/2.0/sql/statements" --profile "$PROFILE" --json "{
-  \"warehouse_id\": \"$WAREHOUSE_ID\",
-  \"statement\": \"INSERT INTO $CATALOG.kaapi_bricks.po_line_items SELECT * FROM (SELECT 'pl-001' as line_id, po_id, 'ING-001' as ingredient_id, 'Coorg Arabica Beans' as ingredient_name, 25.0 as quantity, 'kg' as unit, 1200.0 as unit_price, 30000.0 as line_total FROM $CATALOG.kaapi_bricks.purchase_orders WHERE supplier_id = 'SUP-001' ORDER BY order_date DESC LIMIT 1) UNION ALL SELECT * FROM (SELECT 'pl-002', po_id, 'ING-004', 'Chicory', 15.0, 'kg', 400.0, 6000.0 FROM $CATALOG.kaapi_bricks.purchase_orders WHERE supplier_id = 'SUP-001' ORDER BY order_date DESC LIMIT 1) UNION ALL SELECT * FROM (SELECT 'pl-003', po_id, 'ING-002', 'House Blend Pre-Mix', 25.0, 'kg', 820.0, 20500.0 FROM $CATALOG.kaapi_bricks.purchase_orders WHERE supplier_id = 'SUP-001' ORDER BY order_date DESC LIMIT 1) UNION ALL SELECT * FROM (SELECT 'pl-004', po_id, 'ING-021', 'Paper Cups (200ml)', 10.0, 'case', 800.0, 8000.0 FROM $CATALOG.kaapi_bricks.purchase_orders WHERE supplier_id = 'SUP-001' ORDER BY order_date DESC LIMIT 1) UNION ALL SELECT * FROM (SELECT 'pl-005', po_id, 'ING-022', 'Stirrer Sticks', 5.0, 'case', 300.0, 1500.0 FROM $CATALOG.kaapi_bricks.purchase_orders WHERE supplier_id = 'SUP-001' ORDER BY order_date DESC LIMIT 1)\",
-  \"wait_timeout\": \"50s\"
-}" 2>/dev/null | python3 -c "import sys,json; print(f'  PO line items: {json.load(sys.stdin).get(\"status\",{}).get(\"state\",\"?\")}')" 2>/dev/null
+echo "→ Skipping po_line_items DDL — managed by kaapi_bricks_medallion pipeline (silver MV)."
 
 # ---- Step 11: MCP UC HTTP Connection (M2M OAuth) ----
 # REQUIRES ACCOUNT-ADMIN: needs to create a Service Principal via SCIM API.
