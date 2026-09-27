@@ -61,7 +61,7 @@ def run_sql(statement, catalog=CATALOG, schema=SCHEMA):
         warehouse_id=warehouse_id,
         catalog=catalog,
         schema=schema,
-        wait_timeout="120s",
+        wait_timeout="50s",
         on_wait_timeout=ExecuteStatementRequestOnWaitTimeout.CONTINUE,
     )
     while resp.status.state in (StatementState.PENDING, StatementState.RUNNING):
@@ -176,7 +176,7 @@ sync_table("gold_open_purchase_orders", "lb_open_purchase_orders")
 sync_table("gold_delivery_exceptions",  "lb_delivery_exceptions")
 sync_table(
     "gold_product_demand", "lb_product_demand",
-    extra_where="order_date >= CURRENT_DATE() - INTERVAL 7 DAYS",
+    extra_where="order_date >= (SELECT MAX(order_date) - INTERVAL 7 DAYS FROM gold_product_demand)",
 )
 
 print(f"\nSync complete at {datetime.utcnow().isoformat()}Z")
