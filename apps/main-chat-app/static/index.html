@@ -413,7 +413,7 @@ function App(){
   const fetchInventory=async()=>{
     setInvLoadingInv(true);
     try{
-      const resp=await fetch('/api/inventory/STR-001');
+      const resp=await fetch('/api/lakebase/inventory/STR-001');
       const data=await resp.json();
       setInvInventory(data.inventory||[]);
     }catch(e){console.error(e);}
