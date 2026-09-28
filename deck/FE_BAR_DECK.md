@@ -202,8 +202,8 @@ Test dataset (10 KA queries + 5 MAS routing tests)
 | Waste reduction | ₹2,59,000 | $3,100 | 25% reduction in ₹28k/store/year waste |
 | Manager time (Genie queries) | ₹27,07,200 | $32,200 | 15 min/day saved × 37 stores |
 | **Total annual value** | **₹2,22,27,120** | **~$264,500** | |
-| Platform cost (est.) | — | $60,000/year | Serverless + apps + FMAPI at demo scale |
-| Payback period | — | ~3.6 months | |
+| Platform cost (est.) | — | $50,000/year | Serverless + apps + FMAPI at demo scale [ASSUMPTION] |
+| Payback period | — | ~4.8 months | $264,500 annual value / ($50k platform + $70k impl) |
 | 3-year ROI | — | 2.6× | $573,500 value / $220,000 investment (platform $150k + impl $70k) [ASSUMPTION] |
 
 *All assumptions labeled. Replace with actual Kaapi Bricks operational data before a live business case.*

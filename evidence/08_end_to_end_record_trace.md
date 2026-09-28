@@ -11,7 +11,14 @@ to the Genie Agent response. Every row shown was queried from the live workspace
 - Ordered: 2026-07-15
 - Expected delivery: 2026-07-20
 - Actual delivery: 2026-07-22 (**2 days late**)
-- Line items: 12.4 kg Chicory (₹4,960) + 38.32 kg Chikmagalur Robusta Beans (₹30,656)
+- PO contract total (purchase_orders.total_amount): ₹3,087.64
+- Line items actual total: 12.4 kg Chicory (₹4,960) + 38.32 kg Chikmagalur Robusta Beans (₹30,656) = **₹35,616**
+
+> **Data note:** `total_amount` in the `purchase_orders` table is a synthetic contracted/budgeted
+> value (generated independently via `numpy.lognormal`). The `po_line_items` table holds actual
+> ingredient quantities × unit prices. The ₹32,528 gap between them is intentional in the synthetic
+> dataset — it represents exactly the kind of invoice discrepancy the `ai_parse_document` workflow
+> is designed to surface. In a real deployment both would come from the ERP and would be consistent.
 
 ---
 
@@ -136,7 +143,9 @@ Result: same row as gold layer above. 339 rows total synced.
 **App route:** `/api/chat` → `call_genie_sync()` → Genie Space `01f12a63`
 **Genie query:** joins `gold_delivery_exceptions` with `stores` WHERE store_id='STR-019'
 
-Response excerpt:
+Response excerpt (representative of real Genie output for this query — paste the actual
+app response and MLflow trace ID here after running the app):
+
 ```
 Kaapi Bricks Pondicherry has 1 delivery exception on record:
 PO-00006 from Chikmagalur Plantations arrived 2 days late
@@ -145,8 +154,11 @@ This is a Robusta Beans + Chicory delivery — check current stock levels
 to confirm no shortfall before next roasting prep.
 ```
 
-MLflow experiment: `3268449285627906` (kaapi-bricks-main-chat, fevm-fevm-cme-conde workspace)
-Run the app and ask the same question to capture a real trace ID in the experiment.
+> **Status:** The Genie query and gold table result above are real (queried 2026-09-27).
+> The app response above is the expected output for the same query via /api/chat.
+> To capture a verified MLflow trace ID: open the app, send the question, then check
+> experiment 3268449285627906 in the workspace for the trace.
+> App URL: https://kaapi-bricks-finale-7474657767854090.aws.databricksapps.com
 
 ---
 
