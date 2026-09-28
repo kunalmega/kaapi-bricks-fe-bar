@@ -1,0 +1,19 @@
+{
+  "question": "Are there any delivery exceptions for my store? List any late or cancelled supplier deliveries with the PO number, supplier and days late.",
+  "store_location": "Pondicherry",
+  "request_utc": "2026-09-28T14:19:38.013155+00:00",
+  "client_elapsed_s": 44.04,
+  "http": 200,
+  "final_event": {
+    "done": true,
+    "full_text": "## Delivery Exceptions for Kaapi Bricks Pondicherry\n\nYes, there are **6 late deliveries** recorded for your store. All were eventually delivered, with delays ranging from 1 to 2 days. No cancelled deliveries were found.\\[[1](<workspace-url>)\\]\n\n**Delivery exceptions for STR-019 (Pondicherry)**\n\n| po_id | supplier_name | exception_type | days_late | order_date | expected_delivery_date | actual_delivery_date | status |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| PO-00470 | Araku Valley Organics | late | 2 | 2026-06-01 | 2026-06-11 | 2026-06-13 | delivered |\n| PO-00006 | Chikmagalur Plantations | late | 2 | 2026-07-15 | 2026-07-20 | 2026-07-22 | delivered |\n| PO-01077 | Kerala Spice Traders | late | 1 | 2026-02-23 | 2026-03-01 | 2026-03-02 | delivered |\n| PO-00167 | Coorg Coffee Estates | late | 1 | 2026-06-04 | 2026-06-11 | 2026-06-12 | delivered |\n| PO-00996 | Coorg Coffee Estates | late | 1 | 2026-06-27 | 2026-07-02 | 2026-07-03 | delivered |\n| PO-01358 | Kerala Spice Traders | late | 1 | 2026-03-10 | 2026-03-14 | 2026-03-15 | delivered |\n\n### Key Findings\n- **Most delayed**: PO-00470 (Araku Valley Organics) and PO-00006 (Chikmagalur Plantations) were both 2 days late\n- **Suppliers with exceptions**: Coorg Coffee Estates (2 late deliveries), Kerala Spice Traders (2 late deliveries), Araku Valley Organics (1), and Chikmagalur Plantations (1)\n- All exceptions occurred between February and July 2026",
+    "latency_ms": 39809.30972099304,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "from_cache": false,
+    "match_type": "",
+    "similarity": 0,
+    "matched_question": "",
+    "trace_id": "tr-054b71b6d16076a7ba3b5e0008342e81"
+  }
+}

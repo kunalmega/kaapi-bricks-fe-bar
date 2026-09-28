@@ -687,11 +687,55 @@ async def post_feedback(request: Request):
     return {"ok": True}
 
 
+_menu_lock = threading.Lock()
+_menu = None  # [(name_lower, display_name, base_price)], longest names first
+
+
+def _load_menu():
+    global _menu
+    with _menu_lock:
+        if _menu is None:
+            rows = _run_sql(f"SELECT name, base_price FROM {CATALOG_SCHEMA}.products")
+            items = []
+            for r in rows:
+                # "Bella Kaapi (Jaggery)" is asked for as "Bella Kaapi"
+                display = r["name"]
+                key = re.sub(r"\s*\(.*?\)", "", display).strip().lower()
+                items.append((key, display, float(r["base_price"])))
+            _menu = sorted(items, key=lambda x: -len(x[0]))
+    return _menu
+
+
+@mlflow.trace(name="menu_price_lookup", span_type=SpanType.TOOL)
+def add_menu_prices(query, answer):
+    """Append governed menu prices (products.base_price) for drinks named in the question.
+
+    Prices are structured data, so they come from the table rather than relying on the
+    model to copy them out of the recipe PDF (eval run 3 showed it often drops them).
+    """
+    try:
+        menu = _load_menu()
+    except Exception as e:
+        print(f"[Menu] lookup failed: {e}")
+        return answer
+    remaining = query.lower()
+    lines = []
+    for key, display, price in menu:
+        if key and key in remaining:
+            remaining = remaining.replace(key, " ")  # "degree coffee" inside "kumbakonam degree coffee"
+            p = f"{price:g}"
+            if not re.search(rf"(Rs\.?\s?|₹\s?){re.escape(p)}\b", answer):
+                lines.append(f"- {display}: Rs.{p}")
+    if not lines:
+        return answer
+    return answer + "\n\n**Menu price** (from the `products` table):\n" + "\n".join(lines)
+
+
 @mlflow.trace(name="chat_request", span_type=SpanType.AGENT)
-def process_chat(query, store, history, conv_id):
-    """Traced end-to-end chat processing with cache check and MAS call."""
+def process_chat(query, store, history, conv_id, skip_cache=False):
+    """Traced end-to-end chat processing with cache check and Genie Agent call."""
     # 1. Check short-term memory
-    cached = find_cached_answer(query, store)
+    cached = None if skip_cache else find_cached_answer(query, store)
     if cached:
         trace_id = None
         try:
@@ -717,6 +761,8 @@ def process_chat(query, store, history, conv_id):
     # 2. Call Genie Agent (replaces MAS + KA)
     messages = history + [{"role": "user", "content": query}]
     result = call_genie_sync(messages, store)
+    if not result.get("error"):
+        result["text"] = add_menu_prices(query, result["text"])
 
     # 3. Update trace metadata with token usage
     trace_id = None
@@ -751,6 +797,7 @@ async def chat(request: Request):
     conv_id = body.get("conversation_id")
     store = body.get("store_location", "Koramangala, Bangalore")
     history = body.get("history", [])
+    skip_cache = bool(body.get("skip_cache", False))  # evaluation runs measure fresh answers
 
     if not conv_id:
         conv_id = str(uuid.uuid4())
@@ -760,7 +807,7 @@ async def chat(request: Request):
     save_message(conv_id, "user", query)
 
     # Run traced processing
-    result = process_chat(query, store, history, conv_id)
+    result = process_chat(query, store, history, conv_id, skip_cache=skip_cache)
 
     # Save assistant message
     save_message(conv_id, "assistant", result["text"], trace_id=result.get("trace_id"))
@@ -772,7 +819,8 @@ async def chat(request: Request):
                 embedding = get_embedding(query)
             except Exception:
                 embedding = None
-            save_to_cache(query, result["text"], embedding, store, result["latency_ms"])
+            if not skip_cache:
+                save_to_cache(query, result["text"], embedding, store, result["latency_ms"])
             log_inference(
                 result.get("trace_id"), conv_id, store, query, result["text"],
                 result["latency_ms"], result["input_tokens"], result["output_tokens"],
@@ -782,7 +830,7 @@ async def chat(request: Request):
 
     # Return as SSE (single event — frontend handles typing animation)
     def event_stream():
-        yield f"data: {json.dumps({'done': True, 'full_text': result['text'], 'latency_ms': result['latency_ms'], 'input_tokens': result['input_tokens'], 'output_tokens': result['output_tokens'], 'from_cache': result['from_cache'], 'match_type': result.get('match_type', ''), 'similarity': result.get('similarity', 0), 'matched_question': result.get('matched_question', '')})}\n\n"
+        yield f"data: {json.dumps({'done': True, 'full_text': result['text'], 'latency_ms': result['latency_ms'], 'input_tokens': result['input_tokens'], 'output_tokens': result['output_tokens'], 'from_cache': result['from_cache'], 'match_type': result.get('match_type', ''), 'similarity': result.get('similarity', 0), 'matched_question': result.get('matched_question', ''), 'trace_id': result.get('trace_id')})}\n\n"
 
     return StreamingResponse(
         event_stream(),

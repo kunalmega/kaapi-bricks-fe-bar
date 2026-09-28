@@ -1,6 +1,6 @@
 # MLflow Evaluation Results — Kaapi Bricks Genie Agent
 
-Three measured runs on the same 10-question dataset: a baseline, a re-test after an API fix, and a re-test after an instruction change.
+Five runs on the same 10-question dataset. Runs 1–3 evaluate **Genie directly**. Runs 4–5 evaluate the **deployed app end to end** (what a store manager sees). Run 4 is void (incomplete scoring); run 5 is the current headline result.
 Every score below was read back from MLflow. None are estimates.
 
 | Field | Value |
@@ -12,6 +12,9 @@ Every score below was read back from MLflow. None are estimates.
 | Dataset | 10 store-manager questions (recipes, SOPs, food safety, suppliers), 32 expected facts in total |
 
 ## Results
+
+**Headline (run 5, deployed app end to end, all 10 scored): Correctness 0.70 · Relevance 1.00 · Safety 1.00.**
+History below. Runs 1–3 are Genie-direct; runs 4–5 are in *Runs 4–5* further down.
 
 | Scorer | Run 1: baseline | Run 2: Agent mode | Run 3: + completeness instruction |
 |---|---:|---:|---:|
@@ -95,15 +98,70 @@ one omission, a different fact was dropped, and prices stayed missing. With 10 q
 of ±1 question between runs is within normal variation, so 0.50 is the stable result. Pushing this
 higher needs a structural change, not more prompt text (see Next iteration).
 
+## Runs 4–5: evaluating the deployed app end to end
+
+Runs 1–3 called Genie directly. The store manager uses the **app**, which adds a governed
+menu-price lookup on top of Genie Agent mode: after Genie answers, menu items named in the question
+are matched against `products.base_price` and the price is appended if missing. That follows
+from run 3: structured facts should come from tables, not model recall. Runs 4–5 therefore call
+the deployed app's `POST /api/chat` with `skip_cache: true`, so every answer is fresh.
+
+- Script: `scripts/run_app_evaluation.py` (runs locally against the deployed app)
+- Dataset: `scripts/eval_dataset.json`, extracted verbatim from `run_genie_evaluation.py`
+  (same 10 questions, same 32 expected facts)
+- Scorers: the same `Safety()`, `RelevanceToQuery()`, `Correctness()`
+- Each eval trace is tagged with the app's own trace ID (`app_trace_id`) and `from_cache`
+
+| | Run 4 | Run 5 |
+|---|---|---|
+| MLflow run ID | bb82919a855e4341a31126dd36c60462 | **b14becd1d6384a9586d38726b3622de6** |
+| Started (UTC) | 2026-09-28 ~14:25 | 2026-09-28 ~14:45 |
+| Questions scored | **9 of 10** (void) | **10 of 10** |
+| Correctness | 0.90 reported, **not valid** | **0.70** |
+| RelevanceToQuery | 1.00 | **1.00** |
+| Safety | 1.00 | **1.00** |
+| Answers served from cache | 0 | 0 |
+
+**Why run 4 is void:** an OAuth token refresh failed partway through the run
+(`fetching OAuth endpoints … EOF`). The Masala Chai trace (tr-7bc39947ed1fe837ef16249754fb0f6b)
+has **zero** assessments, so the reported 0.90 averages 9 questions, not 10. We re-ran the full
+dataset instead of scoring the one missing question separately.
+
+**Run 5 per-question results (all 10 scored):**
+
+| Question | Correct | Price appended by lookup? | Note | Eval trace → app trace |
+|---|---|---|---|---|
+| Classic Filter Coffee | **yes** | **yes** | the lookup supplied Rs.60 | tr-598c5bf7… → tr-f221a083… |
+| Masala Chai | **yes** | no | Genie included Rs.50 itself this run | tr-199704bc… → tr-740f7e4f… |
+| Coorg Arabica reorder | **yes** | n/a | 50 kg minimum included this run | tr-e4910747… → tr-8e5015eb… |
+| Milk storage temperature | **yes** | n/a | | tr-6e1b9dfb… → tr-1ef2e486… |
+| Decoction ratio and timing | **yes** | n/a | | tr-cdae37af… → tr-171a00a4… |
+| Decoction hold time | **yes** | n/a | | tr-2c7de898… → tr-d3bdd7ca… |
+| Brass filter cleaning | **yes** | n/a | | tr-78380c30… → tr-9a540876… |
+| Nut allergy | no | n/a | missed "if unsure, consult the manager" | tr-9a5215c0… → tr-ef1123d7… |
+| Franchise | no | n/a | missed "India and select international markets" | tr-6a1e63d1… → tr-a4b0dea5… |
+| Milk supplier | no | n/a | same judge error as runs 2–3 (both facts confirmed present) | tr-662a5d88… → tr-dea6f1fa… |
+
+**How to read 0.70:**
+- It is the best *complete* measurement so far, and it measures the product as deployed.
+- The price lookup demonstrably fixed one question (Classic Filter Coffee: the price came from the table).
+- The other gains (Masala Chai price, Coorg minimum order) came from Genie including the fact
+  *this time*. Runs 2–3 show it doesn't do that reliably. Some of the gain from 0.50 to 0.70 is
+  therefore run-to-run variation, which with 10 questions is about ±0.1–0.2.
+- One of the three remaining failures is a grading error, so the correct-answer rate is 8/10 if
+  that answer is counted as correct. We still report the judge's 0.70.
+- **Safety has been 1.00 in every run.** When the agent lacks a fact, it omits it rather than
+  inventing one. That matters most for allergen and food-safety questions.
+
 ## Operational trade-off
 
 End-to-end latency through the deployed app's `/api/chat` for Q10 was **22.9 s** in Agent mode, compared with a few seconds in Chat mode. Agent mode reasons over several steps and reads documents. Mitigation already in the app: the Lakebase semantic cache (`kaapi_mcp.qa_cache`) serves repeat SOP questions instantly. SOP content changes rarely, so cache hit rates for these questions should be high.
 
 ## Next iteration
 
-1. **Structured facts from tables, not documents.** The menu price is already in `products.base_price`,
-   and lead time is in `suppliers`. Have the app look these up deterministically and append them to
-   recipe and supplier answers, instead of relying on the model to copy them from the PDF.
+1. **Structured facts from tables, not documents. Done for menu prices** (runs 4–5). Extend the
+   same lookup to supplier lead time and minimum order, which would need the contract terms loaded
+   into a governed table.
 2. **A rubric that separates must-have from nice-to-have facts.** Keep strict `Correctness()` for
    comparability, and add a `Guidelines()` scorer that grades the safety-critical facts (temperatures,
    hold times, allergen steps) separately from secondary ones (price).
@@ -116,6 +174,6 @@ End-to-end latency through the deployed app's `/api/chat` for Q10 was **22.9 s**
 import mlflow
 mlflow.set_tracking_uri("databricks")
 runs = mlflow.search_runs(experiment_ids=["982411422225142"],
-    filter_string="attributes.run_id IN ('17e8de540367484f82992d96b4a8fea9','cbf7938448934232baa109b09a0cb8b1','0878d859cce847c3b970551c4c3defac')")
+    filter_string="attributes.run_id IN ('17e8de540367484f82992d96b4a8fea9','cbf7938448934232baa109b09a0cb8b1','0878d859cce847c3b970551c4c3defac','b14becd1d6384a9586d38726b3622de6')")
 print(runs.filter(regex="run_id|metrics").T)
 ```

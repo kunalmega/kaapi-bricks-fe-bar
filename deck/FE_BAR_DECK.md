@@ -99,7 +99,7 @@ Recipes, decoction timing, allergen handling, and equipment cleaning live in six
 ### Scene 3 — How We Know It Works
 **TELL:** *"How do we know the answers are right?"*
 
-**SHOW:** MLflow experiment → evaluation runs on 10 store-manager questions. Baseline (Chat mode, no document access): Correctness 0.00. After switching to Genie Agent mode with the SOP volume: Correctness 0.50, Relevance 1.00, Safety 1.00. Latest iteration and failed-case analysis: `evidence/09`.
+**SHOW:** MLflow experiment → evaluation runs on 10 store-manager questions. Baseline (Chat mode, no document access): Correctness 0.00. After switching to Genie Agent mode with the SOP volume: Correctness 0.50. With governed menu-price lookup, measured end to end through the deployed app: **Correctness 0.70, Relevance 1.00, Safety 1.00** (10/10 questions scored). Failed-case analysis: `evidence/09`.
 
 **TELL:** *"We measure it, we publish the failures, and we fix the root cause, not the score."*
 
@@ -181,6 +181,7 @@ The same keys (store_id, ingredient_id, po_id) flow raw → bronze → silver �
   → Baseline:   Correctness 0.00  (Chat mode API cannot read documents)
   → Fix:        switch to Genie Agent mode API
   → Re-test:    Correctness 0.50 · Relevance 1.00 · Safety 1.00
+  → App end-to-end (+ governed price lookup): Correctness 0.70 · Relevance 1.00 · Safety 1.00
   → Latest iteration + failed-case analysis: evidence/09
 ```
 
@@ -248,7 +249,7 @@ Full calculation: `evidence/10_business_kpi_calculations.md`. The first thing a 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
 | ai_parse_document accuracy on unusual invoice layouts | Medium | LLM vision fallback in code; every result needs human approval |
-| Genie Agent correctness on long procedures | Medium | Measured today (0.50 → see evidence/09 for latest); improve instructions and eval rubric before rollout |
+| Genie Agent correctness on long procedures | Medium | Measured today: 0.70 end to end (target 0.80, see evidence/09); improve instructions and eval rubric before rollout |
 | Agent mode latency (~23 s on SOP questions) | Medium | Semantic answer cache in Lakebase; SOP content changes rarely |
 | Lakebase data is a snapshot | Medium | Sync runs after each pipeline update; move to a scheduled job or synced tables in production |
 | Store managers resist the new workflow | Low | Chat-first UI; invoice upload is a single step |

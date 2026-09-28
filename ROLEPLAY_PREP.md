@@ -36,7 +36,7 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
 |---|---|---|---|
 | 1. Morning questions | "Priya asks about her numbers and her procedures in plain English." | Below-reorder items (SQL on gold) → decoction hold time (SOP PDF, cited) → top drinks | "Data and SOPs in one governed assistant: fewer escalations, faster barista onboarding." |
 | 2. Delivery | "A supplier invoice arrives on paper." | Upload → `ai_parse_document` → PO match → flagged lines → Lakebase inventory → approve | "The system compares; the manager decides. Every discrepancy is recorded. This is the leakage and labor line of the business case." |
-| 3. Evaluation | "How do we know it's right?" | MLflow: 0.00 → 0.50 Correctness, Relevance 1.00, Safety 1.00; a failed case with the judge's reason | "We found the root cause and fixed it. We're below our 0.80 target and we know why. This becomes your quality gate." |
+| 3. Evaluation | "How do we know it's right?" | MLflow: 0.00 → 0.50 → 0.70 Correctness (app end to end), Relevance 1.00, Safety 1.00; a failed case with the judge's reason | "We found the root cause and fixed it. We're below our 0.80 target and we know why. This becomes your quality gate." |
 | 4. Architecture | "One journey, not six demos." | UC lineage, PO-00006 trace raw → app | "Governed in one place, serverless, deployed from code." |
 | 5. Close | "What it's worth and how to prove it." | Value table with assumptions | "Next step is a six-week, five-store pilot with a timed baseline." |
 
@@ -64,16 +64,18 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
   corrupt pipeline tables. Parsing uses `ai_parse_document`, then an LLM structures the fields, then
   the PO comparison is deterministic code, not the model."
 
-### "Your correctness is only 0.50"
+### "Your correctness is only 0.70"
 - **Business:** "Yes, and I'm showing you on purpose. It was 0.00 on the first run; we found the
-  cause and one change moved it to 0.50. Safety is 1.00: when it doesn't know, it says
+  cause, fixed it, and it's now 0.70 measured through the deployed app. Safety is 1.00: when it doesn't know, it says
   so instead of guessing. We won't roll out below the 0.80 target; the pilot includes getting there."
 - **Technical:** "Baseline 0.00: we called Genie through the Chat-mode API, which only queries
   tables, so all SOP questions were declined. We switched to the Agent mode API, which reads the
-  attached PDF volume; Correctness went to 0.50, Relevance 1.00. Of the five remaining failures,
-  four are answers that were right but missed one secondary expected fact, like a menu price that
-  wasn't asked for, and one is a judge error. 28 of 32 expected facts are present. Next: split the
-  expected facts into must-have and nice-to-have, tighten the agent instructions, and re-run.
+  attached PDF volume; Correctness went to 0.50, Relevance 1.00. Most misses were facts the model left out, like menu
+  prices. A prompt change didn't fix that, so we moved prices to a deterministic lookup against the
+  governed `products` table. Measured end to end through the app, Correctness is 0.70. Of the three
+  remaining failures, one is a judge error and two missed one secondary fact each. With 10 questions,
+  run-to-run variation is about ±0.1–0.2, so the next step is a 30+ question set and a
+  must-have/nice-to-have rubric.
   Latest numbers are in evidence/09. We dropped the groundedness scorer because Agent mode doesn't
   return the retrieved chunks, so a groundedness score would have been meaningless."
 
@@ -156,6 +158,6 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
 - [ ] Opening delivered in under 90 seconds, no screen
 - [ ] Each scene ends with a business "so what", not a feature
 - [ ] Say "projected" or "assumed" every time you quote the value model
-- [ ] Practice the 0.50 answer out loud until it sounds confident, not defensive
+- [ ] Practice the 0.70 answer out loud until it sounds confident, not defensive
 - [ ] Practice switching altitude mid-answer ("for the platform team: …")
 - [ ] Full run under 15 minutes with pre-warmed cache

@@ -120,45 +120,66 @@ Gold layer has 339 total delivery exceptions (late + cancelled).
 
 ## Layer 5 — Lakebase (operational serving)
 
-After `sync_gold_to_lakebase.py` run (2026-09-27T10:03:28Z):
+Sync: `scripts/sync_gold_to_lakebase.py`, latest run 2026-09-28T13:59:57Z (339 rows in `lb_delivery_exceptions`).
 
-**Table:** `lb_delivery_exceptions` in Lakebase instance `kaapi-bricks`
+**Table:** `lb_delivery_exceptions` in Lakebase instance `kaapi-bricks`. Actual query output, 2026-09-28:
 
 ```sql
-SELECT po_id, supplier_name, store_id, exception_type, days_late, total_amount
-FROM lb_delivery_exceptions
-WHERE po_id = 'PO-00006'
+SELECT po_id, days_late FROM lb_delivery_exceptions
+WHERE store_id = 'STR-019' ORDER BY days_late DESC, po_id;
+```
+```
+PO-00006 | 2      <- the traced record
+PO-00470 | 2
+PO-00167 | 1
+PO-00996 | 1
+PO-01077 | 1
+PO-01358 | 1
+(6 rows)
 ```
 
-Result: same row as gold layer above. 339 rows total synced.
+The same query on gold `gold_delivery_exceptions` returns the same 6 POs with the same `days_late`.
 
 ---
 
-## Layer 6 — App response (Genie Agent)
+## Layer 6 — App response (captured from the deployed app)
 
-**Endpoint:** `GET /api/lakebase/inventory/STR-019` reads from `lb_inventory_position`
-(Lakebase OLTP path — no Delta scan)
+| Field | Value |
+|---|---|
+| Endpoint | `POST /api/chat` on `kaapi-bricks-finale` (authenticated SDK token) |
+| Body | `{"query": "Are there any delivery exceptions for my store? List any late or cancelled supplier deliveries with the PO number, supplier and days late.", "store_location": "Pondicherry", "skip_cache": true}` |
+| Captured | 2026-09-28T14:19:38Z · HTTP 200 · `from_cache: false` · 44.0 s client |
+| Route | `process_chat` → `call_genie_sync` (Genie Agent mode, space `01f12a63…`) → `menu_price_lookup` |
+| MLflow trace | **tr-054b71b6d16076a7ba3b5e0008342e81** · experiment 3268449285627906 · state OK · 42.7 s |
+| Trace spans | `chat_request` (AGENT, 42,683 ms) → `genie_call` (CHAT_MODEL, 40,005 ms) → `menu_price_lookup` (TOOL, 2,632 ms) |
+| Raw response | `evidence/raw/08_app_delivery_exceptions_response.json` |
 
-**Chat question:** "Are there any delivery exceptions for my store?"
-**App route:** `/api/chat` → `call_genie_sync()` → Genie Space `01f12a63`
-**Genie query:** joins `gold_delivery_exceptions` with `stores` WHERE store_id='STR-019'
+**Actual response (`full_text`, citation link removed):**
 
-Response excerpt (representative of real Genie output for this query — paste the actual
-app response and MLflow trace ID here after running the app):
+> ## Delivery Exceptions for Kaapi Bricks Pondicherry
+>
+> Yes, there are **6 late deliveries** recorded for your store. All were eventually delivered, with delays ranging from 1 to 2 days. No cancelled deliveries were found.
+>
+> | po_id | supplier_name | exception_type | days_late | order_date | expected_delivery_date | actual_delivery_date | status |
+> |---|---|---|---|---|---|---|---|
+> | PO-00470 | Araku Valley Organics | late | 2 | 2026-06-01 | 2026-06-11 | 2026-06-13 | delivered |
+> | **PO-00006** | **Chikmagalur Plantations** | **late** | **2** | **2026-07-15** | **2026-07-20** | **2026-07-22** | **delivered** |
+> | PO-01077 | Kerala Spice Traders | late | 1 | 2026-02-23 | 2026-03-01 | 2026-03-02 | delivered |
+> | PO-00167 | Coorg Coffee Estates | late | 1 | 2026-06-04 | 2026-06-11 | 2026-06-12 | delivered |
+> | PO-00996 | Coorg Coffee Estates | late | 1 | 2026-06-27 | 2026-07-02 | 2026-07-03 | delivered |
+> | PO-01358 | Kerala Spice Traders | late | 1 | 2026-03-10 | 2026-03-14 | 2026-03-15 | delivered |
 
-```
-Kaapi Bricks Pondicherry has 1 delivery exception on record:
-PO-00006 from Chikmagalur Plantations arrived 2 days late
-(expected 2026-07-20, actual 2026-07-22). Total order value: ₹3,087.64.
-This is a Robusta Beans + Chicory delivery — check current stock levels
-to confirm no shortfall before next roasting prep.
-```
+**Cross-check:** the app's 6 POs and days-late values match gold `gold_delivery_exceptions` and
+Lakebase `lb_delivery_exceptions` row for row. PO-00006's order, expected and actual dates match
+the raw, bronze and silver rows in Layers 1–3.
 
-> **Status:** The Genie query and gold table result above are real (queried 2026-09-27).
-> The app response above is the expected output for the same query via /api/chat.
-> To capture a verified MLflow trace ID: open the app, send the question, then check
-> experiment 3268449285627906 in the workspace for the trace.
-> App URL: <main-app-url>
+**Correction note:** an earlier version of this file had a *representative* answer
+claiming "1 delivery exception" for Pondicherry. The captured answer is 6, which matches the data.
+The representative text has been removed.
+
+Serving path note: the chat answer is produced by Genie Agent mode over the governed
+silver/gold tables. The Lakebase copy serves the app's operational panels (`/api/lakebase/inventory/*`,
+evidence/07) at OLTP latency. Layer 5 shows that both stores hold the same records.
 
 ---
 
@@ -170,5 +191,5 @@ to confirm no shortfall before next roasting prep.
 | Bronze | bronze_purchase_orders | PO-00006 | +_source_file, +_ingested_at |
 | Silver | purchase_orders | PO-00006 | type-cast, expectations passed |
 | Gold | gold_delivery_exceptions | PO-00006 | exception_type=late, days_late=2 |
-| Lakebase | lb_delivery_exceptions | PO-00006 | synced 2026-09-27T10:03Z |
-| App | /api/chat (Genie) | STR-019 | "arrived 2 days late" |
+| Lakebase | lb_delivery_exceptions | PO-00006 | days_late=2 (synced 2026-09-28T13:59Z) |
+| App | /api/chat → Genie Agent mode | PO-00006 | "late · 2 days · 2026-07-20 → 2026-07-22" (trace tr-054b71b6…) |

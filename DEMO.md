@@ -87,6 +87,7 @@ flows into the inventory numbers after the next pipeline refresh and Lakebase sy
    cannot read documents, so it declined every SOP question. It didn't make anything up:
    Safety 1.00.
 3. Run 2 (after switching to Genie Agent mode): Correctness 0.50, Relevance 1.00, Safety 1.00.
+   Run 5 (the deployed app end to end, with the governed menu-price lookup): Correctness 0.70.
 4. Open one failed case and read the judge's reason (e.g. the recipe was right but the price was
    missing). The latest iteration is in `evidence/09`.
 

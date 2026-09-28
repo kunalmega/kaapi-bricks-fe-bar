@@ -44,10 +44,10 @@ credential file were left out.
 
 ## Remaining before submitting
 
-- [ ] **Improve AI correctness.** Measured Correctness is 0.50 across two Agent-mode runs
-      (run 3 changed Genie's instructions; the score held, and which questions failed shifted).
-      Below the 0.80 target. Next step is structural: price and supplier facts from tables,
-      a must-have/nice-to-have rubric, and a larger dataset (see evidence/09). Keep the measured
+- [ ] **Improve AI correctness.** Genie-direct Correctness 0.50 (runs 2–3). With the governed
+      menu-price lookup, measured end to end through the deployed app: **0.70** (run 5, 10/10 scored;
+      run 4 void). Below the 0.80 target. Next: supplier terms from a table, a must-have/nice-to-have
+      rubric, and a 30+ question set (see evidence/09). Keep the measured
       history visible; do not present unscored metrics as passes.
 - [x] **Verify public access.** Checked 2026-09-28 with an unauthenticated request: repo page
       HTTP 200, raw README HTTP 200, GitHub API `visibility: public`.
