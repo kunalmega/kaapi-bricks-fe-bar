@@ -1,0 +1,163 @@
+{
+  "file": "invoice_mysore_po01057.pdf",
+  "request_utc": "2026-09-28T13:53:13.782099+00:00",
+  "client_elapsed_s": 23.8,
+  "http": 200,
+  "body": {
+    "extracted": {
+      "supplier_name": "MYSORE SWEET WORKS",
+      "invoice_number": "MSW-INV-2026-0729",
+      "invoice_date": "2026-07-29",
+      "po_reference": "PO-01057",
+      "delivery_to": "Kaapi Bricks Koramangala, Bangalore (STR-001)",
+      "items": [
+        {
+          "name": "Badam Paste",
+          "quantity": 2.15,
+          "unit": "kg",
+          "rate": 800.0,
+          "amount": 1720.0
+        },
+        {
+          "name": "Rose Syrup",
+          "quantity": 6.39,
+          "unit": "liter",
+          "rate": 230.0,
+          "amount": 1469.7
+        },
+        {
+          "name": "Jaggery Blocks",
+          "quantity": 14.0,
+          "unit": "kg",
+          "rate": 80.0,
+          "amount": 1120.0
+        },
+        {
+          "name": "Sugar",
+          "quantity": 5.0,
+          "unit": "kg",
+          "rate": 45.0,
+          "amount": 225.0
+        }
+      ],
+      "subtotal": 4534.7,
+      "gst_amount": 226.74,
+      "total_amount": 4761.44
+    },
+    "supplier_match": {
+      "supplier_id": "SUP-006",
+      "name": "Mysore Sweet Works"
+    },
+    "po_match": {
+      "po_id": "PO-01057",
+      "supplier_id": "SUP-006",
+      "store_id": "STR-001",
+      "total_amount": "1400.5",
+      "status": "pending"
+    },
+    "po_lines": [
+      {
+        "ingredient_id": "ING-014",
+        "ingredient_name": "Badam Paste",
+        "quantity": "2.15",
+        "unit": "kg",
+        "unit_price": "800.0",
+        "line_total": "1720.0"
+      },
+      {
+        "ingredient_id": "ING-013",
+        "ingredient_name": "Rose Syrup",
+        "quantity": "6.39",
+        "unit": "liter",
+        "unit_price": "200.0",
+        "line_total": "1278.0"
+      },
+      {
+        "ingredient_id": "ING-005",
+        "ingredient_name": "Jaggery",
+        "quantity": "12.69",
+        "unit": "kg",
+        "unit_price": "80.0",
+        "line_total": "1015.2"
+      },
+      {
+        "ingredient_id": "ING-018",
+        "ingredient_name": "Palm Jaggery",
+        "quantity": "5.76",
+        "unit": "kg",
+        "unit_price": "150.0",
+        "line_total": "864.0"
+      }
+    ],
+    "matched_items": [
+      {
+        "invoice_name": "Badam Paste",
+        "invoice_qty": 2.15,
+        "invoice_unit": "kg",
+        "invoice_rate": 800.0,
+        "invoice_amount": 1720.0,
+        "status": "match",
+        "issues": [],
+        "po_name": "Badam Paste",
+        "po_qty": 2.15,
+        "po_rate": 800.0,
+        "ingredient_id": "ING-014"
+      },
+      {
+        "invoice_name": "Rose Syrup",
+        "invoice_qty": 6.39,
+        "invoice_unit": "liter",
+        "invoice_rate": 230.0,
+        "invoice_amount": 1469.7,
+        "status": "error",
+        "issues": [
+          "Price: contract ₹200.0, invoiced ₹230.0 (+₹30)"
+        ],
+        "po_name": "Rose Syrup",
+        "po_qty": 6.39,
+        "po_rate": 200.0,
+        "ingredient_id": "ING-013"
+      },
+      {
+        "invoice_name": "Jaggery Blocks",
+        "invoice_qty": 14.0,
+        "invoice_unit": "kg",
+        "invoice_rate": 80.0,
+        "invoice_amount": 1120.0,
+        "status": "warning",
+        "issues": [
+          "Qty: ordered 12.69, invoiced 14.0 (+1.3)"
+        ],
+        "po_name": "Jaggery",
+        "po_qty": 12.69,
+        "po_rate": 80.0,
+        "ingredient_id": "ING-005"
+      },
+      {
+        "invoice_name": "Sugar",
+        "invoice_qty": 5.0,
+        "invoice_unit": "kg",
+        "invoice_rate": 45.0,
+        "invoice_amount": 225.0,
+        "status": "extra",
+        "issues": [
+          "Not in PO — extra item"
+        ]
+      },
+      {
+        "invoice_name": "Palm Jaggery",
+        "po_name": "Palm Jaggery",
+        "po_qty": 5.76,
+        "po_rate": 150.0,
+        "status": "missing",
+        "issues": [
+          "In PO but not in invoice — missing delivery"
+        ],
+        "ingredient_id": "ING-018"
+      }
+    ],
+    "warnings": [],
+    "latency_ms": 22656.731843948364,
+    "filename": "inv_04017f08_invoice_mysore_po01057.pdf"
+  }
+}

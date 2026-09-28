@@ -158,7 +158,7 @@ to confirm no shortfall before next roasting prep.
 > The app response above is the expected output for the same query via /api/chat.
 > To capture a verified MLflow trace ID: open the app, send the question, then check
 > experiment 3268449285627906 in the workspace for the trace.
-> App URL: https://kaapi-bricks-finale-7474657767854090.aws.databricksapps.com
+> App URL: <main-app-url>
 
 ---
 

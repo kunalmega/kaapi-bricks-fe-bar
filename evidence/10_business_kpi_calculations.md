@@ -1,6 +1,11 @@
 # Business KPI Calculations — Kaapi Bricks Intelligent Store Operations
 
-All inputs marked `[ASSUMPTION: ...]` are estimates. Replace with actual data from Kaapi Bricks operations before a real customer presentation.
+**Status: projection, not a measured outcome.** Every value below is derived from inputs marked
+`[ASSUMPTION: ...]`. No timed baseline trial of manual vs. assisted reconciliation has been run, and
+Kaapi Bricks is a fictional company with synthetic data. Replace each assumption with the customer's
+own operational data before using these numbers in a real business case. The only measured timings
+in this repository are system latencies (see `evidence/06` for invoice parse time and `evidence/09`
+for Genie Agent latency).
 
 ---
 
@@ -35,7 +40,7 @@ USD equivalent at ₹84/USD       : ~$107,000/year
 ```
 Deliveries per year             : 37 × 2 × 365 = 27,010 deliveries
 Average invoice value           : ₹35,000  [ASSUMPTION: avg across 8 suppliers]
-Invoices with discrepancies     :  12%  [ASSUMPTION: based on demo data — ~12% of POs have qty/price issues]
+Invoices with discrepancies     :  12%  [ASSUMPTION: industry-typical rate; not measured from the synthetic data]
 Average discrepancy per invoice : ₹2,800  [ASSUMPTION: ~8% of invoice value slips through]
 ---------------------------------------------------------------------------
 Annual leakage prevented        : 27,010 × 12% × ₹2,800 = ₹9,075,360 (~₹91 lakhs/year)
@@ -106,21 +111,28 @@ Annual value at ₹800/hr         : ₹2,707,200 (~₹27 lakhs/year)
 
 ---
 
-## Payback Estimate
+## Payback and ROI (projection)
 
 ```
-Databricks platform cost        : $50,000/year  [ASSUMPTION: serverless pipelines + Lakebase + FMAPI + apps at 37-store scale]
-3-year platform cost            : $150,000
-Implementation cost (one-time)  : $70,000  [ASSUMPTION: 8-week implementation — data eng, app setup, training, change management]
+Annual gross value (projected)  : $264,500/year   (sum of KPIs 1–5 above, all assumption-based)
+Databricks platform cost        : $50,000/year    [ASSUMPTION: serverless pipelines + Lakebase + FMAPI + apps at 37-store scale]
+Implementation cost (one-time)  : $70,000         [ASSUMPTION: 8-week implementation — data eng, app setup, training, change management]
 ---------------------------------------------------------------------------
-Total 3-year investment         : $220,000  [ASSUMPTION: $150k platform + $70k implementation]
+Annual net benefit              : $264,500 − $50,000 = $214,500
 
-Year-1 net benefit              : $264,500 - $50,000 - $70,000 = $144,500
-Year-2+ net benefit/year        : $264,500 - $50,000 = $214,500
-Payback period                  : ~4.8 months
-3-year total value              : $144,500 + $214,500 + $214,500 = $573,500
-3-year ROI                      : $573,500 / $220,000 = 2.6×
+Simple payback (months)         = one-time implementation cost ÷ annual net benefit × 12
+                                = $70,000 ÷ $214,500 × 12
+                                = 3.9 months
+
+3-year gross value              : 3 × $264,500 = $793,500
+3-year total cost               : 3 × $50,000 + $70,000 = $220,000
+3-year net ROI                  = (3-year gross value − 3-year total cost) ÷ 3-year total cost
+                                = ($793,500 − $220,000) ÷ $220,000
+                                = $573,500 ÷ $220,000
+                                = 2.6×
 ```
+
+These two formulas are the only payback and ROI definitions used in this repository (deck included).
 
 ---
 
@@ -133,9 +145,9 @@ Payback period                  : ~4.8 months
 | Waste rate (% of ingredient cost) | ~4% | < 3% |
 | Supplier on-time rate | 80–86% (range across 8 suppliers, per gold_supplier_performance) | > 92% |
 | Manager minutes per delivery reconciliation | 25 min | < 2 min |
-| Genie answer latency | N/A (manual) | < 5 sec |
+| Genie answer latency | N/A (manual) | < 5 sec for cached / table questions; document (SOP) questions measured at ~23 s in Agent mode (see evidence/09) |
 | Forecast error (MAPE) | no forecast | < 15% |
 
 ---
 
-*All assumptions labeled above should be validated against actual Kaapi Bricks operational data before a production business case. These numbers are for demo and illustrative purposes using the synthetic dataset.*
+*All figures are projections from labeled assumptions. They are not measured customer outcomes and must be validated against real operational data (ideally a timed pilot baseline in 5 stores) before a production business case.*

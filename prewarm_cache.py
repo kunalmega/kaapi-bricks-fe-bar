@@ -1,54 +1,64 @@
-"""Pre-warm the Kaapi Bricks app cache before demo.
+"""Pre-warm the Kaapi Bricks app cache before the demo.
 
-Fires all example questions through the app so the semantic cache in
-Lakebase is populated. Run this 30 minutes before the demo.
+Sends the demo questions through the app so their answers are stored in the Lakebase
+semantic cache. Document (SOP) questions take ~20–25 s in Genie Agent mode when not cached.
+Run this 30 minutes before the demo; cached answers expire after 48 hours.
 
 Usage:
-    python prewarm_cache.py [APP_URL]
+    python prewarm_cache.py <APP_URL> [--profile DEFAULT]
+
+A deployed Databricks App requires OAuth, so requests are signed with the Databricks CLI
+profile's token.
 """
 
-import sys
+import argparse
 import time
-import requests
 
-APP_URL = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8000"
+import requests
+from databricks.sdk import WorkspaceClient
 
 QUESTIONS = [
-    "What's our best-selling drink this month?",
+    "Which ingredients are below reorder threshold? Show store and days of cover.",
+    "How long can prepared decoction be kept before discarding?",
+    "What were our top-selling drinks from February to May?",
     "How do I make a Classic Filter Coffee?",
-    "Which stores are running low on Coorg Arabica beans?",
-    "What promotions are active right now?",
+    "What is the correct decoction ratio and timing?",
     "How long does Coorg Arabica take to reorder?",
-    "What should I prepare for tomorrow?",
 ]
 
-print(f"Pre-warming cache at {APP_URL}...\n")
+parser = argparse.ArgumentParser()
+parser.add_argument("app_url", nargs="?", default="http://localhost:8000")
+parser.add_argument("--profile", default="DEFAULT")
+args = parser.parse_args()
+app_url = args.app_url.rstrip("/")
+
+headers = {"Content-Type": "application/json"}
+if not app_url.startswith("http://localhost"):
+    headers.update(WorkspaceClient(profile=args.profile).config.authenticate())
+
+print(f"Pre-warming cache at {app_url}...\n")
 
 for i, q in enumerate(QUESTIONS, 1):
     print(f"  [{i}/{len(QUESTIONS)}] {q[:60]}...")
+    start = time.time()
     try:
         resp = requests.post(
-            f"{APP_URL}/api/chat",
-            json={
-                "query": q,
-                "store_location": "Koramangala, Bangalore",
-                "history": [],
-            },
-            timeout=120,
+            f"{app_url}/api/chat",
+            headers=headers,
+            json={"query": q, "store_location": "Koramangala, Bangalore", "history": []},
+            timeout=300,
             stream=True,
         )
-        # Consume SSE stream
-        for line in resp.iter_lines(decode_unicode=True):
+        for _ in resp.iter_lines(decode_unicode=True):  # consume the SSE stream
             pass
-        print(f"           Done ({resp.status_code})")
+        print(f"           Done ({resp.status_code}, {time.time() - start:.0f}s)")
     except Exception as e:
         print(f"           Error: {e}")
     time.sleep(2)
 
-# Verify cache
 print("\nVerifying cache...")
 try:
-    stats = requests.get(f"{APP_URL}/api/stats", timeout=10).json()
+    stats = requests.get(f"{app_url}/api/stats", headers=headers, timeout=10).json()
     print(f"  Cache entries: {stats.get('cache_entries', 'N/A')}")
     print(f"  Total messages: {stats.get('messages', 'N/A')}")
     print(f"  Lakebase connected: {stats.get('connected', False)}")

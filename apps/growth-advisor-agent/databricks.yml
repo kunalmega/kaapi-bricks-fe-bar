@@ -12,13 +12,9 @@ targets:
   dev:
     mode: development
     default: true
-    workspace:
-      host: https://fevm-fevm-cme-conde.cloud.databricks.com
 
   prod:
     mode: production
-    workspace:
-      host: https://fevm-fevm-cme-conde.cloud.databricks.com
     resources:
       apps:
         agent_kaapi_bricks_growth:

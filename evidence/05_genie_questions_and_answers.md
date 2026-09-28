@@ -12,7 +12,7 @@ Inventory and PO questions cover the full range through July 2026.
 
 ---
 
-## Question 1: Top 5 selling products in the dataset period (Feb–Jul 2026)
+## Question 1: Top 5 selling products in the dataset period (Feb–May 2026 orders)
 
 **Question asked:** What were the top 5 best-selling drinks by units sold from February to July 2026?
 
@@ -31,16 +31,19 @@ ORDER BY units_sold DESC
 LIMIT 5
 ```
 
-**Result:**
+**Result** (re-executed against the warehouse on 2026-09-28; orders exist only through 2026-05-14):
 | name | category | revenue (₹) | units_sold |
-|---|---|---|---|
-| Classic Filter Coffee | Filter Coffee | ₹1,623,480 | 28,020 |
-| Masala Chai | Traditional | ₹861,300 | 17,226 |
-| Strong Decoction | Filter Coffee | ₹1,372,560 | 19,608 |
-| Degree Coffee | Filter Coffee | ₹957,240 | 15,954 |
-| Bella Kaapi (Jaggery) | Filter Coffee | ₹706,200 | 10,864 |
+|---|---|---:|---:|
+| Classic Filter Coffee | Filter Coffee | ₹3,065,275 | 44,375 |
+| Strong Decoction | Filter Coffee | ₹2,510,275 | 31,781 |
+| Masala Chai | Traditional | ₹1,684,830 | 28,434 |
+| Degree Coffee | Filter Coffee | ₹1,737,430 | 25,191 |
+| Bella Kaapi (Jaggery) | Filter Coffee | ₹1,403,090 | 18,953 |
 
-Classic Filter Coffee leads with 28,020 units — consistent with its 14% popularity weight in the menu design. Filter Coffee as a category dominates all top positions. Masala Chai is the strongest non-coffee item at 17,226 units.
+Classic Filter Coffee leads with 44,375 units, consistent with its 14% popularity weight in the
+generator. Masala Chai is the strongest non-coffee item. *(Correction: an earlier version of this
+file listed different figures that were not query output; the table above is the actual result
+of the SQL shown.)*
 
 ---
 

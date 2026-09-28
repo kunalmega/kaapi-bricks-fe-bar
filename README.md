@@ -1,117 +1,154 @@
 # Kaapi Bricks — Intelligent Store Operations
 
-**FE Bar submission** · Industry: Multi-location food-service and specialty retail
+**FE Bar submission** · Industry: multi-location food service and specialty retail ·
+Fictional company, 100% synthetic data
 
 ---
 
-## Business Problem
+## Business problem
 
-Kaapi Bricks operates **37 stores** across India and internationally selling South Indian filter
-coffee. Each store manager currently reconciles supplier deliveries, checks inventory, reviews
-demand, and looks up operating guidance across separate systems — a process that takes roughly
-**30 minutes per delivery, per store, every day**.
+Kaapi Bricks runs **37 filter-coffee stores** (30 in India, 7 international). Each store gets about
+two supplier deliveries a day. Today the store manager checks every paper invoice against its
+purchase order by hand, looks up stock levels by counting, and answers staff questions about
+recipes and food safety from memory or a binder of PDFs.
 
-This solution replaces that manual workflow with a single governed assistant that answers
-operational questions in seconds: catching invoice discrepancies, flagging stockout risk before
-it happens, and recommending preparation quantities based on weather and local demand patterns.
+This solution gives the manager one governed assistant:
 
-**Measured outcome:** Supplier-invoice cross-check reduced from ~30 minutes to seconds.
-Full KPI math in `evidence/10_business_kpi_calculations.md`.
+- **Invoice check:** upload an invoice → it is parsed, matched to the PO, and every quantity and
+  price discrepancy is flagged → the manager approves.
+- **Inventory:** current stock, below-reorder items, open and late POs, served from Lakebase.
+- **Questions in plain English:** sales, suppliers, and inventory from governed tables; recipes,
+  SOPs, and food safety from the company's own documents, with citations.
+
+**Projected value: ~₹2.2 crore (~$264,500) a year, simple payback 3.9 months.** These are
+projections from labeled assumptions, not measured outcomes. No timed baseline trial has been run.
+See `evidence/10_business_kpi_calculations.md`.
 
 ---
 
-## Integrated Data Journey
+## Integrated data journey (as built and run)
 
 ```
-Synthetic raw retail + supplier data   (scripts/generate_data.py — 37 stores, 200k orders)
-  → Unity Catalog Volume               (raw_data/<entity>/*.parquet)
-  → Lakeflow bronze streaming tables   (Auto Loader, 14 entities)
-  → Lakeflow silver tables             (conformed + data-quality expectations, 14 entities)
-  → Lakeflow gold operational tables   (7 KPI + operational tables)
-  → Lakebase operational serving       (4 hot tables at OLTP latency)
-  → ML / GenAI                         (Knowledge Assistant, Multi-Agent Supervisor, document AI, MLflow)
-  → Genie Agent                        (governed NL analytics over silver + gold)
-  → Databricks App                     (store-manager console — main-chat-app)
+scripts/generate_data.py          synthetic POS, supplier, PO, inventory data (Faker, seed=42)
+  → Unity Catalog volume          raw_data/<entity>/*.parquet
+  → Lakeflow bronze               14 streaming tables (Auto Loader)
+  → Lakeflow silver               14 materialized views, 45 data-quality expectations
+  → Lakeflow gold                 7 operational + KPI views
+  → Lakebase                      4 gold tables synced for the app's point lookups
+  → Genie Agent (Agent mode)      21 silver + gold tables + 6 SOP/recipe PDFs
+  → ai_parse_document + LLM       invoice parsing; human approval writes app tables
+  → MLflow evaluation             Correctness / Relevance / Safety on 10 store-manager questions
+  → Databricks App                store manager console (main-chat-app)
 ```
 
-The same entity keys (store_id, ingredient_id, po_id) flow from raw Parquet through every layer
-to the app response — one integrated journey, not separate demos.
+The same keys (store_id, ingredient_id, po_id) flow through every layer. `evidence/08` traces one
+real purchase order from raw file to app response.
 
 ---
 
-## FE Bar Layer Map
+## FE Bar layer map
 
-| Layer | Implementation | File |
-|---|---|---|
-| **Lakeflow** | Serverless declarative pipeline: 14 bronze (Auto Loader) + 14 silver (expectations) + 7 gold | `databricks.yml`, `resources/`, `src/pipeline/` |
-| **Unity Catalog** | Catalog `fevm_cme_conde_catalog`, schema `kaapi_bricks`, comments, grants, lineage | `scripts/generate_data.py`, pipeline |
-| **Lakebase** | 4 operational gold tables synced for OLTP reads; app memory + QA cache | `scripts/sync_gold_to_lakebase.py`, `apps/main-chat-app/app.py` |
-| **ML / GenAI** | Knowledge Assistant (RAG), Multi-Agent Supervisor, `ai_parse_document` (invoice), MLflow eval | `scripts/run_ka_evaluation.ipynb`, `run_mas_evaluation.ipynb` |
-| **Genie Agent** | NL analytics space wired to silver + gold tables | `scripts/create_agents.py` |
-| **Databricks App** | Store-manager chat console + MCP ops-advisor + growth + promo agents | `apps/` |
+| Layer | What is built | Where | Evidence |
+|---|---|---|---|
+| **Lakeflow** | Serverless declarative pipeline `kaapi_bricks_medallion`: 14 bronze + 14 silver + 7 gold. Run 065d6a70 completed | `databricks.yml`, `resources/kaapi_pipeline.pipeline.yml`, `src/pipeline/` | 01, 03 |
+| **Unity Catalog** | `kaapi_bricks` schema, raw/invoice volumes, table comments, lineage, app service-principal grants | pipeline, `scripts/generate_data.py` | 02 |
+| **Lakebase** | `lb_inventory_position`, `lb_open_purchase_orders`, `lb_delivery_exceptions`, `lb_product_demand`; the inventory panel reads `/api/lakebase/inventory/{store}`. Also chat history + answer cache | `scripts/sync_gold_to_lakebase.py`, `apps/main-chat-app/` | 04, 07 |
+| **ML / GenAI** | `ai_parse_document` invoice extraction; MLflow `genai.evaluate` with Correctness, Relevance, Safety | `apps/main-chat-app/app.py`, `scripts/run_genie_evaluation.py` | 06, 09 |
+| **Genie Agent** | One space: 21 tables + SOP PDF volume, called through the **Agent mode** API so it can read documents | `resources/genie_space.json`, `scripts/create_genie_agent.py` | 05, 09 |
+| **Databricks App** | Store manager console: chat, inventory panel, invoice upload and approval | `apps/main-chat-app/` | 07 |
+
+**Replaced:** Knowledge Assistant and Supervisor Agent (being deprecated). One Genie Agent now covers
+structured data and documents.
 
 ---
 
-## Repository Layout
+## Evidence index (text, committed)
+
+| File | Contents |
+|---|---|
+| `evidence/01_lakeflow_run.txt` | Pipeline update ID, status, duration, row counts for all 35 datasets |
+| `evidence/02_uc_tables_and_lineage.md` | Unity Catalog table inventory and raw → gold lineage traces |
+| `evidence/03_data_quality_results.txt` | 45 expectations with passed/failed counts, read from the pipeline event log |
+| `evidence/04_lakebase_queries.txt` | Lakebase tables, synced row counts, operational queries |
+| `evidence/05_genie_questions_and_answers.md` | Genie questions, generated SQL, returned results |
+| `evidence/06_genai_model_outputs.md` | Invoice parse and match output from `/api/parse-invoice` |
+| `evidence/07_app_health_and_api_tests.txt` | App status and authenticated API responses (Lakebase inventory, chat) |
+| `evidence/08_end_to_end_record_trace.md` | PO-00006 traced raw → bronze → silver → gold → Lakebase → app |
+| `evidence/09_mlflow_evaluation_results.md` | MLflow run IDs, scores per iteration, per-question traces, failure analysis |
+| `evidence/10_business_kpi_calculations.md` | Value model: every assumption labeled, payback and ROI formulas |
+
+---
+
+## Repository layout
 
 ```
 README.md                ← you are here
-DEMO.md                  ← 15-min demo script (tell-show-tell per scene)
-DEMO_SCRIPT.md           ← extended talking points
-ARCHITECTURE.md          ← living integrated-journey diagram
-febar.md                 ← working plan + submission checklist
-LAKEFLOW_PLAN.md         ← medallion pipeline design doc
+deck/FE_BAR_DECK.md      ← business presentation (outcome first, 10 sections)
+DEMO.md                  ← 15-minute demo script, tell-show-tell per scene
+ROLEPLAY_PREP.md         ← opening, scene script, prepared answers for both personas
+ARCHITECTURE.md          ← architecture and design decisions
+febar.md                 ← submission checklist
+LAKEFLOW_PLAN.md         ← pipeline design notes
 
-databricks.yml           ← DAB bundle root
-resources/               ← kaapi_pipeline.pipeline.yml (serverless LDP)
+databricks.yml           ← bundle root
+resources/               ← kaapi_pipeline.pipeline.yml · genie_space.json
 src/pipeline/            ← 01_bronze.sql · 02_silver.sql · 03_gold.sql
-scripts/                 ← generate_data.py · sync_gold_to_lakebase.py · create_agents.py · evals
-apps/                    ← main-chat-app · growth-advisor-agent · promo-agent · mcp-server
-sample-invoices/         ← PDF invoices for the doc-AI demo
-evidence/                ← committed text execution evidence (01–10)
-deck/                    ← FE_BAR_DECK.md (business presentation)
+scripts/                 ← data generation, migration, Lakebase sync, Genie config, evaluation
+apps/main-chat-app/      ← the store manager console (deployed)
+apps/mcp-server/         ← operations-advisor MCP server (deployed by deploy.sh; not called by chat)
+sample-invoices/         ← invoice PDFs for the demo
+evidence/                ← execution evidence 01–10
 ```
+
+Legacy files kept for history, not part of the current flow: `scripts/create_agents.py`,
+`scripts/run_ka_evaluation*.ipynb`, `scripts/run_mas_evaluation*.ipynb` (Knowledge Assistant /
+Supervisor Agent), `apps/growth-advisor-agent/`, `apps/promo-agent/`.
 
 ---
 
 ## Deploy
 
-**Prerequisites:** Databricks CLI authenticated, Unity Catalog access, SQL warehouse, Lakebase
-instance named `kaapi-bricks`.
+Prerequisites: Databricks CLI authenticated, a Unity Catalog catalog, a SQL warehouse, and a
+Lakebase instance named `kaapi-bricks`. Set your catalog in `databricks.yml` and in
+`apps/main-chat-app/app.py` (`CATALOG_SCHEMA`).
 
 ```bash
-# 1. Land raw data in the UC Volume
-python scripts/generate_data.py --profile DEFAULT
+# 1. Generate synthetic data and land raw Parquet in the volume
+python scripts/generate_data.py --profile DEFAULT --warehouse-id <warehouse_id>
 
-# 2. Drop legacy generator-created tables (one-time migration)
-databricks sql execute --profile DEFAULT --file scripts/drop_legacy_tables.sql
+# 2. One-time migration: drop tables the pipeline will own
+#    run scripts/drop_legacy_tables.sql in a SQL editor or via the statements API
 
-# 3. Deploy and run the Lakeflow medallion pipeline
+# 3. Deploy and run the Lakeflow pipeline
 databricks bundle deploy -t dev --profile DEFAULT
 databricks bundle run kaapi_bricks_medallion -t dev --profile DEFAULT
 
-# 4. Create app-write tables (outside the pipeline)
-databricks sql execute --profile DEFAULT --file scripts/init_app_tables.sql
+# 4. Create the app-write tables (outside the pipeline)
+#    run scripts/init_app_tables.sql
 
-# 5. Sync gold operational data to Lakebase
-python scripts/sync_gold_to_lakebase.py --profile DEFAULT
+# 5. Sync gold operational tables to Lakebase (repeat after every pipeline update)
+python scripts/sync_gold_to_lakebase.py --profile DEFAULT --warehouse-id <warehouse_id>
+#    then, in Lakebase: GRANT SELECT ON lb_inventory_position, lb_open_purchase_orders,
+#    lb_delivery_exceptions, lb_product_demand TO "<app service principal>";
 
-# 6. Create KA + MAS + Genie agents
-python scripts/create_agents.py --profile DEFAULT
+# 6. Configure the Genie Agent from resources/genie_space.json
+python scripts/create_genie_agent.py --profile DEFAULT            # update existing space
+python scripts/create_genie_agent.py --create --catalog <catalog> # or create a new one
 
-# 7. Deploy apps
-./deploy.sh DEFAULT fevm_cme_conde_catalog <warehouse_id>
+# 7. Deploy the apps and grant the app service principal access
+./deploy.sh DEFAULT <catalog> <warehouse_id>
+
+# 8. Evaluate the agent (runs as a notebook job; results land in MLflow)
+#    import scripts/run_genie_evaluation.py to the workspace and run it on serverless
 ```
-
-**Catalog and warehouse:** change `fevm_cme_conde_catalog` → your catalog in `databricks.yml`
-variables and `apps/main-chat-app/app.py` (`CATALOG_SCHEMA`).
 
 ---
 
 ## Data
 
-Fully synthetic — no real customer identity. Generated with Faker (seed=42):
-37 stores · 28 products · 22 ingredients · 8 suppliers · 15,000 customers ·
-~200,000 orders · 2,000 purchase orders · inventory transactions · po_line_items
+Fully synthetic, fictional company (Faker, seed=42): 37 stores · 28 products · 22 ingredients ·
+8 suppliers · 15,000 customers · 200,000 orders · 2,000 purchase orders · 3,493 PO line items ·
+171,163 inventory transactions · 6 SOP/training PDFs.
 
-See `evidence/` for committed text-readable execution results after deployment.
+Date coverage: orders 2026-02-01 → 2026-05-14 (the 200,000-order cap is reached in mid-May);
+purchase orders and inventory 2026-02-01 → 2026-07-31.

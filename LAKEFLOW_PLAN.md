@@ -3,7 +3,10 @@
 Design for the #1 FE Bar gap: replace the one-time `read_files()` batch load with a real
 **Lakeflow Spark Declarative Pipeline** (bronze → silver → gold) on serverless compute.
 
-Status: **PLAN ONLY** — no code written yet. Awaiting go-ahead to scaffold.
+> **Historical design doc.** This was the pre-build plan. The implemented pipeline has **14 bronze + 14 silver + 7 gold** datasets
+> (`po_line_items` was added after this plan) and ran successfully on 2026-09-27 — see `src/pipeline/`, `evidence/01` and `evidence/03`.
+
+Status at time of writing: plan only.
 See `ARCHITECTURE.md` for the whole-journey diagram.
 
 ---

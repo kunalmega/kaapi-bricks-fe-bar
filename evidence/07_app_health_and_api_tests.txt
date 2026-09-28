@@ -1,9 +1,9 @@
 APP HEALTH AND API TESTS — KAAPI BRICKS
 ========================================
 App name   : kaapi-bricks-finale
-App URL    : https://kaapi-bricks-finale-7474657767854090.aws.databricksapps.com
-MCP URL    : https://kaapi-ops-mcp-7474657767854090.aws.databricksapps.com
-Workspace  : fevm-fevm-cme-conde.cloud.databricks.com
+App URL    : <main-app-url>
+MCP URL    : <mcp-app-url>
+Workspace  : <workspace-host>
 Test date  : 2026-09-28
 Auth       : Databricks App OAuth (w.config.authenticate() SDK token)
 
@@ -13,18 +13,18 @@ $ databricks apps get kaapi-bricks-finale --profile DEFAULT
   name        : kaapi-bricks-finale
   compute_status.state : ACTIVE
   app_status.state     : RUNNING
-  url         : https://kaapi-bricks-finale-7474657767854090.aws.databricksapps.com
+  url         : <main-app-url>
 
 $ databricks apps get kaapi-ops-mcp --profile DEFAULT
   name        : kaapi-ops-mcp
   compute_status.state : ACTIVE
-  url         : https://kaapi-ops-mcp-7474657767854090.aws.databricksapps.com
+  url         : <mcp-app-url>
 
 HEALTH CHECK (unauthenticated)
 -------------------------------
-GET https://kaapi-bricks-finale-7474657767854090.aws.databricksapps.com/
+GET <main-app-url>/
 HTTP 302 → Databricks OAuth OIDC redirect
-Location: https://fevm-fevm-cme-conde.cloud.databricks.com/oidc/oauth2/v2.0/authorize?...
+Location: <workspace-url>
 This is expected — Databricks Apps require OAuth login before serving content.
 
 API TEST 1 — Lakebase inventory (OLTP serving path)
@@ -107,7 +107,7 @@ DEPLOY VERIFICATION
 ---------------------
 Both apps deployed 2026-09-27 via deploy.sh DEFAULT fevm_cme_conde_catalog e755eae9d758fdf7
 Databricks pre-commit secret-scan hook passed on all commits (no credentials in code).
-App service principal (5edc807e) has:
+App service principal (main app SP) has:
   - USE CATALOG / USE SCHEMA / SELECT / MODIFY on fevm_cme_conde_catalog.kaapi_bricks
   - READ/WRITE VOLUME on raw_data and invoices volumes
   - SELECT on Lakebase lb_* tables (granted 2026-09-28)

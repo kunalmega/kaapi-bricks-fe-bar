@@ -82,7 +82,7 @@ and referential constraints by construction.
 
 REPRODUCE THIS QUERY
 ---------------------
-Run in any Databricks SQL session on fevm-fevm-cme-conde.cloud.databricks.com:
+Run in any Databricks SQL session on <workspace-host>:
 
   SELECT
     details:flow_progress:data_quality:expectations as expectations,

@@ -1,3 +1,4 @@
+import os
 """Create a Lakeview dashboard for Kaapi Bricks Agent Monitoring.
 
 Combines:
@@ -194,7 +195,7 @@ layout = [
         "### Quick Links",
         f"- [MAS Traces (MLflow)]({host}/ml/experiments/982411422225143) — Full trace spans for every MAS request",
         f"- [KA Traces (MLflow)]({host}/ml/experiments/982411422225142) — Knowledge Assistant traces",
-        f"- [Kaapi Bricks App]({host.replace('fevm-fevm-cme-conde.cloud.databricks.com','kaapi-bricks-app-7474657767854090.aws.databricksapps.com')}) — Live chat app",
+        f"- [Kaapi Bricks App]({os.environ.get('KAAPI_APP_URL', '<app-url>')}) — Live chat app",
     ]), "position": {"x": 0, "y": 43, "width": 6, "height": 2}},
 ]
 

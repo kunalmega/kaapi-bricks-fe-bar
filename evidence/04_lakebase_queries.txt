@@ -2,7 +2,7 @@ LAKEBASE OPERATIONAL SERVING — EXECUTION RECORD
 ================================================
 Sync run : 2026-09-27T10:03:28Z
 Instance : kaapi-bricks
-Host     : ep-gentle-morning-d2pv9c2i.database.us-east-1.cloud.databricks.com
+Host     : <lakebase-host>
 Database : databricks_postgres
 Source   : gold materialized views (fevm_cme_conde_catalog.kaapi_bricks)
 

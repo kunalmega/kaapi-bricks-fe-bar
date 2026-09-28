@@ -1,212 +1,226 @@
 # Kaapi Bricks Intelligent Store Operations
 ## Powered by Databricks
 
-*FE Bar Submission Deck — Kaapi Bricks (fictional 37-store South Indian filter-coffee chain)*  
+*FE Bar Submission Deck — Kaapi Bricks (fictional 37-store South Indian filter-coffee chain)*
 *Industry: Multi-location food service and specialty retail*
+
+> **How to read the numbers in this deck.** Business value figures (₹ / $, time saved, payback, ROI)
+> are **projections built from labeled assumptions**. No timed baseline trial has been run.
+> System measurements (pipeline run, data quality, Lakebase rows, invoice parse time, AI evaluation
+> scores, latency) are **measured** and come from the `evidence/` folder.
 
 ---
 
 ## Slide 1: The Outcome in One Sentence
 
-**Before Databricks:** A store manager spends 30 minutes per delivery cross-checking a supplier invoice against a purchase order — across 37 stores, that is 30+ manager-hours lost every single day.
+**Today:** A store manager spends an estimated 25–30 minutes per delivery cross-checking a supplier invoice against the purchase order. Across 37 stores and ~74 deliveries a day, that is a projected 30+ manager-hours a day. *[assumption]*
 
-**After Databricks:** The same reconciliation takes seconds. Every discrepancy is flagged. Every inventory record is updated. The manager approves with one click.
+**With the solution:** The manager uploads the invoice. The app parses it, matches it to the PO, flags every quantity and price discrepancy, and the manager approves or rejects. Parse-and-match is measured in seconds of system time (see `evidence/06`); the target end-to-end manager time is under 2 minutes per delivery.
 
-**Annual value: ~₹2.2 crore (~$264,000) across 37 stores.**
+**Projected annual value: ~₹2.2 crore (~$264,500) across 37 stores** *(assumption-based; see Slide 9)*
 
 ---
 
 ## Slide 2: Customer and Industry Context
 
-**Kaapi Bricks** operates 37 stores across India, Dubai, Singapore, London, San Francisco, and Sydney. The brand specializes in South Indian filter coffee — from classic tumbler-davara Degree Coffee to specialty cold brews.
+**Kaapi Bricks** operates 37 stores: 30 in India and 7 international (Dubai, Singapore, London, San Francisco, Kuala Lumpur, Sydney, Toronto). The brand specializes in South Indian filter coffee, from tumbler-davara Degree Coffee to cold brews.
 
 **Why this industry is hard:**
 
-- **Perishable ingredients** — full cream milk (25 litres/day/store), cardamom, fresh coconut. Over-order and you waste. Under-order and you lose the morning rush.
-- **8 active suppliers**, each with their own lead times, pricing schedules, and delivery reliability.
-- **Weather and festivals matter** — a Navratri long weekend in Bangalore drives 20% more footfall. A rainy morning shifts orders from cold brew to hot filter coffee.
-- **37 stores, 2 deliveries/day each** — 74 invoices per day arriving on paper or as PDFs. No two invoices look the same.
+- **Perishable ingredients**: full cream milk, cardamom, coconut milk. Over-order and you waste; under-order and you lose the morning rush.
+- **8 active suppliers**, each with its own lead time, pricing, and reliability. Measured on-time delivery ranges from **80.5% to 86.4%** across the 8 suppliers (`gold_supplier_performance`, evidence/05).
+- **Weather and festivals matter**: holidays, rain, and local events shift demand between hot and cold drinks.
+- **37 stores × ~2 deliveries/day**: ~74 invoices a day, arriving as paper or PDFs in different layouts.
 
-**The store manager is the most information-dense role in the company** — and today they operate with no real-time data, no AI assistance, and no time.
+**The store manager is the most information-dense role in the company**, and today they work from paper, spreadsheets, and memory.
 
 ---
 
 ## Slide 3: The Specific Problem — Three Pain Points
 
-### Pain Point 1: Invoice Reconciliation (30 min × 74 invoices/day)
+### Pain Point 1: Invoice Reconciliation
 Priya, the Koramangala store manager, receives a paper invoice from Coorg Coffee Estates. She must:
-1. Open the PO system and find PO-01288.
-2. Compare 8 line items manually — quantities, units, prices, GST codes.
-3. Note any discrepancies (price increase? extra items not in PO?).
-4. Call accounts payable. Wait. Get approval. File.
+1. Find the matching PO.
+2. Compare each line item by hand: quantities, units, prices, GST codes.
+3. Note discrepancies (price increase? item not on the PO?).
+4. Chase accounts payable for approval, then file.
 
-**Today this takes 25–30 minutes per delivery.** Across 37 stores: **1,850 manager-minutes lost every day.**
+**Estimated at 25–30 minutes per delivery** *[assumption]*. Across 37 stores: a projected **1,850 manager-minutes a day**.
 
 ### Pain Point 2: Inventory Blindness
-Priya doesn't know her current stock of Coorg Arabica until she physically counts it. By the time she realizes she's low, the reorder lead time (7 days from Coorg) means she'll run short. **3.5% of store-days have a critical stockout** — that's ₹20 lakhs/year in lost revenue.
+Priya doesn't know her current stock of Coorg Arabica until she counts it. By then, the 7-day reorder lead time from Coorg means she will run short. In the synthetic data, **27 store×ingredient positions are below reorder threshold right now** (evidence/05). The stockout cost model assumes 3.5% of store-days have a critical stockout *[assumption]*.
 
-### Pain Point 3: No Contextual Demand Preparation
-Tomorrow is a holiday. There's a corporate campus nearby. Rain is forecast. None of this context reaches Priya's preparation plan — she uses last week's numbers and her intuition.
+### Pain Point 3: Operating Knowledge Is Locked in PDFs
+Recipes, decoction timing, allergen handling, and equipment cleaning live in six SOP and training PDFs. New baristas ask the manager; the manager looks it up or answers from memory.
 
 ---
 
 ## Slide 4: Proposed Business Outcomes and KPI Targets
 
-| KPI | Current Baseline | 12-Month Target |
-|---|---|---|
-| Invoice reconciliation time | 25–30 min/delivery | < 2 min/delivery |
-| Invoice exception rate (missed discrepancies) | ~12% | < 3% |
-| Stockout rate (% of store-days) | 3.5% | < 1.5% |
-| Ingredient waste rate | ~4% of cost | < 3% |
-| Supplier on-time delivery rate | ~78% | > 92% |
-| Manager time on data gathering | ~45 min/day | < 5 min/day |
-| Genie answer latency | N/A (manual) | < 5 seconds |
+| KPI | Current Baseline | 12-Month Target | Baseline source |
+|---|---|---|---|
+| Invoice reconciliation time | 25–30 min/delivery | < 2 min/delivery | assumption |
+| Invoice exception rate (missed discrepancies) | ~12% | < 3% | assumption |
+| Stockout rate (% of store-days) | 3.5% | < 1.5% | assumption |
+| Ingredient waste rate | ~4% of cost | < 3% | assumption |
+| Supplier on-time delivery rate | 80.5–86.4% | > 92% | **measured** (synthetic data) |
+| Manager time on data gathering | ~45 min/day | < 5 min/day | assumption |
+| Answer latency, table/cached questions | manual | < 5 s | target |
+| Answer latency, SOP document questions | manual | ~23 s measured today; < 10 s target | **measured** (evidence/09) |
 
-**Projected annual value: ₹2.2 crore (~$264,500/year)**  
-**Payback period: ~3.6 months**
+**Projected annual value: ₹2.2 crore (~$264,500/year)** *(assumption-based)*
+
+**Simple payback: 3.9 months**
+= one-time implementation cost ÷ annual net benefit × 12
+= $70,000 ÷ ($264,500 − $50,000) × 12
 
 ---
 
 ## Slide 5: The Solution Journey (Live Demo Flow)
 
-*Tell → Show → Tell structure*
+*Tell → Show → Tell for every scene. Full script in `DEMO.md`.*
 
-### Scene 1 — Morning Questions (TELL)
-*"Priya opens the store at 7am. She has three questions. She asks them in plain English."*
+### Scene 1 — Morning Questions
+**TELL:** *"Priya opens the store at 7am. She has questions about her data and about how to do the job. She asks both in plain English, in one place."*
 
-**SHOW:** Main chat app → "What's our best-selling drink this month?" → Classic Filter Coffee, 1,483 units. "How do I make a Classic Filter Coffee?" → barista recipe from the training manual. "How should I prepare for tomorrow?" → weather + holiday + demand context from three different agents.
+**SHOW:** Main chat app (Genie Agent mode) →
+- "Which ingredients are below reorder threshold?" → SQL over `gold_inventory_position`; 27 positions below threshold across stores (evidence/05).
+- "How long can prepared decoction be kept before discarding?" → answered from `drink_recipes_sop.pdf`: maximum 4 hours (evidence/07).
 
-*"Three questions. Three different AI systems answered. Priya didn't know which one. She just asked."*
+**TELL:** *"One assistant, governed data plus company SOPs. The numbers come from SQL she can inspect; the procedures come from cited documents."*
 
-### Scene 2 — The Delivery (TELL)
-*"A truck pulls up from Coorg Coffee Estates. Priya has a paper invoice. Eight line items. GST breakups. Batch numbers."*
+### Scene 2 — The Delivery
+**TELL:** *"A truck arrives from Coorg Coffee Estates with a paper invoice."*
 
-**SHOW:** Upload invoice PDF → `ai_parse_document` extracts every line item → matches PO-01288 → flags 3 discrepancies (overdelivery on Arabica, price increase on Chicory, 3 unauthorized items) → Priya clicks "Approve" → inventory updated, PO marked delivered.
+**SHOW:** Upload the invoice PDF → `ai_parse_document` extracts line items → matched to the open PO → discrepancies flagged line by line → Priya approves → receipt written to `app_inventory_receipts`; the inventory panel (served from Lakebase) reflects it after the next pipeline refresh and sync. Captured parse output and timing: `evidence/06`.
 
-*"30 minutes. Now seconds. And every discrepancy is on record."*
+**TELL:** *"The machine does the comparison; the manager still makes the decision. Every discrepancy is on record."*
 
-### Scene 3 — Under the Hood (TELL)
-*"How do we know it's correct?"*
+### Scene 3 — How We Know It Works
+**TELL:** *"How do we know the answers are right?"*
 
-**SHOW:** MLflow trace → every agent call, every tool invocation, every token. Evaluation dashboard → Correctness, Safety, RelevanceToQuery, RetrievalGroundedness. One failed case: wrong decoction ratio caught by the evaluator.
+**SHOW:** MLflow experiment → evaluation runs on 10 store-manager questions. Baseline (Chat mode, no document access): Correctness 0.00. After switching to Genie Agent mode with the SOP volume: Correctness 0.50, Relevance 1.00, Safety 1.00. Latest iteration and failed-case analysis: `evidence/09`.
 
-*"We measure it. When something fails, our baristas review it, label it, and the agent gets better."*
+**TELL:** *"We measure it, we publish the failures, and we fix the root cause, not the score."*
 
 ---
 
 ## Slide 6: Architecture and Integrated Data Flow
 
 ```
-SYNTHETIC RETAIL DATA (generate_data.py)
-  37 stores · 28 products · 15k customers · 200k orders · 2k POs
+SYNTHETIC RETAIL DATA (scripts/generate_data.py, Faker seed=42)
+  37 stores · 28 products · 15k customers · 200k orders · 2k POs · 3.5k PO lines · 171k inventory txns
     │
-    ▼ Parquet per entity
-UNITY CATALOG VOLUME  /Volumes/.../kaapi_bricks/raw_data/<entity>/
+    ▼ Parquet, one folder per entity
+UNITY CATALOG VOLUME  raw_data/<entity>/
     │
     ▼ Auto Loader (STREAM read_files)
 LAKEFLOW PIPELINE  kaapi_bricks_medallion  [serverless, declarative]
-  ├── Bronze (13 streaming tables) — raw + ingest metadata
-  ├── Silver (14 MV) — conformed, typed, expectations, deduped
-  └── Gold (7 MV) — operational KPIs, inventory position, open POs,
-                    delivery exceptions, product demand, supplier performance
+  ├── Bronze  14 streaming tables — raw + ingest metadata
+  ├── Silver  14 materialized views — typed, deduped, 45 expectations
+  └── Gold     7 materialized views — inventory position, open POs, delivery
+               exceptions, product demand, supplier performance, waste, store KPIs
     │
-    ├─► UNITY CATALOG — governed tables, column comments, lineage, grants
+    ├─► UNITY CATALOG — governed tables, comments, lineage, least-privilege grants
     │
-    ├─► LAKEBASE (Postgres) — 4 operational gold tables synced
-    │     lb_inventory_position, lb_open_purchase_orders,
-    │     lb_delivery_exceptions, lb_product_demand
+    ├─► LAKEBASE (Postgres) — 4 gold operational tables synced
+    │     lb_inventory_position · lb_open_purchase_orders ·
+    │     lb_delivery_exceptions · lb_product_demand
     │
-    ├─► GENIE SPACE — natural-language analytics over silver + gold
+    ├─► GENIE AGENT (Agent mode) — 21 silver + gold tables + 6 SOP PDFs in a volume
     │
-    └─► ML / GenAI
-          Knowledge Assistant (KA) — RAG over barista/ops documents
-          Multi-Agent Supervisor (MAS) — routes KA / Genie / Ops Advisor
-          ai_parse_document — native SQL invoice parsing
-          MLflow evaluation — Correctness, Safety, Groundedness, Relevance
+    └─► GenAI + evaluation
+          ai_parse_document + LLM extraction — invoice parsing
+          MLflow mlflow.genai.evaluate — Correctness, Relevance, Safety
     │
     ▼
-DATABRICKS APP — Kaapi Bricks Store Manager Console
-  main-chat-app · growth-advisor · promo-agent · mcp-server
+DATABRICKS APP — Store Manager Console (main-chat-app)
+  chat → Genie Agent mode · inventory panel → Lakebase · invoice upload → ai_parse_document
 ```
 
-Every entity key (store_id, ingredient_id, po_id) flows from raw → bronze → silver → gold → app without transformation breaks. The same `po_id = 'PO-01234'` can be traced through every layer.
+The same keys (store_id, ingredient_id, po_id) flow raw → bronze → silver → gold → Lakebase → app. `evidence/08` traces one real delivery (PO-00006) through every layer.
 
 ---
 
 ## Slide 7: Governance, Security, and Data Quality
 
 ### Unity Catalog Governance
-- All tables in `fevm_cme_conde_catalog.kaapi_bricks` with column-level comments.
-- Service principal access via least-privilege grants (`USE CATALOG`, `SELECT` on specific tables).
-- Full lineage registered: raw Parquet → bronze streaming table → silver MV → gold MV.
-- Lineage visible in UC UI: "Who reads `gold_inventory_position`?" — the app and Genie.
+- All tables in one governed `kaapi_bricks` schema, with table comments.
+- App service principal grants: `USE CATALOG`, `USE SCHEMA`, `SELECT` and `MODIFY` on the `kaapi_bricks` schema (the app only writes to the two app-write tables), `READ VOLUME` on raw data, read/write on the invoices volume, and `SELECT` on the Lakebase serving tables. Tightening `MODIFY` to the two tables is a production hardening step.
+- Lineage: raw volume → bronze → silver → gold, visible in Unity Catalog.
 
-### Data Quality (44 Expectations in Silver)
-- **DROP ROW** constraints on primary keys, required foreign keys, non-negative totals.
-- **WARN** constraints on referential integrity and business rules (e.g. `cost ≤ base_price`).
-- Clean synthetic data: 0 rows expected to drop on first run. Constraints protect against future dirty ingest.
+### Data Quality (45 expectations in Silver, measured)
+- **DROP ROW** on primary keys, required foreign keys, non-negative totals.
+- **WARN** on business rules (e.g. `cost ≤ base_price`, delivery date ≥ order date).
+- Pipeline run 065d6a70: **45 of 45 constraints passed, 0 rows failed** (read from the pipeline event log, evidence/03). The data is synthetic and clean by construction; the constraints protect future real ingest.
 
 ### App-Write Separation
-- Silver materialized views are pipeline-managed (read-only).
+- Silver and gold are pipeline-owned (read-only to the app).
 - Invoice approvals write to separate `app_inventory_receipts` and `app_po_approvals` Delta tables.
-- Gold views UNION both sources — deterministic calculation, LLM only explains the result.
+- Gold views UNION both sources. The calculation is deterministic SQL; the LLM only explains results.
 
 ### Security
-- No real customer data. 100% synthetic (Faker, seed=42).
-- No hardcoded credentials in codebase. Lakebase uses OAuth token rotation.
-- Databricks App identity / user_api_scopes controls what users can query.
+- 100% synthetic data, fictional company.
+- No credentials in the codebase; commits pass a secret-scanning hook. Lakebase uses short-lived OAuth credentials.
+- The app runs as its own service principal; user access goes through Databricks App OAuth.
 
 ---
 
 ## Slide 8: AI Grounding, Evaluation, and Human Controls
 
 ### How the AI is Grounded
-- **Knowledge Assistant:** retrieves from PDF training documents (barista manual, food safety policy, supplier SOPs). Answers are grounded in retrieved chunks, not model memory.
-- **Genie Space:** generates SQL over certified gold/silver tables. SQL is visible, auditable, and executed against real data — not inferred.
-- **Operations Advisor:** uses deterministic data (gold inventory position, weather API) as inputs; model only synthesizes the narrative.
+- **Genie Agent, structured questions:** generates SQL over governed silver/gold tables. The SQL is visible and runs against real data.
+- **Genie Agent, procedural questions:** reads the six SOP/training PDFs in a Unity Catalog volume and cites the source file.
+- **Invoice parsing:** `ai_parse_document` extracts the text; an LLM structures it; matching against the PO is deterministic code.
 
-### Evaluation Loop (MLflow)
+### Evaluation Loop (MLflow, measured)
 ```
-Test dataset (10 KA queries + 5 MAS routing tests)
-  → mlflow.genai.evaluate()
-  → Scorers: Correctness, Safety, RelevanceToQuery, RetrievalGroundedness
-  → Failed cases flagged → SME labelling session → evaluation dataset improved
-  → Re-evaluate → scores trend upward
+10 store-manager questions with 32 expected facts
+  → mlflow.genai.evaluate()  (scripts/run_genie_evaluation.py, serverless job)
+  → Scorers: Correctness, RelevanceToQuery, Safety
+  → Baseline:   Correctness 0.00  (Chat mode API cannot read documents)
+  → Fix:        switch to Genie Agent mode API
+  → Re-test:    Correctness 0.50 · Relevance 1.00 · Safety 1.00
+  → Latest iteration + failed-case analysis: evidence/09
 ```
 
 ### Where Humans Stay in the Loop
-- **Invoice approval** is always a human action — the app flags discrepancies, Priya decides.
-- **Model promotion** requires running an evaluation set and comparing scores — not auto-promoted.
-- **Guardrails:** off-topic questions (e.g. financial forecasts) are deflected to the appropriate channel.
-- **MLflow traces** — every question, every agent decision, every API call logged. Auditable in production.
+- **Invoice approval** is always a human action. The app flags discrepancies; the manager decides.
+- **No silent answers:** when a source is missing, the agent says so instead of guessing (Safety 1.00 in both runs).
+- **MLflow traces** log every question and response for audit.
 
-### Trade-off: Genie vs Custom SQL Tools
-- **Chose Genie:** Faster to build, governed table access, natural-language SQL is transparent to users.
-- **Trade-off:** Genie occasionally generates suboptimal SQL for complex aggregations. Mitigated with certified metric views and Genie instructions.
-- **Alternative considered:** Custom LangGraph agent with pre-built SQL tools — more controllable, 2× build time.
+### Trade-off: Genie Agent vs a Custom Agent
+- **Chose Genie Agent:** governed table access, transparent SQL, native document reading, and it replaces the deprecated Knowledge Assistant + Supervisor Agent with one product.
+- **Cost of that choice:** Agent mode answers SOP questions in ~23 s versus a few seconds for table-only Chat mode. Mitigated with the Lakebase semantic answer cache for repeat questions.
+- **Alternative considered:** a custom agent on Databricks Apps with our own retrieval. More control, more code to own.
 
 ### Trade-off: Lakebase vs Delta for Serving
-- **Delta (warehouse):** great for heavy analytical scans, ~500ms–2s cold start.
-- **Lakebase (Postgres):** OLTP latency (~10–50ms), suitable for point-lookups in the app (current inventory for one store).
-- **Decision:** Gold aggregates (inventory position, open POs) synced to Lakebase for the app. Heavy queries (trend analysis, multi-store revenue) stay on Delta/Genie.
+- **Delta via SQL warehouse:** best for large analytical scans.
+- **Lakebase (Postgres):** OLTP point lookups for one store's current inventory.
+- **Decision:** gold operational tables are synced to Lakebase for the app's inventory panel; trend and multi-store analysis stays on Delta through Genie.
 
 ---
 
 ## Slide 9: Expected Value and Assumptions
 
+*Every row is a projection from the stated assumption. None is a measured customer outcome.*
+
 | Value driver | Annual (₹) | Annual ($) | Key assumption |
 |---|---|---|---|
-| Invoice reconciliation labor | ₹89,93,600 | $107,000 | 25 min saved/delivery, ₹800/hr loaded cost |
-| Invoice leakage prevention | ₹90,75,360 | $108,000 | 12% exception rate, ₹2,800 avg slip-through |
-| Stockout reduction | ₹11,91,960 | $14,200 | 60% reduction in 3.5% baseline stockout rate |
-| Waste reduction | ₹2,59,000 | $3,100 | 25% reduction in ₹28k/store/year waste |
-| Manager time (Genie queries) | ₹27,07,200 | $32,200 | 15 min/day saved × 37 stores |
+| Invoice reconciliation labor | ₹89,93,600 | $107,000 | 25 min saved/delivery, 2 deliveries/store/day, ₹800/hr loaded cost |
+| Invoice leakage prevention | ₹90,75,360 | $108,000 | 12% exception rate, ₹2,800 average slip-through |
+| Stockout reduction | ₹11,91,960 | $14,200 | 60% reduction on a 3.5% store-day stockout baseline |
+| Waste reduction | ₹2,59,000 | $3,100 | 25% reduction on ₹28k/store/year perishable waste |
+| Manager time (data questions) | ₹27,07,200 | $32,200 | 15 min/day saved × 37 stores |
 | **Total annual value** | **₹2,22,27,120** | **~$264,500** | |
-| Platform cost (est.) | — | $50,000/year | Serverless + apps + FMAPI at demo scale [ASSUMPTION] |
-| Payback period | — | ~4.8 months | $264,500 annual value / ($50k platform + $70k impl) |
-| 3-year ROI | — | 2.6× | $573,500 value / $220,000 investment (platform $150k + impl $70k) [ASSUMPTION] |
+| Platform cost | — | $50,000/year | serverless pipeline + Lakebase + model APIs + app at 37 stores |
+| Implementation (one-time) | — | $70,000 | 8-week implementation and training |
 
-*All assumptions labeled. Replace with actual Kaapi Bricks operational data before a live business case.*
+**Simple payback = one-time implementation ÷ annual net benefit × 12 = $70,000 ÷ $214,500 × 12 = 3.9 months**
+
+**3-year net ROI = (3-year gross value − 3-year cost) ÷ 3-year cost = ($793,500 − $220,000) ÷ $220,000 = 2.6×**
+
+Full calculation: `evidence/10_business_kpi_calculations.md`. The first thing a pilot should do is replace these assumptions with a timed baseline.
 
 ---
 
@@ -214,45 +228,36 @@ Test dataset (10 KA queries + 5 MAS routing tests)
 
 ### Recommended Pilot (5 stores, 6 weeks)
 
-**Week 1–2 — Data foundation**
-- Deploy pipeline, land synthetic data, validate bronze/silver/gold row counts.
-- Connect Genie Space; confirm 5 demo questions return correct answers.
+**Week 1–2: Baseline and data foundation**
+- Stopwatch baseline: time 10 manual invoice reconciliations per pilot store before go-live.
+- Connect the customer's POS, PO, and inventory exports in place of the synthetic generator; the pipeline and expectations stay the same.
 
-**Week 3–4 — App + Lakebase live**
-- Deploy main-chat-app to 5 pilot stores.
-- Sync gold tables to Lakebase; confirm latency < 50ms.
-- Train 5 store managers on invoice upload and approval workflow.
+**Week 3–4: App live in 5 stores**
+- Deploy the store manager console; train 5 managers on invoice upload and approval.
+- Schedule the Lakebase sync right after each pipeline refresh.
 
-**Week 5–6 — Measure and evaluate**
-- Run KA + MAS evaluation; target Correctness ≥ 0.80.
-- Measure invoice reconciliation time (stopwatch, 10 deliveries per store).
-- Capture actual stockout events vs baseline.
-- Collect manager NPS.
+**Week 5–6: Measure**
+- Re-time 10 reconciliations per store with the app; compare with the Week 1 baseline.
+- Re-run the MLflow evaluation on the customer's own SOP questions; target Correctness ≥ 0.80.
+- Count stockout events against the baseline; collect manager feedback.
 
-**Go/no-go criteria:** ≥ 50% time reduction on invoice reconciliation; ≥ 0 critical stockouts from proactive reorder alerts; KA Correctness ≥ 0.80.
+**Go/no-go:** ≥ 50% reduction in measured reconciliation time; Correctness ≥ 0.80 with Safety 1.00; no increase in stockouts.
 
 ### Key Risks
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| Lakeflow pipeline fails on first run (auth, volume path) | Medium | Tested locally via `bundle validate`; run `generate_data.py` first to land raw files |
-| ai_parse_document accuracy on non-standard invoices | Medium | Fallback LLM vision parsing already coded; flag low-confidence parses for human review |
-| Genie generates wrong SQL for complex aggregations | Low-medium | Certified metric views + Genie instructions constrain query scope |
-| Store managers resist new workflow | Low | App is chat-first, not dashboard; invoice upload takes < 60 seconds |
-| Lakebase Postgres latency spikes | Low | Connection pooling + token refresh logic already in app; fallback to Delta SQL warehouse |
+| ai_parse_document accuracy on unusual invoice layouts | Medium | LLM vision fallback in code; every result needs human approval |
+| Genie Agent correctness on long procedures | Medium | Measured today (0.50 → see evidence/09 for latest); improve instructions and eval rubric before rollout |
+| Agent mode latency (~23 s on SOP questions) | Medium | Semantic answer cache in Lakebase; SOP content changes rarely |
+| Lakebase data is a snapshot | Medium | Sync runs after each pipeline update; move to a scheduled job or synced tables in production |
+| Store managers resist the new workflow | Low | Chat-first UI; invoice upload is a single step |
 
 ### Next Steps
-1. `databricks auth login --profile DEFAULT`
-2. `python scripts/generate_data.py --profile DEFAULT`
-3. `databricks bundle deploy -t dev --profile DEFAULT`
-4. `databricks bundle run kaapi_bricks_medallion -t dev --profile DEFAULT`
-5. Fill in `evidence/01_lakeflow_run.txt` with real pipeline output.
-6. `python scripts/sync_gold_to_lakebase.py --profile DEFAULT`
-7. Deploy app; run `evidence/07_app_health_and_api_tests.txt` curls.
-8. Run eval notebooks; fill in `evidence/09_mlflow_evaluation_results.md`.
-9. Push to public GitHub repo.
-10. Submit via the FE Bar form.
+1. Agree the 5 pilot stores and the baseline timing method.
+2. Share one month of real (masked) invoices, POs, and SOP documents for a fit test.
+3. Re-run the pipeline and the evaluation on customer data; review results together in week 2.
 
 ---
 
-*Kaapi Bricks is a fictional company. All data is synthetic (Faker library, seed=42). No real customer data, no real product names, no hardcoded credentials.*
+*Kaapi Bricks is a fictional company. All data is synthetic (Faker, seed=42). No real customer data or credentials.*

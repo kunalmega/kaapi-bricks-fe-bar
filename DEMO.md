@@ -1,254 +1,148 @@
-# Kaapi Bricks — AI Days Finale Demo
+# Kaapi Bricks — Demo Script (12–15 minutes)
 
-**Duration:** 15-18 minutes
-**Audience:** CIOs, VPs, Architects, Developers
-**Story:** A day in the life of a Kaapi Bricks store manager — from morning questions to supplier deliveries — powered entirely by Databricks AI.
-
----
-
-## Before Going On Stage (3 min)
-
-Open these tabs in order:
-1. **Kaapi Bricks App** — Main Chat (Koramangala selected)
-2. **MLflow Experiment** — traces page (empty, ready for new traces)
-3. **Databricks UI** — MAS Supervisor Agent (show 3 agents)
-4. **MCP Server App** — Settings tab (show model config)
-5. **MCP Server App** — Compare tab (ready for A/B test)
-6. **Kaapi Bricks App** — Delivery & Invoice tab (ready for upload)
-7. **Sample invoice PDF** — `invoice_complex_coorg.pdf` ready on desktop
-
-Clear chat history. Confirm MAS is warm (ask one quick question from the UI first).
+**Audience:** a business stakeholder (the executive who funds it) and a technical stakeholder
+(the architect who must run it).
+**Story:** one morning in the life of Priya, store manager at Kaapi Bricks Koramangala.
+**Structure:** every scene is Tell → Show → Tell. Prepared answers to likely questions are in
+`ROLEPLAY_PREP.md`.
 
 ---
 
-## THE STORY
+## Before you start (5 min)
 
-You're telling the story of **Priya**, a store manager at Kaapi Bricks Koramangala, Bangalore. It's 7am. She's opening the store. She has questions, she has deliveries coming in, and she needs to plan for tomorrow. She doesn't want dashboards. She wants answers.
+Open these tabs:
+1. **Kaapi Bricks app** — main chat, store set to Koramangala, Bangalore
+2. **Kaapi Bricks app** — Delivery & Invoice tab
+3. **Invoice PDF** — `sample-invoices/invoice_complex_coorg.pdf`
+4. **MLflow experiment** — the evaluation runs (see `evidence/09` for run IDs)
+5. **Unity Catalog** — lineage view of `gold_inventory_position`
+6. Optional backup: `deck/FE_BAR_DECK.md`
 
----
-
-## SCENE 1 — Morning Questions (3 min)
-
-*Tab: Main Chat app*
-
-> "Meet Priya. She manages our Koramangala store — one of 37 across India, Dubai, Singapore, London. It's 7am. She's opening the store and she has three questions before the first customer walks in."
-
-**[Click:]** "What's our best-selling drink this month?"
-
-*Answer appears — Classic Filter Coffee 1,483 units, Strong Decoction 1,071...*
-
-> "Real data. 200,000 orders across 37 stores. She didn't open a dashboard. She asked a question."
-
-**[Click:]** "How do I make a Classic Filter Coffee?"
-
-*Recipe appears — tumbler-davara technique, 92-96°C, 12-15 min drip.*
-
-> "Same chat. Different answer. This one came from our barista training manual — a PDF. She didn't search a document library. She just asked."
-
-**[Click:]** "How should I prepare for tomorrow?"
-
-*Answer appears — weather forecast, holiday calendar, product recommendations.*
-
-> "Now this one is interesting. Priya asked about tomorrow. The system checked the live weather forecast for Bangalore, looked at the Indian holiday calendar, and generated a preparation plan."
-
-**[Pause 3 seconds. Let the audience read.]**
-
-> "Three questions. Three different AI agents answered. One pulled from a database. One searched internal documents. One checked the weather and the festival calendar. Priya didn't know which agent answered. She just asked."
+Warm the answer cache so the first answers are instant: `python prewarm_cache.py <app URL>`.
+Document questions in Agent mode take ~20–25 s when not cached; the cache avoids waiting on stage.
 
 ---
 
-## SCENE 2 — Under the Hood (2 min)
+## Opening — frame before you show (1 min)
 
-*Tab: MLflow Experiment — click the latest trace*
-
-> "Let me show you what actually happened."
-
-**[Point at the trace spans — don't click into every one, just point:]**
-
-> "The MAS Supervisor received the question. It read the descriptions of three agents and decided this was an operational planning question. It called our MCP server — that's a separate Databricks App — which checked the weather API, checked the holiday calendar, and called a foundation model to generate the plan."
-
-> "Every step is traced. Every API call, every tool invocation, every token. If this agent starts giving bad answers at 3am, I open the trace and I know exactly where it went wrong."
-
-**[Switch to Databricks UI — MAS Supervisor]**
-
-> "Here's the architecture. Three agents under one supervisor."
-
-**Point quickly at each:**
-> "Knowledge Assistant — our training documents. Genie Space — our transaction data. Operations Advisor — an MCP server connecting to the outside world. The supervisor routes. I don't write routing code."
+> "Kaapi Bricks runs 37 filter-coffee stores. Each manager receives about two supplier deliveries a
+> day, and today checks every invoice against its purchase order by hand. We estimate 25 to 30
+> minutes per delivery. That is an assumption we'd confirm with a timed baseline in a pilot.
+>
+> I'll show you three things: how Priya gets answers from her data and her company's SOPs in one
+> place, how an invoice check goes from a manual cross-check to a reviewed result, and how we know
+> the AI's answers are correct. Then I'll show you the value model and what a pilot looks like."
 
 ---
 
-## SCENE 3 — Model Flexibility (2 min)
+## Scene 1 — Morning questions (3 min)
 
-*Tab: MCP Server App — Settings*
+**TELL:** "It's 7am. Priya has questions about her numbers and about how to run the shift. She asks
+both in plain English."
 
-> "Now the question every CIO asks: are we locked into one model?"
+**SHOW:** main chat
+1. "Which ingredients are below reorder threshold? Show store and days of cover."
+   → SQL over `gold_inventory_position`; 27 positions below threshold across stores, the most urgent
+   at under 2 days of cover (evidence/05).
+2. "How long can prepared decoction be kept before discarding?"
+   → "Maximum of 4 hours … after 4 hours the coffee oxidizes and tastes stale", from the drink
+   recipes SOP PDF (evidence/07).
+3. "What were our top-selling drinks from February to May?"
+   → Classic Filter Coffee first with 44,375 units (evidence/05).
 
-**[Show the Settings page]**
-
-> "This is our MCP server's admin. The Operations Advisor currently uses Llama 70B. I can change it to Claude, GPT, Gemini — one dropdown."
-
-**[Switch to Compare tab. Select Llama vs Claude. Ask: "How should I prepare for tomorrow?"]**
-
-> "But I wouldn't change blindly. Same question, same weather, same calendar — two different models."
-
-*Both results appear side by side.*
-
-> "Claude structured it as a checklist. Llama gave more narrative detail. I pick the winner, go back to Settings, save. Done."
-
-> "Test in the sandbox. Promote to production. CI/CD for AI."
-
----
-
-## SCENE 4 — The Delivery (4 min) ⭐ Star of the demo
-
-*Tab: Kaapi Bricks App — Delivery & Invoice*
-
-> "It's now 9am. A truck pulls up from Coorg Coffee Estates. They hand Priya a paper invoice."
-
-**[Hold up the PDF or show it on screen for 3 seconds]**
-
-> "Eight line items. Arabica beans, chicory, house blend, cardamom, paper cups. HSN codes, batch numbers, GST breakup, quality certifications. A real Indian GST invoice."
-
-**[Upload the PDF. Click "Parse Invoice".]**
-
-> "Watch."
-
-*Loading... "Parsing invoice with ai_parse_document..."*
-
-*Results appear — extracted supplier, items, totals.*
-
-> "Databricks just read that PDF. ai_parse_document — a native SQL AI function — extracted every line item, every rate, every GST number. No OCR library. No third-party service. One SQL function."
-
-**[Point at the PO Match card]**
-
-> "It found the matching purchase order — PO-01288. And look at the line items."
-
-**[Point at the comparison table]**
-
-> "Green means match. Yellow means warning. Red means discrepancy."
-
-**[Point at specific discrepancies:]**
-
-> "Arabica beans — we ordered 25 kilos at twelve hundred rupees. The invoice says 30 kilos at thirteen hundred. That's a quantity overdelivery AND a price increase. The system caught both."
-
-> "Chicory — price went up by 20 rupees per kilo. House blend — up by 30. And there are three extra items not in our purchase order at all — Araku Valley Reserve, Cardamom, and a second grade of Arabica."
-
-**[Pause — let them absorb]**
-
-> "A store manager looking at this paper invoice would take 30 minutes to cross-check against the PO. The system did it in seconds."
-
-**[Click "View Current Inventory"]**
-
-> "Here's our current stock. Some items are green, some are low, some are critical."
-
-**[Click "Approve & Update Inventory"]**
-
-*Success message. Inventory refreshes.*
-
-> "One click. The delivery is now in our inventory system. The purchase order is marked as delivered. And if Priya goes back to the main chat and asks 'What's our current stock of Arabica?' — she'll see the new quantity."
+**TELL:** "One assistant. The numbers come from governed tables through SQL she can inspect. The
+procedures come from her company's own documents, with the source cited. For the business, that
+means fewer calls to the area manager and faster onboarding for new baristas."
 
 ---
 
-## SCENE 5 — Evaluation & Quality (3 min)
+## Scene 2 — The delivery (4 min) ⭐
 
-*Tab: MLflow Experiment — Evaluation tab*
+**TELL:** "It's 9am. A truck from Coorg Coffee Estates arrives with a paper invoice."
 
-> "Everything I showed you looks great. But how do I KNOW it's correct? How do I know the agent isn't hallucinating? In production, you can't just trust the output — you have to measure it."
+**SHOW:** Delivery & Invoice tab
+1. Upload `invoice_complex_coorg.pdf` and click **Parse Invoice**.
+2. `ai_parse_document` reads the PDF; an LLM structures the line items, rates, and GST.
+3. The app finds the matching purchase order and compares each line with `po_line_items`.
+4. Walk through the flagged lines on screen: matches, quantity differences, price differences,
+   and items not on the PO. **Read the actual figures from the screen**; the captured output and
+   timing for this invoice are in `evidence/06`.
+5. Click **View Current Inventory**. The panel is served from Lakebase.
+6. Click **Approve**. The receipt is written to `app_inventory_receipts` and the PO approval to
+   `app_po_approvals`.
 
-**[Show the evaluation dashboard / labelling session]**
-
-> "We built custom LLM judges that run on every agent output. Four judges, each checking a different dimension."
-
-**[Point at each scorer:]**
-
-> "**Correctness** — does the answer match expected guidelines? If someone asks about our food safety policy, does the agent return the actual FSSAI policy, or did it make something up?"
-
-> "**Retrieval Groundedness** — is the answer grounded in the documents it retrieved? We check: did the agent cite real content from our training manual, or did it hallucinate a recipe that doesn't exist?"
-
-> "**Safety** — does the response contain anything inappropriate, harmful, or off-brand for Kaapi Bricks?"
-
-> "**Custom Guidelines** — domain-specific checks. Does it mention prices in INR? Does it reference the right store? Does it follow our brand voice?"
-
-**[Show a failed evaluation — a row marked red]**
-
-> "Here's one that failed. The agent gave a recipe with the wrong decoction ratio — 1 tablespoon per 200ml instead of 2 tablespoons per 150ml. The Correctness judge caught it."
-
-> "When something fails, it goes into a **labelling session**. Our subject matter experts — the baristas, the operations team — review the flagged outputs and label them: correct or incorrect, with notes. That labelled data goes back into improving the evaluation dataset."
-
-**[Show evaluation comparison — if available]**
-
-> "And we can compare evaluations. We ran evaluation set A with Llama, and evaluation set B with Claude. Side by side — which model scored higher on correctness? Which one had better retrieval grounding? The data tells us which model to promote. Not opinions — evidence."
-
-**[Pause]**
-
-> "This is what separates a demo from production. Evaluation, labelling, continuous improvement. The agents get better because we measure them."
+**TELL:** "The system does the comparison; Priya still makes the decision. Every discrepancy is on
+record, which is where invoice leakage stops. One thing to be precise about: the approved receipt
+flows into the inventory numbers after the next pipeline refresh and Lakebase sync, not instantly."
 
 ---
 
-## SCENE 6 — The Big Picture (2 min)
+## Scene 3 — How we know it's correct (3 min)
 
-> "Let me step back and show you what we just built."
+**TELL:** "You can't put an AI assistant in front of 37 store managers on trust. You have to measure it."
 
-**Count on fingers:**
+**SHOW:** MLflow experiment
+1. The test set: 10 real store-manager questions, 32 expected facts.
+2. Run 1 (baseline): Correctness 0.00. The agent was called through the Chat-mode API, which
+   cannot read documents, so it declined every SOP question. It didn't make anything up:
+   Safety 1.00.
+3. Run 2 (after switching to Genie Agent mode): Correctness 0.50, Relevance 1.00, Safety 1.00.
+4. Open one failed case and read the judge's reason (e.g. the recipe was right but the price was
+   missing). The latest iteration is in `evidence/09`.
 
-> "One — a multi-agent supervisor. Three specialists, one router. Documents, data, and the outside world. The store manager doesn't know or care which agent answered."
-
-> "Two — an MCP server. A separate app that connects our AI system to live weather, holiday calendars, and anything else we want. It plugs into the supervisor via a standard protocol. Tomorrow I could add a CRM connector, an ERP system, a logistics tracker — same pattern."
-
-> "Three — document intelligence. A supplier invoice — a complex, real-world PDF with GST breakups and batch numbers — parsed by a native SQL function, matched against purchase orders, discrepancies flagged, inventory updated. End to end."
-
-> "Four — model flexibility. Ten foundation models, side-by-side comparison, one-click switch. We're not locked into any vendor."
-
-> "Five — continuous evaluation. Custom LLM judges — correctness, retrieval grounding, safety — running on every output. When something fails, SMEs label it, the evaluation dataset improves, the agents get better."
-
-> "Six — full traceability. Every question, every agent decision, every tool call — traced in MLflow. Production-ready observability."
-
----
-
-## CLOSING (30 seconds)
-
-> "We started at 7am with Priya opening her store. She asked about her best sellers, learned a recipe, planned for tomorrow's weather. Then a delivery truck arrived, she scanned an invoice, caught three discrepancies, and updated her inventory — all without leaving one app."
-
-> "That's not a chatbot. That's an enterprise AI platform. And it runs on Databricks."
-
-**[END]**
+**TELL:** "We found the root cause, fixed it, and measured again. We're not at our 0.80 target yet,
+and I'd rather show you that than a perfect score we can't defend. In a pilot, this same test set
+becomes your team's quality gate before any change ships."
 
 ---
 
-## Timing Summary
+## Scene 4 — Under the hood (2 min, for the architect)
 
-| Scene | Duration | What Happens |
-|-------|----------|-------------|
-| 1. Morning Questions | 3 min | 3 chat questions → 3 agents |
-| 2. Under the Hood | 2 min | MLflow trace + MAS architecture |
-| 3. Model Flexibility | 2 min | MCP Settings + Compare side-by-side |
-| 4. The Delivery | 4 min | Invoice upload → parse → PO match → discrepancies → approve → inventory |
-| 5. Evaluation & Quality | 3 min | Custom LLM judges, failed eval, labelling, eval comparison |
-| 6. Big Picture | 2 min | Six pillars recap |
-| Close | 0.5 min | Back to Priya's story |
-| **Total** | **~17 min** | Buffer: 1-2 min for audience reactions |
+**TELL:** "Here's how the pieces connect. It's one integrated journey, not six demos."
+
+**SHOW:** Unity Catalog lineage on `gold_inventory_position`, then the architecture in `ARCHITECTURE.md`:
+raw volume → Lakeflow bronze/silver/gold (45 quality checks, all passed) → Lakebase for the app →
+Genie Agent over the same governed tables plus the SOP volume → the app.
+Mention `evidence/08`: one purchase order, PO-00006, traced through every layer.
+
+**TELL:** "Everything is governed in one place, runs serverless, and the pipeline, the Genie
+configuration, and the app are all deployed from code."
 
 ---
 
-## If Things Go Wrong
+## Close — value and next step (1 min)
+
+> "We projected about ₹2.2 crore a year across 37 stores, with a payback of about four months. Those
+> are assumptions, and every one is written down. So the next step isn't a rollout. It's a
+> six-week pilot in five stores: time ten invoice checks per store before and after, run this
+> evaluation on your own SOPs, and decide on measured numbers."
+
+---
+
+## Timing
+
+| Part | Minutes |
+|---|---|
+| Opening | 1 |
+| Scene 1 — Morning questions | 3 |
+| Scene 2 — The delivery | 4 |
+| Scene 3 — Evaluation | 3 |
+| Scene 4 — Under the hood | 2 |
+| Close | 1 |
+| **Total** | **~14**, leaving time for questions |
+
+## If something goes wrong
 
 | Problem | Recovery |
-|---------|----------|
-| MAS slow on first question | Click a cached example first to warm it up. Say "Real agents, real data" while waiting. |
-| MCP tool approval hangs | The auto-approval code handles this. If it still fails, ask a KA or Genie question instead. |
-| Invoice parsing slow | Say "ai_parse_document is reading 8 line items, HSN codes, GST breakups..." — narrate while waiting. |
-| Network error on chat | Switch to the cached question. Second try always works. |
-| Compare page slow | Say "Two models running the same question — real computation, not a mock." |
+|---|---|
+| A document answer is slow (~20–25 s) | Narrate: "It's reading our SOP documents and citing them." Use a pre-warmed question next. |
+| Chat returns an error | Ask a table question (inventory, suppliers); those are fast. Show the answer in `evidence/05`. |
+| Invoice parse is slow | Narrate the steps (parse, structure, match). If it fails, walk through `evidence/06`. |
+| Inventory panel is empty | Lakebase permissions or sync; fall back to `evidence/07` and explain the sync step. |
 
----
+## Rules
 
-## Golden Rules
-
-1. **Lead with Priya, not the technology.** The audience remembers the store manager, not the API call.
-2. **Pause after each answer.** The magic only works if they have time to read it.
-3. **Don't explain MCP protocol** unless asked. Say "an open standard for connecting AI to external systems" and move on.
-4. **Don't show code.** Everything is UI-driven. That IS the point.
-5. **The invoice is your closer.** It's the most visual, most tangible, most "I need this" moment. Spend time here.
-6. **Name the products.** "Classic Filter Coffee, Coorg Arabica, tumbler-davara" — specifics make it real.
-7. **End with the platform, not the features.** "That's not a chatbot. That's an enterprise AI platform."
+1. Lead with Priya and the outcome, not the technology.
+2. Pause after each answer so people can read it.
+3. Say which numbers are measured and which are assumptions.
+4. Answer at the altitude of the person who asked.

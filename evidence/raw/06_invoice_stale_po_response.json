@@ -1,0 +1,142 @@
+{
+  "file": "invoice_coorg_mixed.pdf",
+  "request_utc": "2026-09-28T13:51:10.362264+00:00",
+  "client_elapsed_s": 33.1,
+  "http": 200,
+  "body": {
+    "extracted": {
+      "supplier_name": "Coorg Coffee Estates",
+      "invoice_number": "CCE/BLR/2026-27/0923",
+      "invoice_date": "2026-04-06",
+      "po_reference": "PO-01288",
+      "delivery_to": "Kaapi Bricks Koramangala (STR-001), #45, 80 Feet Road, Koramangala 4th Block, Bangalore 560034",
+      "items": [
+        {
+          "name": "Coorg Arabica Beans — Grade AA",
+          "quantity": 25.0,
+          "unit": "kg",
+          "rate": 1200.0,
+          "amount": 30000.0
+        },
+        {
+          "name": "Premium Chicory Powder",
+          "quantity": 15.0,
+          "unit": "kg",
+          "rate": 400.0,
+          "amount": 6000.0
+        },
+        {
+          "name": "House Blend Pre-Mix (70/30)",
+          "quantity": 25.0,
+          "unit": "kg",
+          "rate": 870.0,
+          "amount": 21750.0
+        },
+        {
+          "name": "Branded Paper Cups — 200ml",
+          "quantity": 10.0,
+          "unit": "case",
+          "rate": 800.0,
+          "amount": 8000.0
+        },
+        {
+          "name": "Cardamom — Alleppey Green (8mm+)",
+          "quantity": 2.0,
+          "unit": "kg",
+          "rate": 3200.0,
+          "amount": 6400.0
+        }
+      ],
+      "subtotal": 72150.0,
+      "gst_amount": 3607.5,
+      "total_amount": 75757.5
+    },
+    "supplier_match": {
+      "supplier_id": "SUP-001",
+      "name": "Coorg Coffee Estates"
+    },
+    "po_match": {
+      "po_id": "PO-01314",
+      "supplier_id": "SUP-001",
+      "store_id": "STR-001",
+      "total_amount": "6340.84",
+      "status": "pending"
+    },
+    "po_lines": [
+      {
+        "ingredient_id": "ING-001",
+        "ingredient_name": "Coorg Arabica Beans",
+        "quantity": "41.95",
+        "unit": "kg",
+        "unit_price": "1200.0",
+        "line_total": "50340.0"
+      }
+    ],
+    "matched_items": [
+      {
+        "invoice_name": "Coorg Arabica Beans — Grade AA",
+        "invoice_qty": 25.0,
+        "invoice_unit": "kg",
+        "invoice_rate": 1200.0,
+        "invoice_amount": 30000.0,
+        "status": "warning",
+        "issues": [
+          "Qty: ordered 41.95, invoiced 25.0 (-17.0)"
+        ],
+        "po_name": "Coorg Arabica Beans",
+        "po_qty": 41.95,
+        "po_rate": 1200.0,
+        "ingredient_id": "ING-001"
+      },
+      {
+        "invoice_name": "Premium Chicory Powder",
+        "invoice_qty": 15.0,
+        "invoice_unit": "kg",
+        "invoice_rate": 400.0,
+        "invoice_amount": 6000.0,
+        "status": "extra",
+        "issues": [
+          "Not in PO — extra item"
+        ]
+      },
+      {
+        "invoice_name": "House Blend Pre-Mix (70/30)",
+        "invoice_qty": 25.0,
+        "invoice_unit": "kg",
+        "invoice_rate": 870.0,
+        "invoice_amount": 21750.0,
+        "status": "extra",
+        "issues": [
+          "Not in PO — extra item"
+        ]
+      },
+      {
+        "invoice_name": "Branded Paper Cups — 200ml",
+        "invoice_qty": 10.0,
+        "invoice_unit": "case",
+        "invoice_rate": 800.0,
+        "invoice_amount": 8000.0,
+        "status": "extra",
+        "issues": [
+          "Not in PO — extra item"
+        ]
+      },
+      {
+        "invoice_name": "Cardamom — Alleppey Green (8mm+)",
+        "invoice_qty": 2.0,
+        "invoice_unit": "kg",
+        "invoice_rate": 3200.0,
+        "invoice_amount": 6400.0,
+        "status": "extra",
+        "issues": [
+          "Not in PO — extra item"
+        ]
+      }
+    ],
+    "warnings": [
+      "PO PO-01288 belongs to SUP-006, not invoice supplier SUP-001 (Coorg Coffee Estates) — reference ignored"
+    ],
+    "latency_ms": 30311.559677124023,
+    "filename": "inv_76d4bf3e_invoice_coorg_mixed.pdf"
+  }
+}

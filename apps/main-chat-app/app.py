@@ -915,13 +915,20 @@ async def parse_invoice(file: UploadFile = File(...), store: str = Form("Koraman
     # Step 4: Find matching PO
     po_match = None
     po_lines = []
+    warnings = []
     po_ref = extracted.get("po_reference", "")
     if po_ref:
         po_rows = _run_sql(f"SELECT po_id, supplier_id, store_id, total_amount, status FROM {CATALOG_SCHEMA}.purchase_orders WHERE po_id = '{po_ref}'")
-        if po_rows:
+        if po_rows and supplier_match and po_rows[0]["supplier_id"] != supplier_match["supplier_id"]:
+            # PO reference belongs to a different supplier — never reconcile against it
+            warnings.append(f"PO {po_ref} belongs to {po_rows[0]['supplier_id']}, not invoice supplier "
+                            f"{supplier_match['supplier_id']} ({supplier_match['name']}) — reference ignored")
+        elif po_rows:
             po_match = po_rows[0]
             po_lines = _run_sql(f"SELECT ingredient_id, ingredient_name, quantity, unit, unit_price, line_total FROM {CATALOG_SCHEMA}.po_line_items WHERE po_id = '{po_ref}'")
-    elif supplier_match:
+        else:
+            warnings.append(f"PO {po_ref} not found")
+    if not po_match and supplier_match:
         # Try matching by supplier + store
         store_id = "STR-001"  # TODO: map store name to ID
         po_rows = _run_sql(f"SELECT po_id, supplier_id, store_id, total_amount, status FROM {CATALOG_SCHEMA}.purchase_orders WHERE supplier_id = '{supplier_match['supplier_id']}' AND store_id = '{store_id}' AND status != 'delivered' ORDER BY order_date DESC LIMIT 1")
@@ -981,7 +988,9 @@ async def parse_invoice(file: UploadFile = File(...), store: str = Form("Koraman
 
     # Check for missing PO items (in PO but not in invoice)
     for pl in po_lines:
-        found = any(pl.get("ingredient_name", "").lower() in (mi.get("invoice_name") or "").lower() or (mi.get("invoice_name") or "").lower() in pl.get("ingredient_name", "").lower() for mi in invoice_items)
+        # Compare against the PO line each invoice item actually matched above — a bare
+        # substring test would count "Jaggery Blocks" as delivering "Palm Jaggery".
+        found = any(mi.get("po_name") == pl.get("ingredient_name") for mi in matched_items)
         if not found:
             matched_items.append({
                 "invoice_name": pl.get("ingredient_name"),
@@ -1000,6 +1009,7 @@ async def parse_invoice(file: UploadFile = File(...), store: str = Form("Koraman
         "po_match": po_match,
         "po_lines": po_lines,
         "matched_items": matched_items,
+        "warnings": warnings,
         "latency_ms": latency_ms,
         "filename": filename,
     }

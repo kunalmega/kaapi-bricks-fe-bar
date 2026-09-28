@@ -1,0 +1,122 @@
+{
+  "version": 2,
+  "config": {
+    "sample_questions": [
+      {
+        "id": "11daa44fc3724d56a970e441d51d5f5f",
+        "question": [
+          "Which suppliers have the lowest on-time delivery rate?"
+        ]
+      },
+      {
+        "id": "35b6175eeead441492374980d86cc28c",
+        "question": [
+          "What is the daily revenue trend across all stores in the last 7 days?"
+        ]
+      },
+      {
+        "id": "58955f42dd4f489b91c100a9be04db3c",
+        "question": [
+          "Which ingredients are below reorder threshold at Koramangala?"
+        ]
+      },
+      {
+        "id": "c2184a3f79784bfa806dff50d53bdcda",
+        "question": [
+          "What are the top 5 selling products by units this month?"
+        ]
+      },
+      {
+        "id": "c24896eebb0c449a81fc53f778e26de9",
+        "question": [
+          "Show overdue purchase orders with supplier names and days overdue"
+        ]
+      }
+    ]
+  },
+  "data_sources": {
+    "tables": [
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.customers"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.gold_delivery_exceptions"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.gold_inventory_position"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.gold_open_purchase_orders"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.gold_product_demand"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.gold_store_daily_kpis"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.gold_supplier_performance"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.gold_waste_summary"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.ingredients"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.inventory_transactions"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.order_item_toppings"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.order_items"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.orders"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.po_line_items"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.products"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.promotion_redemptions"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.promotions"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.purchase_orders"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.stores"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.suppliers"
+      },
+      {
+        "identifier": "fevm_cme_conde_catalog.kaapi_bricks.toppings"
+      }
+    ],
+    "volumes": [
+      {
+        "path": "/Volumes/fevm_cme_conde_catalog/kaapi_bricks/raw_data/",
+        "description": [
+          "You need to use KA documents folder any question related to the recipe guidelines or rules"
+        ]
+      }
+    ]
+  },
+  "instructions": {
+    "text_instructions": [
+      {
+        "id": "88c0f389849448bdb6b00d4dad75cb19",
+        "content": [
+          "For recipes, drink preparation, decoction, barista procedures, equipment cleaning, food safety, allergens, franchise questions, and supplier contract terms (minimum orders, payment, delivery terms): answer from the documents in the attached volume (drink_recipes_sop.pdf, barista_training_manual.pdf, equipment_maintenance_guide.pdf, food_safety_policy.pdf, franchise_operations_guide.pdf, supplier_agreements_summary.pdf) and cite the document.Combine sources when useful: e.g. supplier lead time from the suppliers table plus minimum order and payment terms from supplier_agreements_summary.pdf.Completeness rule for document answers: store managers act on these answers without opening the PDF, so include every operational detail the documents state for the item asked about \u2014 for drinks: the menu price along with the recipe; for suppliers: lead time, minimum order quantity, delivery schedule and payment terms; for perishables: storage temperature AND the use-by window after delivery or preparation."
+        ]
+      }
+    ]
+  }
+}

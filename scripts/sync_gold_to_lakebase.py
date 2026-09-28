@@ -40,6 +40,8 @@ SYNC_TARGETS = [
 parser = argparse.ArgumentParser()
 parser.add_argument("--warehouse-id", default=None)
 parser.add_argument("--profile", default=None)
+parser.add_argument("--app-name", default="kaapi-bricks-finale",
+                    help="Databricks App whose service principal is granted SELECT on the lb_* tables")
 args, _ = parser.parse_known_args()
 
 print("Connecting to Databricks workspace...")
@@ -134,6 +136,15 @@ lb_exec("""CREATE TABLE IF NOT EXISTS lb_product_demand (
   PRIMARY KEY (store_id, product_id, order_date)
 )""")
 print("  Tables ready.")
+
+# The app reads these tables as its own service principal, so it needs SELECT on them.
+try:
+    app_sp = w.apps.get(args.app_name).service_principal_client_id
+    for t in ("lb_inventory_position", "lb_open_purchase_orders", "lb_delivery_exceptions", "lb_product_demand"):
+        lb_exec(f'GRANT SELECT ON {t} TO "{app_sp}"')
+    print(f"  Granted SELECT on lb_* tables to app {args.app_name}'s service principal.")
+except Exception as e:
+    print(f"  WARNING: could not grant app access ({e}); grant SELECT on lb_* tables manually.")
 
 
 # -------------------------------------------------------------------------

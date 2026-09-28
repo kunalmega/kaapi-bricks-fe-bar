@@ -9,22 +9,24 @@
 #   ./deploy.sh fevm-india-gcc fe_india_gcc_catalog 13a6b534c35ffbcb
 #   ./deploy.sh DEFAULT fevm_cme_conde_catalog e755eae9d758fdf7
 #
-# What this script does (fully automated):
+# What this script does:
 #   1. Creates both Databricks Apps (main chat + MCP server)
 #   2. Replaces catalog/warehouse in app code
 #   3. Deploys both apps
 #   4. Syncs data gen + eval scripts to workspace
 #   5. Creates schema + volumes in Unity Catalog
-#   6. Runs data generation as serverless jobs (14 tables + 6 PDFs)
-#   7. Creates Lakebase instance
-#   8. Creates po_line_items table
-#   9. Grants all permissions (UC, Lakebase, Apps) to both app SPs
+#   6. Runs data generation as serverless jobs (raw Parquet landing + 6 SOP PDFs)
+#   7. Creates the Lakebase instance and roles for both app SPs
+#   8. Grants UC permissions (schema, volumes) and app permissions to both app SPs
 #
-# After this script, only 4 manual steps remain:
-#   - Create KA in Agent Bricks UI
-#   - Create Genie Space in SQL UI
-#   - Create MAS Supervisor in Agent Bricks UI
-#   - Update main app resources with endpoint names
+# Run this AFTER the data platform steps (see README "Deploy"):
+#   generate_data.py -> drop_legacy_tables.sql -> databricks bundle deploy/run
+#   -> init_app_tables.sql -> sync_gold_to_lakebase.py (also grants the app SP
+#   SELECT on the lb_* serving tables) -> create_genie_agent.py
+#
+# Genie Agent: the app calls Genie Agent mode; the space (tables + SOP PDF volume
+# + instructions) is configured by scripts/create_genie_agent.py. The retired
+# Knowledge Assistant / Supervisor Agent steps are no longer needed.
 # ================================================================
 
 set -e

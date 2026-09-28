@@ -1,140 +1,96 @@
-# Kaapi Bricks — Architecture & Integrated Journey
+# Kaapi Bricks — Architecture and Design Decisions
 
-> **Living document.** Updated as the build progresses. Legend:
-> ✅ built & verified · 🟡 exists, needs rework · 🔴 to build · ⬜ planned
-
-_Last updated: 2026-09-27 — all code complete. Blockers resolved: po_line_items added,
-write-path conflict fixed (app_inventory_receipts / app_po_approvals), Lakebase sync script
-created, evidence skeleton (01–10) and deck written. Awaiting: `databricks auth login` →
-pipeline deploy + run → fill evidence files → push to GitHub._
-
-## Repository layout (submission root)
-
-```
-FEbar_copy_bricks/            ← git root = the submission
-  ARCHITECTURE.md             ← this file (living diagram)
-  febar.md                    ← working plan + gap checklist
-  README.md  DEMO.md  DEMO_SCRIPT.md
-  databricks.yml              ✅ bundle root (catalog/schema vars, dev target)
-  resources/                  ✅ kaapi_pipeline.pipeline.yml (serverless LDP)
-  src/pipeline/               ✅ 01_bronze.sql · 02_silver.sql · 03_gold.sql (deploy pending)
-  scripts/                    ✅ generate_data.py · drop_legacy_tables.sql · init_app_tables.sql
-                                 sync_gold_to_lakebase.py · evals
-  evidence/                   🟡 01–10 skeleton files (fill after pipeline runs)
-  deck/                       ✅ FE_BAR_DECK.md (outcome-led, 10 sections, KPI math)
-  apps/                       ✅ main-chat-app, growth-advisor-agent, promo-agent, mcp-server
-  sample-invoices/            ✅ PDFs for the doc-AI demo
-  evidence/                   🔴 committed text execution evidence
-  deck/                       🔴 business presentation
-```
-
----
+Current, deployed architecture. Every status below is backed by a file in `evidence/`.
 
 ## The one-line story
 
-A store manager for **Kaapi Bricks** (fictional 37-store South-Indian filter-coffee chain)
-asks one governed assistant to prep daily demand, catch supplier-invoice discrepancies, and
-avoid stockouts — replacing a ~30-minute manual cross-check with a few seconds.
+A Kaapi Bricks store manager (fictional 37-store filter-coffee chain) uses one governed assistant
+to check supplier invoices against POs, see current inventory and late deliveries, and get answers
+from both company data and company SOPs.
 
----
-
-## Integrated journey (target state)
+## End-to-end journey
 
 ```
-                          KAAPI BRICKS — END-TO-END DATA JOURNEY
-
-  ┌─────────────────────────────────────────────────────────────────────────────┐
-  │  SYNTHETIC DATA GENERATION                                            ✅       │
-  │  scripts/generate_data.py  (Faker, seed=42)                                   │
-  │  37 stores · 28 products · 15k customers · 200k orders · 2k POs · inventory   │
-  └───────────────────────────────────────┬───────────────────────────────────────┘
-                                           │  writes raw Parquet (one dir per entity)
-                                           ▼
-  ┌─────────────────────────────────────────────────────────────────────────────┐
-  │  UNITY CATALOG VOLUME  (raw landing zone)                            🟡 ready  │
-  │  /Volumes/fevm_cme_conde_catalog/kaapi_bricks/raw_data/<entity>/*.parquet     │
-  └───────────────────────────────────────┬───────────────────────────────────────┘
-                                           │  Auto Loader (cloudFiles)
-                                           ▼
-  ┌─────────────────────────────────────────────────────────────────────────────┐
-  │  LAKEFLOW  ·  Spark Declarative Pipeline (serverless)          🟡 CODE READY  │
-  │                                                                               │
-  │   BRONZE  (streaming tables, raw + ingest metadata)                           │
-  │     bronze_stores  bronze_products  bronze_customers  bronze_orders  …(13)    │
-  │            │  expectations: type-cast, not-null keys, valid ranges            │
-  │            ▼                                                                   │
-  │   SILVER  (conformed, deduped, referential-integrity checks)                  │
-  │     stores  products  customers  orders  order_items  purchase_orders  …(13)  │
-  │            │  aggregate + business logic                                      │
-  │            ▼                                                                   │
-  │   GOLD  (operational + KPI tables)                                            │
-  │     gold_store_daily_kpis      gold_inventory_position                        │
-  │     gold_open_purchase_orders  gold_delivery_exceptions                       │
-  │     gold_product_demand        gold_supplier_performance  gold_waste_summary  │
-  └───────────────────────────────────────┬───────────────────────────────────────┘
-                                           │
-        ┌──────────────────────────────────┼───────────────────────────────────┐
-        ▼                                  ▼                                     ▼
-  ┌───────────────┐            ┌──────────────────────┐            ┌────────────────────┐
-  │ UNITY CATALOG │            │ LAKEBASE (Postgres)  │            │  ML / GenAI         │
-  │ governance ✅ │            │ operational serving  │            │                     │
-  │ • comments    │            │ 🟡 memory→🔴 ops     │            │ • Knowledge Asst ✅ │
-  │ • grants      │            │ synced gold tables:  │            │ • Multi-Agent Sup ✅│
-  │ • lineage 🔴  │            │  inventory_position  │            │ • ai_parse_document │
-  │  (bronze→gold)│            │  open_pos            │            │   invoice parse  ✅ │
-  └───────┬───────┘            │  delivery_exceptions │            │ • MLflow eval    🟡 │
-          │                    │  product_demand      │            │   (needs outputs)   │
-          │                    └──────────┬───────────┘            └─────────┬──────────┘
-          ▼                               │                                  │
-  ┌───────────────┐                       │                                  │
-  │ GENIE SPACE ✅│                       │                                  │
-  │ NL analytics  │                       │                                  │
-  │ over silver + │                       │                                  │
-  │ gold tables   │                       │                                  │
-  └───────┬───────┘                       │                                  │
-          │                               │                                  │
-          └───────────────┬───────────────┴──────────────────┬───────────────┘
-                          ▼                                   ▼
-              ┌───────────────────────────────────────────────────────────┐
-              │  DATABRICKS APP — Store Manager Console          ✅         │
-              │  apps/main-chat-app  (+ growth-advisor, promo, mcp-server)  │
-              │  • reads operational views from Lakebase (OLTP latency)     │
-              │  • routes questions to MAS → KA / Genie / Ops Advisor       │
-              │  • invoice upload → ai_parse_document → PO discrepancy check │
-              └───────────────────────────────────────────────────────────┘
+  SYNTHETIC DATA  scripts/generate_data.py (Faker, seed=42)
+  37 stores · 200k orders · 2k POs · 3.5k PO lines · 171k inventory txns · 6 SOP PDFs
+        │  Parquet, one folder per entity
+        ▼
+  UNITY CATALOG VOLUME  raw_data/<entity>/            (+ raw_data/ka_documents/*.pdf)
+        │  Auto Loader: STREAM read_files
+        ▼
+  LAKEFLOW  kaapi_bricks_medallion  (serverless, triggered)          evidence/01, 03
+    BRONZE  14 streaming tables       raw + _source_file + _ingested_at
+    SILVER  14 materialized views     typed, deduped, 45 expectations (45/45 passed)
+    GOLD     7 materialized views     inventory position · open POs · delivery exceptions ·
+                                      product demand · supplier performance · waste · store KPIs
+        │
+        ├──► UNITY CATALOG governance: comments, lineage, app SP grants    evidence/02
+        │
+        ├──► LAKEBASE (Postgres)  scripts/sync_gold_to_lakebase.py         evidence/04
+        │      lb_inventory_position (814) · lb_open_purchase_orders (147)
+        │      lb_delivery_exceptions (339) · lb_product_demand (6,324, last 7 days)
+        │      + kaapi_mcp.* chat history, feedback, semantic answer cache
+        │
+        └──► GENIE AGENT  resources/genie_space.json                       evidence/05, 09
+               21 silver + gold tables  +  SOP/recipe PDF volume
+               called via Agent mode: POST /api/2.0/genie/agents/{id}/responses (SSE)
+        │
+        ▼
+  DATABRICKS APP  apps/main-chat-app  (FastAPI + React)                    evidence/07
+    chat panel       → semantic cache (Lakebase) → Genie Agent mode
+    inventory panel  → GET /api/lakebase/inventory/{store} → Lakebase
+    invoice upload   → ai_parse_document + LLM extraction → PO + po_line_items match
+                     → human approval → app_inventory_receipts / app_po_approvals (Delta)
+        │
+        ▼
+  MLFLOW  scripts/run_genie_evaluation.py → mlflow.genai.evaluate           evidence/09
+    Correctness · RelevanceToQuery · Safety on 10 store-manager questions
 ```
 
----
+## Layer status
 
-## Layer status (FE Bar mandatory 6)
+| # | Layer | Status | Evidence |
+|---|---|---|---|
+| 1 | Lakeflow | ✅ Ran: update 065d6a70, 14 + 14 + 7 datasets, ~61 s serverless | 01, 03 |
+| 2 | Unity Catalog | ✅ Governed schema, volumes, comments, lineage, SP grants | 02 |
+| 3 | Lakebase | ✅ 4 serving tables synced; app inventory panel reads Lakebase (HTTP 200, `source: lakebase`) | 04, 07 |
+| 4 | ML / GenAI | ✅ Invoice parsing; ✅ MLflow evaluation measured (latest scores in 09) | 06, 09 |
+| 5 | Genie Agent | ✅ Agent mode, tables + documents | 05, 09 |
+| 6 | Databricks App | ✅ Deployed and ACTIVE | 07 |
 
-| # | Layer | Status | Where (paths are repo-root relative) |
-|---|-------|--------|--------------------------------------|
-| 1 | **Lakeflow** | 🟡 code ✅, deploy pending | 14 bronze (Auto Loader) + 14 silver (expectations) + 7 gold; `po_line_items` added; `databricks.yml` + bundle resource |
-| 2 | **Unity Catalog** | ✅ / 🟡 lineage after run | catalog `fevm_cme_conde_catalog`, schema `kaapi_bricks`, comments on all tables; lineage visible after pipeline runs |
-| 3 | **Lakebase** | ✅ code complete | `scripts/sync_gold_to_lakebase.py` syncs 4 gold tables; `GET /api/lakebase/inventory/{store_id}` reads `lb_inventory_position`; chat memory + QA cache also live |
-| 4 | **ML / GenAI** | ✅ | KA + MAS + `ai_parse_document` + MLflow eval notebooks (outputs needed after run) |
-| 5 | **Genie** | ✅ | `scripts/create_agents.py`; pointed at silver + gold |
-| 6 | **Databricks App** | ✅ | `apps/main-chat-app` + 3 more; write-path conflict resolved |
+## Design decisions (and the trade-offs to defend)
 
----
+- **One Genie Agent instead of Knowledge Assistant + Supervisor Agent.** KA and SA are being
+  deprecated in favour of Genie Agents. One agent now answers table questions (SQL) and document
+  questions (PDF volume). This removed a routing layer and two endpoints.
+- **Agent mode API, not Chat mode.** The Chat-mode conversation API only queries tables. Our
+  first evaluation scored Correctness 0.00 because every SOP question was declined. Agent mode
+  reads the attached volume and cites the file. Cost: ~23 s per document answer versus a few
+  seconds, because Agent mode reasons over several steps.
+- **Semantic answer cache in Lakebase.** Repeat questions (SOPs change rarely) are answered from
+  `kaapi_mcp.qa_cache` by exact match, then embedding similarity ≥ 0.95, with a 48-hour TTL.
+  This hides Agent mode latency for common questions.
+- **Silver keeps plain business names** (`orders`, `purchase_orders`, …), so Genie and the app
+  query the pipeline-owned tables with no renaming. Bronze is prefixed `bronze_`, gold `gold_`.
+- **Deterministic gold, LLM on top.** Inventory position, open POs, and delivery exceptions are
+  SQL in gold. The LLM explains and summarizes; it does not compute the numbers.
+- **App writes are separate from pipeline tables.** Silver and gold are pipeline-owned and
+  read-only. Invoice approvals write to `app_inventory_receipts` and `app_po_approvals`; gold
+  unions them in, so an approval shows up after the next pipeline refresh.
+- **Lakebase vs Delta for serving.** Small per-store point lookups go to Lakebase; multi-store
+  analytics stays on Delta through Genie.
+- **Lakebase sync is a snapshot script.** `sync_gold_to_lakebase.py` truncates and reloads after
+  each pipeline run. Simple and correct for a demo. In production: schedule it as a job task after
+  the pipeline, or use Lakebase synced tables.
 
-## Key design decisions (rationale for the roleplay)
+## Known limits (stated, not hidden)
 
-- **Silver tables keep the plain business names** (`orders`, `customers`, …) that the Genie
-  Space, MAS, and app already query — so the medallion slots in underneath with zero
-  downstream rewrites. Bronze is prefixed `bronze_`, gold is prefixed `gold_`.
-- **Lakebase vs Delta for serving:** aggregated *gold* operational tables (small, hot,
-  point-lookups by store) are synced to Lakebase for OLTP-latency app reads; heavy
-  analytical scans stay on Delta/Genie. (This is a rehearsable trade-off.)
-- **Deterministic gold + LLM on top:** inventory position, open POs, and delivery
-  exceptions are deterministic SQL in gold (auditable); the LLM layer *explains and
-  recommends*, it doesn't compute the numbers.
-- **`inference_logs`** stays app-managed (observability), outside the medallion.
-
----
-
-## Open items feeding this diagram
-- [ ] Confirm target catalog/schema stays `fevm_cme_conde_catalog.kaapi_bricks` (or a public-safe rename before push)
-- [ ] Decide Lakebase sync mechanism (synced tables vs scheduled write) — see `LAKEFLOW_PLAN.md`
-- [ ] Wire lineage evidence capture (`evidence/02_uc_tables_and_lineage.md`)
+- Lakebase data is only as fresh as the last pipeline run + sync. An approved invoice is not
+  visible in the inventory panel until then.
+- Agent mode latency (~23 s) on uncached document questions.
+- Evaluation Correctness is below target (see `evidence/09` for the latest iteration and the
+  failure analysis).
+- `MODIFY` is granted at schema level to the app service principal; production should narrow it
+  to the two app-write tables.
+- The operations-advisor MCP server (`apps/mcp-server`) is deployed but not called by the
+  current chat flow; its previous caller was the retired Supervisor Agent.

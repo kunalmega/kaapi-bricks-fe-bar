@@ -1,0 +1,16 @@
+{
+  "question": "Based on sales history, how many Classic Filter Coffees does Koramangala sell on a typical Monday versus a typical Saturday? Use the daily product demand data and tell me how many to prep for next Monday.",
+  "request_utc": "2026-09-28T13:54:06.598584+00:00",
+  "client_elapsed_s": 34.11,
+  "final_event": {
+    "done": true,
+    "full_text": "## Classic Filter Coffee Sales: Monday vs Saturday at Koramangala\n\nBased on historical sales data, **Koramangala sells an average of 12.8 Classic Filter Coffees on a typical Monday compared to 14.8 on a typical Saturday** — about 2 units more on Saturdays.\\[[1](<workspace-url>)\\]\n\n### Recommendation for Next Monday\n**Prep 13 Classic Filter Coffees** for next Monday based on the historical average of 12.8 units.\n\n### Weekly Pattern Insights\nThe data shows interesting demand patterns throughout the week:\n\n**Classic Filter Coffee sales by day of week at Koramangala**\n\n| day_of_week | day_num | num_days | total_units | avg_units_per_day |\n| --- | --- | --- | --- | --- |\n| Sunday | 1 | 15 | 252 | 16.8 |\n| Monday | 2 | 15 | 192 | 12.8 |\n| Tuesday | 3 | 15 | 182 | 12.1 |\n| Wednesday | 4 | 15 | 187 | 12.5 |\n| Thursday | 5 | 15 | 213 | 14.2 |\n| Friday | 6 | 14 | 175 | 12.5 |\n| Saturday | 7 | 14 | 207 | 14.8 |\n\n- **Lowest demand**: Tuesday (12.1 units) and Monday (12.8 units)\n- **Highest demand**: Sunday (16.8 units) — weekend peak\n- **Saturday demand**: 14.8 units — 16% higher than Monday\n- **Weekend effect**: Both Saturday and Sunday show elevated demand compared to weekdays\n\nMondays are among the slower days for Classic Filter Coffee, likely reflecting the start-of-week pattern. Saturdays benefit from weekend traffic, driving higher sales.",
+    "latency_ms": 31571.133852005005,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "from_cache": false,
+    "match_type": "",
+    "similarity": 0,
+    "matched_question": ""
+  }
+}

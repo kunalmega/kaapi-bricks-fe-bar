@@ -8,8 +8,8 @@ Run date      : 2026-09-27
 Start         : 2026-09-27T09:25:51Z
 End           : 2026-09-27T09:26:52Z
 Duration      : ~61 seconds (serverless)
-Workspace     : fevm-fevm-cme-conde.cloud.databricks.com
-Update URL    : https://fevm-fevm-cme-conde.cloud.databricks.com/#joblist/pipelines/86ecf20f-fb31-43da-a626-db630e1dfa4b/updates/065d6a70-b298-4ccc-be9f-9c0433da45ea
+Workspace     : <workspace-host>
+Update URL    : <workspace-url>
 
 LAYER SUMMARY
 -------------
