@@ -84,20 +84,24 @@ Response (actual, 2026-09-28):
 [{"id": "<uuid>", "title": "New Conversation", "created_at": "2026-09-27 ..."}]
 1 conversation stored in Lakebase kaapi_mcp.conversations table.
 
-API TEST 4 — Chat (Genie Agent path)
---------------------------------------
+API TEST 4 — Chat (Genie Agent mode, reads SOP documents)
+------------------------------------------------------------
 POST /api/chat
 Authorization: Bearer <sdk_token>
-Body: {"query": "Which ingredients are below reorder threshold?", "store_location": "Koramangala, Bangalore"}
+Body: {"query": "How long can prepared decoction be kept before discarding?",
+       "store_location": "Koramangala, Bangalore", "history": []}
 
 HTTP 200 (SSE stream)
-Route: call_genie_sync() → Genie Space 01f12a63ec1011e0acbb09158eda7634
-Genie queries: gold_inventory_position WHERE below_reorder = true
-Response: streamed JSON with "text" field containing Genie answer
-MLflow experiment: 3268449285627906 (traces logged per request)
+Route: /api/chat -> call_genie_sync() -> POST /api/2.0/genie/agents/01f12a63ec1011e0acbb09158eda7634/responses
+Response (actual, 2026-09-28, final SSE event):
+data: {"done": true, "full_text": "## Decoction Hold Time: 4 Hours Maximum\n\nPrepared decoction
+(filter coffee) can be kept for a **maximum of 4 hours** before it must be discarded.\n\nAfter 4 hours,
+the coffee oxidizes and tastes stale. You must discard it and prepare fresh decoction, regardless of
+how it appears.", "latency_ms": 22897.86, "from_cache": false, ...}
 
-Note: Full end-to-end chat test requires running the app in a browser (OAuth session).
-The /api endpoints above are verified via SDK-authenticated requests from the CLI.
+Source: drink_recipes_sop.pdf / food_safety_policy.pdf in the attached volume (Agent mode citation).
+Latency: 22.9 s end-to-end (Agent mode multi-step reasoning; repeat questions served from the
+Lakebase qa_cache).
 
 DEPLOY VERIFICATION
 ---------------------

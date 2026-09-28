@@ -459,11 +459,17 @@ def _extract_token_usage(data):
 
 @mlflow.trace(name="genie_call", span_type=SpanType.CHAT_MODEL)
 def call_genie_sync(messages, store_location):
-    """Call Genie Agent conversation API (replaces MAS + KA)."""
+    """Call the Genie Agent mode API (replaces MAS + KA).
+
+    Agent mode (not the Chat-mode conversation API) is required for Genie to
+    read the SOP/recipe PDFs attached to the space as a volume. It streams SSE
+    events; the final `response.completed` event carries the full output.
+    """
     w = _get_workspace_client()
     host = w.config.host.rstrip("/")
     headers = w.config.authenticate()
     headers["Content-Type"] = "application/json"
+    headers["Accept"] = "text/event-stream"
 
     user_query = messages[-1]["content"] if messages else ""
     db_name = STORE_DB_NAMES.get(store_location, f"Kaapi Bricks {store_location}")
@@ -472,46 +478,43 @@ def call_genie_sync(messages, store_location):
     start_time = time.time()
     try:
         resp = http_requests.post(
-            f"{host}/api/2.0/genie/spaces/{GENIE_SPACE_ID}/start-conversation",
+            f"{host}/api/2.0/genie/agents/{GENIE_SPACE_ID}/responses",
             headers=headers,
-            json={"content": content},
-            timeout=30,
+            json={"input": [{"type": "message", "role": "user",
+                             "content": [{"type": "input_text", "text": content}]}]},
+            stream=True, timeout=300,
         )
         resp.raise_for_status()
-        data = resp.json()
-        conversation_id = data["conversation_id"]
-        message_id = data["message_id"]
+        resp.encoding = "utf-8"
 
-        status = ""
-        msg = {}
-        for _ in range(60):
-            poll = http_requests.get(
-                f"{host}/api/2.0/genie/spaces/{GENIE_SPACE_ID}/conversations/{conversation_id}/messages/{message_id}",
-                headers=headers, timeout=30,
-            )
-            poll.raise_for_status()
-            msg = poll.json()
-            status = msg.get("status", "")
-            print(f"[Genie] status={status}")
-            if status in ("COMPLETED", "FAILED", "CANCELLED"):
-                break
-            time.sleep(2)
+        final = None
+        for line in resp.iter_lines(decode_unicode=True):
+            if not line or not line.startswith("data:"):
+                continue
+            try:
+                event = json.loads(line[5:].strip())
+            except ValueError:
+                continue
+            if event.get("type") in ("response.completed", "response.failed"):
+                final = event.get("response", {})
 
         latency_ms = (time.time() - start_time) * 1000
 
-        if status != "COMPLETED":
+        if not final or final.get("status") != "completed":
+            err = (final or {}).get("error") or "no_response"
             return {"text": "Sorry, I couldn't get an answer right now. Please try again.",
-                    "latency_ms": latency_ms, "input_tokens": 0, "output_tokens": 0, "error": status}
+                    "latency_ms": latency_ms, "input_tokens": 0, "output_tokens": 0, "error": str(err)}
 
         answer_parts = []
-        for attachment in msg.get("attachments", []):
-            if attachment.get("text"):
-                answer_parts.append(attachment["text"]["content"])
-            elif attachment.get("query"):
-                q = attachment["query"]
-                if q.get("description"):
-                    answer_parts.append(q["description"])
-        answer = "\n\n".join(answer_parts) if answer_parts else "I don't have specific data on that. Try asking about sales, inventory, or purchase orders."
+        for item in final.get("output", []):
+            if item.get("type") == "message":
+                for block in item.get("content", []):
+                    if block.get("type") == "output_text" and block.get("text"):
+                        answer_parts.append(block["text"])
+        # Agent mode marks document sources inline as :citation[volume_file.<id>]
+        answer = re.sub(r"\s*:citation\[[^\]]*\]", "", "\n\n".join(answer_parts)).strip()
+        if not answer:
+            answer = "I don't have specific data on that. Try asking about sales, inventory, or purchase orders."
 
         print(f"[Genie] Done in {latency_ms:.0f}ms")
         return {"text": answer, "latency_ms": latency_ms,

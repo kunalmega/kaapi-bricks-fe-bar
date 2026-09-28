@@ -1,61 +1,72 @@
 # MLflow Evaluation Results — Kaapi Bricks Genie Agent
 
-Measured results from a real evaluation run. Nothing on this page is estimated.
+Two measured runs on the same 10-question dataset: a baseline and a re-test after a fix.
+Every score below was read back from MLflow. None are estimates.
 
 | Field | Value |
 |---|---|
 | Workspace | fevm-fevm-cme-conde.cloud.databricks.com |
 | Experiment ID | 982411422225142 |
-| MLflow run ID | 17e8de540367484f82992d96b4a8fea9 |
-| Run start | 2026-09-28 07:38:05 UTC |
-| Job run ID | 53486188180466 (serverless, TERMINATED / SUCCESS) |
-| Notebook | `scripts/run_genie_evaluation.py` (workspace copy: `kaapi-bricks-setup/run_genie_evaluation`) |
-| System under test | Genie Space `01f12a63ec1011e0acbb09158eda7634` (21 silver + gold tables; Content Search **not yet configured**) |
-| Dataset | 10 store-manager questions (recipes, SOPs, food safety, suppliers) with expected facts |
-| Scorers | `Safety()`, `RelevanceToQuery()`, `Correctness()`, `RetrievalGroundedness()` |
+| Notebook | `scripts/run_genie_evaluation.py` (workspace: `kaapi-bricks-setup/run_genie_evaluation`) |
+| System under test | Genie Space `01f12a63ec1011e0acbb09158eda7634`: 21 silver + gold tables + SOP PDF volume |
+| Dataset | 10 store-manager questions (recipes, SOPs, food safety, suppliers), 32 expected facts in total |
 
-## Aggregate scores
+## Results
 
-| Scorer | Mean |
-|---|---:|
-| Safety | **1.00** |
-| RetrievalGroundedness | **1.00** |
-| RelevanceToQuery | **0.30** |
-| Correctness | **0.00** |
+| Scorer | Run 1: baseline | Run 2: Agent mode + documents | Change |
+|---|---:|---:|---:|
+| Correctness | 0.00 | **0.50** | +0.50 |
+| RelevanceToQuery | 0.30 | **1.00** | +0.70 |
+| Safety | 1.00 | **1.00** | held |
+| RetrievalGroundedness | 1.00* | not scored* | n/a |
 
-## Per-question results
+| | Run 1 | Run 2 |
+|---|---|---|
+| MLflow run ID | 17e8de540367484f82992d96b4a8fea9 | cbf7938448934232baa109b09a0cb8b1 |
+| Job run ID | 53486188180466 | 838317136685612 |
+| Started (UTC) | 2026-09-28 07:38 | 2026-09-28 11:59 |
+| Genie API | Chat mode `POST /api/2.0/genie/spaces/{id}/start-conversation` | Agent mode `POST /api/2.0/genie/agents/{id}/responses` (SSE) |
 
-| # | Question | Relevance | Correctness | Trace ID |
-|---|---|---|---|---|
-| 1 | How do I make a Classic Filter Coffee? | yes | no | tr-09ad64a900fbd49f9ebd526f274eb372 |
-| 2 | What is the correct decoction ratio and timing? | no | no | tr-32cce36f36bceccd460ea997060c4b49 |
-| 3 | What should a barista do if a customer reports a nut allergy? | no | no | tr-61694c162a5e7f7381597ee256eaf236 |
-| 4 | How long does Coorg Arabica take to reorder? | yes | no | tr-54ac46b414ca8443bbbd809e823f2e42 |
-| 5 | At what temperature should milk be stored? | no | no | tr-89ab9abe4d57f47895fbaaf39b6106ca |
-| 6 | How do I clean the brass filter coffee maker? | no | no | tr-eb3e64e8d3fa5f4ccc78de5cdd5e01d5 |
-| 7 | How can I open a Kaapi Bricks franchise? | no | no | tr-a8a4aa4f3e246e214599eef1ee2d7acb |
-| 8 | How do I make Masala Chai? | no | no | tr-a5c712be18acbfbc1e8ef4482f9f4253 |
-| 9 | Who supplies our milk and what are their delivery terms? | yes | no | tr-24cb1a65b4e20e24e832a54c70dcce21 |
-| 10 | How long can prepared decoction be kept before discarding? | no | no | tr-9eaf460454bcc9b74703580cf3ad29e8 |
+\* In Run 1 the retriever span was fed Genie's own answer text, so Groundedness 1.00 was trivially true. Agent mode returns citation IDs (`:citation[volume_file.…]`) but not the retrieved chunks, so there is nothing real to score. We dropped the scorer instead of reporting a meaningless number.
+
+## What changed between runs
+
+**Run 1 root cause:** The SOP/recipe PDFs were attached to the Genie space, but the app and the eval called the **Chat mode** conversation API. Chat mode only works with structured tables. Genie declined 7 of 10 document questions ("I can't answer that from this database…"). It didn't make anything up, which is why Safety held at 1.00.
+
+**Fix:** switched `call_genie_sync()` in `apps/main-chat-app/app.py` and `predict()` in the eval to the **Agent mode** API. Agent mode reads the files in the attached volume and cites them. No other changes: same dataset, same scorers, same Genie space.
+
+## Run 2 per-question results
+
+| # | Question | Correct | Facts covered† | What was missing | Trace ID |
+|---|---|---|---|---|---|
+| 1 | How do I make a Classic Filter Coffee? | no | 5 / 6 | price (Rs.60) | tr-5730eb7235edd1590824cc435245d259 |
+| 2 | What is the correct decoction ratio and timing? | **yes** | 4 / 4 | — | tr-dc88f9a50de2b871bba409e07e837e98 |
+| 3 | Barista response to a nut allergy? | **yes** | 4 / 4 | — | tr-4d0371ab77e9e52fc30f5c0959b40a1f |
+| 4 | How long does Coorg Arabica take to reorder? | no | 2 / 3 | minimum order 50 kg | tr-039415e0411b8af15896441b6fa316d3 |
+| 5 | At what temperature should milk be stored? | no | 2 / 3 | "use within 2 days of delivery" | tr-c4b183dd61fad7cd8990e8dca22bb18e |
+| 6 | How do I clean the brass filter coffee maker? | **yes** | 4 / 4 | — | tr-742821752c8b89c779ab8cb9804db9fe |
+| 7 | How can I open a Kaapi Bricks franchise? | **yes** | 2 / 2 | — | tr-dde30674e3255f368f0db4257d3cd44c |
+| 8 | How do I make Masala Chai? | no | 1 / 2 | price (Rs.50) | tr-88d47b5c05c3ffc5ad522f1998e38ebe |
+| 9 | Who supplies our milk and on what terms? | no | 2 / 2 | nothing (judge error, see below) | tr-957c961167fbbca74fcb4de6836e88f1 |
+| 10 | How long can prepared decoction be kept? | **yes** | 2 / 2 | — | tr-336f6978eeee74bb75bafd63f4fc84f0 |
+
+† Fact coverage is our own tally from each judge rationale, not an MLflow metric. **28 of 32 expected facts (87.5%) appear in the answers.**
 
 ## Failure analysis
 
-**Root cause: the documents are not connected to the agent.** Seven of the ten questions (1, 2, 3, 5, 6, 7, 8, 10) can only be answered from the six SOP and training PDFs in `/Volumes/fevm_cme_conde_catalog/kaapi_bricks/raw_data/ka_documents/`. These PDFs were served by the Knowledge Assistant before it was deprecated. Content Search on the Genie space has not been set up yet, so the agent can see only structured tables. Real response to question 2:
+- **All-or-nothing judge on secondary facts (Q1, Q8).** The recipe answers were correct and complete, but left out the menu price the question never asked for. `Correctness()` fails a response that is missing any single expected fact.
+- **Details not surfaced from the documents (Q4, Q5).** The answers covered the main point (7-day lead time; 2–4 °C storage) but missed a secondary detail stated in the PDFs (the 50 kg minimum order; use within 2 days). These are real retrieval gaps.
+- **Judge error (Q9).** The rationale confirms "Nandini Dairy does supply both Full Cream Milk and Toned Milk", which are both expected facts. It then fails the answer because the *expectation* doesn't mention delivery terms. The fault is in the grading, not in the answer.
 
-> "I can't answer that from this database because it doesn't contain brewing SOPs or recipe instructions. I can only fetch data from the available tables on sales, inventory, purchase orders, suppliers, waste, customers, stores, products, and orders."
+## Operational trade-off
 
-**Partial answers from structured data.**
-- **Question 4:** Genie correctly returned "Coorg Arabica Beans from Coorg Coffee Estates has a reorder lead time of 7 days" from the `suppliers` and `ingredients` tables. The judge marked it incorrect because the expected fact "minimum order is 50 kg" appears only in the supplier agreements PDF.
-- **Question 9:** Genie correctly identified the milk suppliers from the tables. It could not give delivery or payment terms, which exist only in the PDF.
+End-to-end latency through the deployed app's `/api/chat` for Q10 was **22.9 s** in Agent mode, compared with a few seconds in Chat mode. Agent mode reasons over several steps and reads documents. Mitigation already in the app: the Lakebase semantic cache (`kaapi_mcp.qa_cache`) serves repeat SOP questions instantly. SOP content changes rarely, so cache hit rates for these questions should be high.
 
-**What went right.** Safety and Groundedness both scored 1.00. When the agent had no source, it said so and did not invent a recipe or a food-safety temperature. For a store-operations assistant, refusing is the right failure mode. A made-up allergen procedure or milk storage temperature would be a real safety risk.
+## Next iteration
 
-## Remediation and re-test plan
-
-1. Add Content Search to the Genie space: Settings → Content Search → Add Volume → `/Volumes/fevm_cme_conde_catalog/kaapi_bricks/raw_data/ka_documents`.
-2. Run `scripts/run_genie_evaluation.py` again with the same dataset and scorers.
-3. Acceptance targets for the re-test: Correctness ≥ 0.70, RelevanceToQuery ≥ 0.80, Safety = 1.00.
-4. Add the re-test run ID and scores to this file next to the baseline above.
+1. Split each expected-fact list into "must answer" and "nice to have" facts, or score with a `Guidelines()` rubric, so a missing price doesn't fail a correct recipe.
+2. Add an instruction telling Genie to include the menu price and supplier contract terms (minimum order, payment) when they appear in the documents.
+3. Re-run with the same scorers. Target: Correctness ≥ 0.80, with Relevance and Safety kept at 1.00.
 
 ## Reproduce
 
@@ -63,6 +74,6 @@ Measured results from a real evaluation run. Nothing on this page is estimated.
 import mlflow
 mlflow.set_tracking_uri("databricks")
 runs = mlflow.search_runs(experiment_ids=["982411422225142"],
-                          filter_string="attributes.run_id = '17e8de540367484f82992d96b4a8fea9'")
-print(runs.filter(like="metrics.").T)
+    filter_string="attributes.run_id IN ('17e8de540367484f82992d96b4a8fea9','cbf7938448934232baa109b09a0cb8b1')")
+print(runs.filter(regex="run_id|metrics").T)
 ```

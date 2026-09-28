@@ -1,5 +1,5 @@
 # Databricks notebook source
-# Kaapi Bricks — Genie Agent Evaluation (replaces KA eval after SA/KA deprecation)
+# Kaapi Bricks — Genie Agent (Agent mode) Evaluation (replaces KA eval after SA/KA deprecation)
 # Experiment: 982411422225142
 
 # COMMAND ----------
@@ -7,10 +7,9 @@
 %restart_python
 
 # COMMAND ----------
-import re, time, requests
+import re, json, requests
 import mlflow
-from mlflow.genai.scorers import Correctness, Safety, RelevanceToQuery, RetrievalGroundedness
-from mlflow.entities import Document
+from mlflow.genai.scorers import Correctness, Safety, RelevanceToQuery
 from databricks.sdk import WorkspaceClient
 
 GENIE_SPACE_ID = "01f12a63ec1011e0acbb09158eda7634"
@@ -19,52 +18,40 @@ mlflow.set_tracking_uri("databricks")
 mlflow.set_experiment(experiment_id="982411422225142")
 
 # COMMAND ----------
+# Agent mode API: required for Genie to read the SOP/recipe PDFs in the attached volume.
+# (The Chat-mode start-conversation API only sees structured tables.)
 @mlflow.trace
 def predict(query: str) -> str:
     w = WorkspaceClient()
     host = w.config.host.rstrip('/')
     headers = w.config.authenticate()
     headers["Content-Type"] = "application/json"
+    headers["Accept"] = "text/event-stream"
 
     resp = requests.post(
-        f"{host}/api/2.0/genie/spaces/{GENIE_SPACE_ID}/start-conversation",
-        headers=headers, json={"content": query}, timeout=30,
+        f"{host}/api/2.0/genie/agents/{GENIE_SPACE_ID}/responses",
+        headers=headers,
+        json={"input": [{"type": "message", "role": "user",
+                         "content": [{"type": "input_text", "text": query}]}]},
+        stream=True, timeout=300,
     )
     resp.raise_for_status()
-    data = resp.json()
-    conv_id = data["conversation_id"]
-    msg_id  = data["message_id"]
+    resp.encoding = "utf-8"
 
-    for _ in range(60):
-        poll = requests.get(
-            f"{host}/api/2.0/genie/spaces/{GENIE_SPACE_ID}/conversations/{conv_id}/messages/{msg_id}",
-            headers=headers, timeout=30,
-        )
-        msg = poll.json()
-        status = msg.get("status", "")
-        if status in ("COMPLETED", "FAILED", "CANCELLED"):
-            break
-        time.sleep(3)
+    final = {}
+    for line in resp.iter_lines(decode_unicode=True):
+        if line and line.startswith("data:"):
+            try:
+                event = json.loads(line[5:].strip())
+            except ValueError:
+                continue
+            if event.get("type") in ("response.completed", "response.failed"):
+                final = event.get("response", {})
 
-    answer_parts, retrieved_docs = [], []
-    for att in msg.get("attachments", []):
-        if att.get("text"):
-            content = att["text"]["content"]
-            answer_parts.append(content)
-            retrieved_docs.append(Document(id="text", page_content=content, metadata={"source": "genie"}))
-        elif att.get("query"):
-            desc = att["query"].get("description", "")
-            if desc:
-                answer_parts.append(desc)
-                retrieved_docs.append(Document(id="query", page_content=desc, metadata={"source": "genie_sql"}))
-
-    answer = "\n\n".join(answer_parts) or "No response from Genie."
-
-    @mlflow.trace(span_type="RETRIEVER", name="retriever")
-    def retrieve_genie_docs(q: str) -> list:
-        return retrieved_docs
-    retrieve_genie_docs(query)
-    return answer
+    parts = [b["text"] for item in final.get("output", []) if item.get("type") == "message"
+             for b in item.get("content", []) if b.get("type") == "output_text" and b.get("text")]
+    answer = re.sub(r"\s*:citation\[[^\]]*\]", "", "\n\n".join(parts)).strip()
+    return answer or "No response from Genie."
 
 # COMMAND ----------
 eval_dataset = [
@@ -84,7 +71,7 @@ eval_dataset = [
 results = mlflow.genai.evaluate(
     data=eval_dataset,
     predict_fn=predict,
-    scorers=[Safety(), RelevanceToQuery(), Correctness(), RetrievalGroundedness()],
+    scorers=[Safety(), RelevanceToQuery(), Correctness()],
 )
 display(results.tables["eval_results"])
 
