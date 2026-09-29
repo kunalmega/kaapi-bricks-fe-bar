@@ -17,11 +17,18 @@ credential file were left out.
 - [x] **Data quality**: 45 silver expectations, 45 passed, 0 failed, from the pipeline event log (evidence/03)
 - [x] **Unity Catalog**: governed schema, volumes, comments, lineage, app service-principal grants (evidence/02)
 - [x] **Lakebase**: 4 gold operational tables synced; the app's inventory panel reads Lakebase (evidence/04, 07)
-- [x] **ML / GenAI**: `ai_parse_document` invoice parsing; MLflow evaluation with measured scores (evidence/06, 09)
+- [x] **ML / GenAI**: invoice document parsing through the Unity AI Gateway (`kaapi_llm`, 4/4 discrepancies + control matched, 18.4 s); preparation plan with live weather; MLflow evaluation with measured scores (evidence/06, 09, 11)
 - [x] **Genie Agent**: Agent mode over 21 tables + SOP PDF volume; config as code in `resources/genie_space.json`
 - [x] **Databricks App**: store manager console deployed and ACTIVE (evidence/07)
 - [x] Same keys flow through every layer: PO-00006 traced raw → app (evidence/08)
 - [x] Migrated off the deprecated Knowledge Assistant + Supervisor Agent to a single Genie Agent
+- [x] **Unity AI Gateway**: every AI call except Genie is governed. Model services `kaapi_llm` and
+      `kaapi_embed` and MCP service `kaapi_ops_advisor`, with `EXECUTE` grants, service-wide rate
+      limits (a real 429 captured), payload logs from both app identities, the `ai-gateway` scope on
+      both apps, and no ungoverned fallback (evidence/11)
+- [x] MCP operations advisor now called (through the gateway), fixing the "prepare for today"
+      answer (same-weekday baseline, live weather)
+- [x] App resources cleaned: retired KA/MAS endpoints and unused model endpoints removed
 
 ## Evidence (text, committed)
 
@@ -29,6 +36,7 @@ credential file were left out.
 - [x] 06 invoice parse output · 07 app and API tests · 08 end-to-end trace
 - [x] 09 MLflow evaluation: baseline and re-test run IDs, per-question traces, failure analysis
 - [x] 10 value model with every assumption labeled
+- [x] 11 Unity AI Gateway: services, grants, gateway invoice / preparation plan / cache captures, payload-log rows, 429
 - [x] Evaluation source: `scripts/run_genie_evaluation.py`, run as a serverless job; results are
       committed as text in evidence/09. The older KA/MAS notebooks
       (`scripts/run_ka_evaluation*.ipynb`, `scripts/run_mas_evaluation*.ipynb`) call retired
@@ -58,7 +66,14 @@ credential file were left out.
       unscrubbed values.
 - [ ] **Rehearse the roleplay.** 12–15 minute demo, tell-show-tell per scene, both personas,
       with the prepared answers in `ROLEPLAY_PREP.md`. The roleplay is scored separately.
-- [ ] Rotate the service-principal secret that was found in cleartext in the original project.
+- [ ] **Attach gateway policies** (UI-only): built-in jailbreak / unsafe-content on `kaapi_llm`;
+      optionally a `kaapi_guard` strict lane for question-level policies.
+- [ ] **Cost-per-store query** on the gateway usage system tables.
+- [ ] *(Optional)* Rewrite git history to drop internal identifiers from older commits (no
+      credentials were ever committed); needs a force-push.
+- [ ] Rotate the service-principal secret that was found in cleartext in the original project;
+      delete the connector SP's older secret (2026-07-07) if unused. The MCP connection's own secret
+      was replaced 2026-09-29 (90-day lifetime).
 
 ## Production follow-ups (not required for the FE Bar; say them in the roleplay)
 

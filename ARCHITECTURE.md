@@ -17,7 +17,8 @@ A Kaapi Bricks store manager (a fictional 37-store South-Indian filter-coffee ch
 1. check a supplier invoice against the purchase order before paying it,
 2. see stock levels and late deliveries for the store,
 3. ask questions answered from company data (sales, stock, suppliers) **and** company documents
-   (recipes, SOPs, food safety, supplier agreements).
+   (recipes, SOPs, food safety, supplier agreements),
+4. get a daily preparation plan that combines sales history, stock and live weather.
 
 ```mermaid
 flowchart LR
@@ -25,7 +26,10 @@ flowchart LR
     APP --> DATA[(Unity Catalog<br/>kaapi_bricks schema)]
     APP --> LB[(Lakebase Postgres<br/>kaapi-bricks)]
     APP --> GENIE[Genie Agent<br/>tables + SOP PDFs]
-    APP --> LLM[Foundation Model APIs]
+    APP --> GW{{Unity AI Gateway<br/>kaapi_llm · kaapi_embed · kaapi_ops_advisor}}
+    GW --> FM[Foundation models<br/>Claude Sonnet 4.6 / Haiku 4.5 · BGE]
+    GW --> MCP[MCP app kaapi-ops-mcp<br/>weather + holidays]
+    MCP --> GW
     PIPE[Lakeflow pipeline<br/>kaapi_bricks_medallion] --> DATA
     GEN[Synthetic data<br/>generator] --> VOL[(UC Volume raw_data)]
     VOL --> PIPE
@@ -34,7 +38,8 @@ flowchart LR
 ```
 
 Everything runs in one Databricks workspace on serverless compute, and one Unity Catalog schema,
-`fevm_cme_conde_catalog.kaapi_bricks`, holds all data and AI assets.
+`fevm_cme_conde_catalog.kaapi_bricks`, holds all data and AI assets, including the gateway services.
+**Every AI call except Genie goes through Unity AI Gateway** (§9).
 
 ---
 
@@ -46,19 +51,20 @@ Everything runs in one Databricks workspace on serverless compute, and one Unity
 | Data | UC Volume `raw_data/<entity>/` | One Parquet folder per entity, plus `ka_documents/` (6 SOP PDFs) | ✅ | 01, 02 |
 | Data | Lakeflow `kaapi_bricks_medallion` | Serverless, triggered, SQL; 14 bronze + 14 silver + 7 gold | ✅ ran, update 065d6a70 | 01, 03 |
 | Data | App-write tables | `app_inventory_receipts`, `app_po_approvals` (Delta, outside the pipeline) | ✅ | 02 |
-| Serving | Lakebase instance `kaapi-bricks` | 4 `lb_*` business tables + `kaapi_mcp.*` app memory | ✅ | 04, 07 |
+| Serving | Lakebase instance `kaapi-bricks` | 4 `lb_*` business tables + `kaapi_mcp.*` app memory | ✅ | 04, 07, 11 |
 | Serving | `scripts/sync_gold_to_lakebase.py` | Truncate-and-reload of gold → Lakebase; grants the app SP `SELECT` | ✅ manual run | 04 |
 | Intelligence | Genie Agent (space `01f12a63…`) | 21 silver + gold tables + the `raw_data/` volume (SOP PDFs), Agent mode API | ✅ | 05, 08, 09 |
-| Intelligence | Invoice reconciliation | `ai_parse_document` → Claude Sonnet 4.6 extraction → PO / line matching | ✅ | 06 |
+| Intelligence | Invoice reconciliation | PDF → `kaapi_llm` document parsing + field extraction (one gateway call) → PO / line matching | ✅ | 06, 11 |
+| Intelligence | Preparation plan | Same-weekday demand (SQL on gold) + stock and overdue POs (Lakebase) → MCP service → plan written by `kaapi_llm` | ✅ | 11 |
 | Intelligence | Menu-price lookup | Appends `products.base_price` for drinks named in the question | ✅ | 09 (run 5) |
-| Intelligence | Semantic answer cache | Exact match, then BGE embedding similarity ≥ 0.95, 48 h TTL, per store | ✅ | code |
-| Intelligence | MCP ops advisor `kaapi-ops-mcp` | Tool `operations_advisor`: live weather (Open-Meteo) + 2026 holiday calendar + LLM plan | ✅ deployed · ⚠️ **not called** | — |
+| Intelligence | Semantic answer cache | Exact match, then embedding similarity ≥ 0.95 (embeddings via `kaapi_embed`), 48 h TTL, per store | ✅ | 11 |
+| Intelligence | MCP ops advisor `kaapi-ops-mcp` | Tool `operations_advisor`: live weather (Open-Meteo) + 2026 holiday calendar + plan; called through MCP service `kaapi_ops_advisor`; its own LLM call goes through `kaapi_llm` | ✅ | 11 |
 | App | `apps/main-chat-app` | FastAPI backend + single-page React UI | ✅ ACTIVE | 07 |
 | Quality | `scripts/run_genie_evaluation.py` | MLflow eval of Genie directly (serverless job) | ✅ runs 1–3 | 09 |
 | Quality | `scripts/run_app_evaluation.py` | MLflow eval of the **deployed app** end to end | ✅ run 5 | 09 |
 | Governance | Unity Catalog grants, lineage, comments | App SP granted directly, not through groups | ✅ | 02, 07 |
-| Governance | AI Gateway (serving endpoints) | Usage tracking only, on the Claude and BGE endpoints | ✅ passive | — |
-| Governance | **Unity Gateway services** | Governed model + MCP services, policies, rate limits, request logs | 🟡 planned (§9) | — |
+| Governance | **Unity AI Gateway services** | `kaapi_llm`, `kaapi_embed`, `kaapi_ops_advisor`: `EXECUTE` grants, service-wide rate limits, payload logs | ✅ | 11 |
+| Governance | Gateway policies / guardrails and `kaapi_guard` strict lane | Question-level policies in front of Genie | 🟡 not built (§9.6) | — |
 
 ---
 
@@ -108,20 +114,20 @@ appears in gold after the next pipeline refresh.
 
 | Schema.table | Rows | Source | Read by |
 |---|---:|---|---|
-| `lb_inventory_position` | 814 | gold_inventory_position | UI inventory panel via `GET /api/lakebase/inventory/{store}` |
-| `lb_open_purchase_orders` | 147 | gold_open_purchase_orders | (available for panels) |
+| `lb_inventory_position` | 814 | gold_inventory_position | UI inventory panel (`GET /api/lakebase/inventory/{store}`); preparation plan (lowest stock cover) |
+| `lb_open_purchase_orders` | 147 | gold_open_purchase_orders | preparation plan (overdue POs) |
 | `lb_delivery_exceptions` | 339 | gold_delivery_exceptions | (available for panels) |
 | `lb_product_demand` | 6,324 | gold_product_demand, last 7 days of data | (available for panels) |
 | `kaapi_mcp.conversations`, `messages` | — | app writes | chat history |
 | `kaapi_mcp.feedback` | — | app writes | 👍/👎 with MLflow trace ID |
-| `kaapi_mcp.qa_cache` | — | app writes | semantic answer cache (question, answer, embedding, store, latency) |
+| `kaapi_mcp.qa_cache` | — | app writes | semantic answer cache (question, answer, 1024-dim embedding, store, latency) |
 
 **Why Lakebase and not Delta for these:** they are small, per-store point lookups made on every
 screen load. Lakebase answers them at OLTP latency. Multi-store analytics stays on Delta through Genie.
 
 ⚠️ **Freshness:** `lb_*` tables change only when the pipeline runs and
 `sync_gold_to_lakebase.py` is run after it. An approved invoice therefore does not move the
-Lakebase stock number until the next sync (planned fix: write-through, §9).
+Lakebase stock number until the next sync (planned fix: write-through, §9.6).
 
 ---
 
@@ -129,8 +135,8 @@ Lakebase stock number until the next sync (planned fix: write-through, §9).
 
 | Route | Purpose | Reads | Writes |
 |---|---|---|---|
-| `POST /api/chat` | Chat (SSE, single final event) | Lakebase cache → Genie Agent → `products` | Lakebase messages and cache; Delta `inference_logs`; MLflow trace |
-| `POST /api/parse-invoice` | Upload and reconcile an invoice | UC Volume `invoices/`, `suppliers`, `purchase_orders`, `po_line_items` | the uploaded file in the volume |
+| `POST /api/chat` | Chat (SSE, single final event) | preparation questions: SQL on gold + Lakebase + MCP service; other questions: Lakebase cache → Genie Agent → `products` | Lakebase messages and cache (embeddings via `kaapi_embed`); Delta `inference_logs`; MLflow trace |
+| `POST /api/parse-invoice` | Upload and reconcile an invoice | `kaapi_llm` (document parsing), `suppliers`, `purchase_orders`, `po_line_items` | the uploaded file in the `invoices/` volume |
 | `POST /api/approve-invoice` | Manager approves reconciled lines | — | `app_inventory_receipts`, `app_po_approvals` |
 | `GET /api/lakebase/inventory/{store}` | Inventory panel (UI uses this) | Lakebase `lb_inventory_position` | — |
 | `GET /api/inventory/{store}` | Same data from Delta gold (backup path) | `gold_inventory_position` | — |
@@ -145,14 +151,17 @@ The final SSE event includes `trace_id` so any answer can be traced in MLflow.
 
 ## 6. Request flows as deployed today
 
-### 6.1 Chat question
+### 6.1 Chat question (non-preparation)
+
+Questions that match the preparation pattern ("prepare", "prep", "plan … today/tomorrow") are
+routed to §6.3 **before** the cache. Everything else follows this path.
 
 ```mermaid
 sequenceDiagram
     participant U as Manager (UI)
     participant A as App /api/chat
     participant C as Lakebase qa_cache
-    participant E as BGE embedding endpoint
+    participant E as kaapi_embed (Unity AI Gateway)
     participant G as Genie Agent mode
     participant P as products table (SQL warehouse)
     U->>A: question + store
@@ -168,14 +177,14 @@ sequenceDiagram
         Note over G: SQL on silver/gold and/or reads SOP PDFs, cites sources
         G-->>A: response.completed → output_text
         A->>P: menu-price lookup for drinks named in the question
-        A->>C: save answer + embedding (background)
+        A->>E: embed question (background) → save answer + vector to cache
     end
     A-->>U: answer + trace_id
 ```
 
 MLflow spans per request: `chat_request` (AGENT) → `genie_call` (CHAT_MODEL) → `menu_price_lookup`
 (TOOL). Example trace `tr-054b71b6d16076a7ba3b5e0008342e81`: 42.7 s, of which 40.0 s was Genie
-(evidence/08).
+(evidence/08). A repeated question is served from the cache in 1.1 s (evidence/11 §4.3).
 
 ### 6.2 Invoice reconciliation
 
@@ -184,12 +193,12 @@ sequenceDiagram
     participant U as Manager (UI)
     participant A as App
     participant V as UC Volume invoices/
+    participant L as kaapi_llm (Unity AI Gateway)
     participant W as SQL warehouse
-    participant L as Claude Sonnet 4.6 endpoint
     U->>A: POST /api/parse-invoice (PDF)
-    A->>V: upload file
-    A->>W: ai_parse_document(content) → text elements
-    A->>L: extract JSON (supplier, invoice no., PO ref, lines, totals)
+    A->>V: upload file (audit copy)
+    A->>L: chat/completions with the PDF as a "document" block
+    Note over L: parse + extract JSON in one governed call<br/>(supplier, invoice no., PO ref, lines, totals)
     A->>W: match supplier; fetch PO by reference
     alt PO belongs to another supplier
         A->>A: warning "reference ignored"; fall back to supplier + store open PO
@@ -200,11 +209,40 @@ sequenceDiagram
     A->>W: INSERT app_inventory_receipts, app_po_approvals
 ```
 
-Measured (evidence/06): PO-01057 invoice, 4 planted discrepancies + 1 control line → all 4
-detected, control matched, 22.7 s server time. The capture found and fixed two defects: the
-missing-delivery check that never fired, and the unchecked supplier on the PO reference.
+Measured through the gateway (evidence/11 §4.1): PO-01057 invoice, 4 planted discrepancies +
+1 control line → all 4 detected, control matched, **18.4 s** server time. The earlier path
+(`ai_parse_document` + a separate LLM call, evidence/06) took 22.7 s and is no longer used.
 
-### 6.3 End-to-end record trace
+### 6.3 Preparation plan ("How should I prepare for today?")
+
+```mermaid
+sequenceDiagram
+    participant U as Manager (UI)
+    participant A as App /api/chat
+    participant W as SQL warehouse (gold)
+    participant LB as Lakebase
+    participant M as MCP service kaapi_ops_advisor (Unity AI Gateway)
+    participant O as MCP app kaapi-ops-mcp
+    participant L as kaapi_llm (Unity AI Gateway)
+    U->>A: "How should I prepare for today?" + store
+    Note over A: preparation question → bypasses cache and Genie
+    A->>W: same-weekday demand per drink + typical orders/revenue
+    A->>LB: lowest stock cover; overdue POs
+    A->>M: JSON-RPC tools/call operations_advisor(query, store, store_data)
+    M->>O: forwards (connection signs in as kaapi-mcp-connector-v2)
+    O->>O: live weather (Open-Meteo) + 2026 holiday calendar
+    O->>L: write the plan (as the MCP app SP)
+    L-->>O: plan
+    O-->>A: plan text
+    A-->>U: plan + "store data used" block (not cached)
+```
+
+Trace `tr-aaeed4886214ffedd824fdd23513d5e7` (evidence/11 §4.2), 36.2 s: `chat_request` →
+`prep_brief` → `prep_store_data` (8.1 s) → `mcp_ops_advisor` (28.1 s). The plan used live
+weather (thunderstorm, 21 mm) and the Tuesday baseline (Classic Filter Coffee 12.1), which
+matches an independent query.
+
+### 6.4 End-to-end record trace
 
 PO-00006 traced raw Parquet → bronze → silver → gold → Lakebase → app answer, with the same
 values at every layer (evidence/08).
@@ -217,10 +255,10 @@ Two identities exist in a Databricks App, and all app calls use the **app servic
 
 | | App service principal | Signed-in user |
 |---|---|---|
-| Used for | UC, SQL warehouse, Lakebase, Genie, model endpoints | Login to the app only |
-| Gets custom OAuth scopes (e.g. `ai-gateway`) | yes, once configured | no (Databricks Apps does not mint them) |
+| Used for | UC, SQL warehouse, Lakebase, Genie, Unity AI Gateway | Login to the app only |
+| Gets custom OAuth scopes (`ai-gateway`) | yes: `user_api_scopes` set on both apps | no (Databricks Apps does not mint them) |
 
-Grants held by the app service principal (granted directly, not through a group):
+Grants held by the **main app** service principal (granted directly, not through a group):
 
 | Asset | Grant |
 |---|---|
@@ -229,16 +267,19 @@ Grants held by the app service principal (granted directly, not through a group)
 | Volumes `raw_data`, `invoices` | `READ VOLUME`; `WRITE VOLUME` on `invoices` |
 | SQL warehouse | `CAN_USE` (app resource) |
 | Genie space | `CAN_EDIT` (app resource) |
-| Serving endpoints | `CAN_QUERY` on Claude Sonnet 4.6 and BGE (app resources) |
+| Unity AI Gateway | `EXECUTE` on `kaapi_llm`, `kaapi_embed`, `kaapi_ops_advisor` |
 | Lakebase | Postgres login role + `SELECT` on `lb_*` (granted by the sync script) + ownership of `kaapi_mcp.*` |
 | MCP app `kaapi-ops-mcp` | `CAN_MANAGE` |
 
-⚠️ **Cleanup items found on 2026-09-29:**
-- The live app still lists the retired MAS and KA endpoints as resources. `apps deploy` updates
-  code, not the app's resource list.
-- `app.yaml` declares five model endpoints the code never calls (Llama, GPT, Gemini, Maverick,
-  AI-Days).
-- `user_api_scopes` is empty; the `ai-gateway` scope must be added for §9.
+Other principals:
+
+| Principal | Grant | Why |
+|---|---|---|
+| MCP app service principal | `EXECUTE` on `kaapi_llm` | the advisor's own LLM call goes through the gateway |
+| Connector SP `kaapi-mcp-connector-v2` | `CAN_USE` on the MCP app | the UC connection `kaapi_ops_mcp` signs in as this SP (OAuth M2M; secret rotated 2026-09-29, 90-day lifetime) |
+
+The main app now declares only three resources (Genie space, Lakebase, SQL warehouse). The retired
+KA/MAS endpoints and five unused model endpoints were removed from the live app on 2026-09-29.
 
 ---
 
@@ -250,7 +291,8 @@ Grants held by the app service principal (granted directly, not through a group)
 | MLflow traces | experiment `3268449285627906` | every chat request with span timings; `trace_id` returned to the UI |
 | MLflow evaluation | experiment `982411422225142` | 5 runs on 10 questions / 32 expected facts (evidence/09) |
 | `inference_logs` (Delta) | `kaapi_bricks.inference_logs` | query, response summary, latency, errors per chat request |
-| Serving usage | `system.serving` usage tables | token usage on the Claude and BGE endpoints (usage tracking on) |
+| **Gateway payload logs** | `kaapi_bricks.kaapi_llm_payload`, `kaapi_embed_payload` | every governed model call: time, status, latency, destination, requester (main app SP vs MCP app SP), full request/response (evidence/11) |
+| Gateway / MCP usage | system tables | MCP service calls (MCP services have no payload-log table) and token usage |
 
 Evaluation history (evidence/09):
 
@@ -264,82 +306,81 @@ Evaluation history (evidence/09):
 
 ---
 
-## 9. Target architecture: Unity Gateway in front of all AI calls 🟡
+## 9. Unity AI Gateway: every non-Genie AI call is governed ✅
 
-Planned and approved in principle, **not built yet**. It follows the `demo-app-factory` plugin's
-gateway pattern (`phase-gateway.md`).
+Built 2026-09-29, following the `demo-app-factory` plugin's gateway pattern (`phase-gateway.md`).
+Evidence: `evidence/11_unity_ai_gateway.md`.
 
 ### 9.1 Principle
 
-Every AI call from the app enters through **Unity Gateway**, Databricks' governance layer for
-models and MCP servers, built on Unity Catalog. Services are UC objects: callers need `EXECUTE`,
-and each call is policy-checked, rate-limited, logged to a Delta table and cost-attributed in
-system tables.
+Unity AI Gateway is Databricks' governance layer for models and MCP servers, built on Unity
+Catalog. Services are UC objects: callers need `EXECUTE`, and each call is rate-limited, logged
+and attributed in system tables. The app routes **every AI call except Genie** through it and has
+no fallback to an ungoverned path: a gateway error surfaces as an error.
 
-### 9.2 Services to create (in `fevm_cme_conde_catalog.kaapi_bricks`)
+### 9.2 Services (in `fevm_cme_conde_catalog.kaapi_bricks`)
 
-| Service | Type | Routes to | Lane | Used for |
-|---|---|---|---|---|
-| `kaapi_guard` | model service | Claude Haiku 4.5 | **strict**: jailbreak, unsafe-content and customer-PII policies | Screens every chat question and classifies its intent |
-| `kaapi_llm` | model service | Claude Sonnet 4.6, with a fallback model | **working**: governed and logged, no blocking policies | Invoice extraction, prep brief, the MCP server's own LLM |
-| `kaapi_embed` | model service | BGE-large-en (same model as the cache) | working | Semantic-cache embeddings |
-| `kaapi_ops_advisor` | MCP service | existing UC connection `kaapi_ops_mcp` | governed tool | Weather + holiday calendar for preparation plans |
+| Service | Type | Routes to | Rate limit | Request log | Used for | Status |
+|---|---|---|---|---|---|---|
+| `kaapi_llm` | model service | Claude Sonnet 4.6 → fallback Claude Haiku 4.5 | 300/min | `kaapi_llm_payload` | Invoice document parsing + extraction, the MCP advisor's plan | ✅ |
+| `kaapi_embed` | model service | BGE-large-en v1.5 (same vectors as before: cosine 1.000000) | 600/min | `kaapi_embed_payload` | Semantic-cache embeddings | ✅ |
+| `kaapi_ops_advisor` | MCP service | UC connection `kaapi_ops_mcp` → MCP app | 120/min | system tables | Weather + holiday preparation advice | ✅ |
+| `kaapi_guard` | model service, strict lane | Claude Haiku 4.5 + policies | — | — | Question-level policies before Genie | 🟡 not built (user kept Genie questions off the gateway) |
 
-Two LLM lanes because a strict PII policy must not break legitimate work (the app handles
-customer and supplier names). The embedding service must wrap the **same** model as the cache,
-or cached embeddings silently stop matching.
+Rate limits are service-wide (`RATE_LIMIT_KEY_SERVICE`, per minute). All app traffic reaches the
+gateway as the app service principal, so a per-user limit would not differentiate store managers.
+Enforcement was verified: at 1 request/min, 2 of 4 calls got **HTTP 429 `REQUEST_LIMIT_EXCEEDED`**
+(evidence/11 §4.4); the limit was restored to 300.
 
-### 9.3 Target request flow
+### 9.3 As-built flow
 
 ```mermaid
 flowchart TD
-    Q([Manager question]) --> GW1{{"Unity Gateway · kaapi_guard<br/>policies + intent"}}
-    GW1 -->|blocked| B[Refusal card naming the policy<br/>request logged]
-    GW1 -->|allowed| CACHE[Lakebase semantic cache<br/>embeddings via kaapi_embed]
+    Q([Manager question]) --> R{preparation question?}
+    R -->|no| CACHE[Lakebase semantic cache]
+    CACHE -.embeddings.-> E{{"Unity AI Gateway · kaapi_embed"}}
     CACHE -->|hit| OUT([Answer])
-    CACHE -->|miss, data or SOP question| G[Genie Agent mode<br/>tables + SOP PDFs]
+    CACHE -->|miss| G[Genie Agent mode<br/>tables + SOP PDFs · not behind the gateway]
     G --> PR[menu-price lookup] --> OUT
-    CACHE -->|miss, prepare for today| S[SQL same-weekday demand baseline]
-    S --> G2[Genie: stock + overdue POs]
-    G2 --> MCP{{"Unity Gateway · MCP service<br/>kaapi_ops_advisor"}}
-    MCP --> LLM{{"Unity Gateway · kaapi_llm<br/>writes the brief"}} --> OUT
-    INV([Invoice PDF]) --> PARSE[ai_parse_document] --> LLM2{{"Unity Gateway · kaapi_llm<br/>field extraction"}} --> MATCH[PO match] --> OUT2([Reconciliation])
+    R -->|yes| S[SQL same-weekday demand + Lakebase stock and overdue POs]
+    S --> MCP{{"Unity AI Gateway · MCP service kaapi_ops_advisor"}}
+    MCP --> O[MCP app: live weather + holidays]
+    O --> LLM{{"Unity AI Gateway · kaapi_llm writes the plan"}} --> OUT
+    INV([Invoice PDF]) --> LLM2{{"Unity AI Gateway · kaapi_llm<br/>document parsing + extraction"}} --> MATCH[PO match] --> OUT2([Reconciliation])
 ```
 
-The guard runs **before** the cache, so a cached answer can never bypass a policy.
-
-### 9.4 How it will be wired
+### 9.4 Wiring
 
 | Item | Setting |
 |---|---|
-| Call surface | `POST {workspace}/ai-gateway/mlflow/v1/chat/completions` and `/embeddings`, with `model` = the 3-level UC name |
-| Identity | App service principal token with the `ai-gateway` scope (`databricks apps update … user_api_scopes`, then restart) |
-| Grants | `EXECUTE` on each service to the app SP; `USE CONNECTION` on `kaapi_ops_mcp` |
-| Rate limits | `config.rate_limits` via CLI (default: 60/min per user, 300/min for the app) |
-| Request logs | `config.inference_table` via CLI, one Delta table per service in `kaapi_bricks` |
-| Policies | **UI-only**: built-in jailbreak + unsafe-content, plus custom UC SQL function `kaapi_customer_pii` |
-| App flags | `APP_GW_ROUTE_LLM`, `APP_GW_ROUTE_EMBED` default off; **no silent fallback** around the gateway |
-| Blocked calls | HTTP 400 with the policy name; the app renders answer / blocked / approval / error states |
+| Call surface | `POST {workspace}/ai-gateway/mlflow/v1/chat/completions` and `/embeddings` (`model` = 3-level UC name); `POST {workspace}/ai-gateway/mcp-services/<catalog>.<schema>.<service>` (JSON-RPC) |
+| Document input | PDF sent as `{"type":"document","source":{"type":"base64","media_type":"application/pdf",…}}` |
+| Identity | App service principal token; `ai-gateway` in both apps' `user_api_scopes` (set with `databricks apps update`, applied on redeploy) |
+| Grants | `EXECUTE` per service (§7) |
+| Config | `create-model-service` / `create-mcp-service`; `update-model-service … config.rate_limits`, `config.inference_table`; `update-mcp-service … config.rate_limits` |
+| App config | `GW_LLM_MODEL`, `GW_EMBED_MODEL`, `GW_MCP_SERVICE` in `app.yaml`; MCP app `GW_LLM_MODEL` |
 
 ### 9.5 What stays outside the gateway
 
-- `ai_parse_document`: a built-in SQL function that runs inside the warehouse. It is governed by UC
-  and billed in system tables, but it is not a model API call. The extraction step after it goes
-  through `kaapi_llm`.
-- Genie's own internal model calls are managed by Genie. The question still enters through
-  `kaapi_guard` first.
-- The MCP server's call to the Open-Meteo weather API is made inside the MCP server. The gateway
-  governs the MCP tool call, not the HTTP request behind it.
+| Item | Why |
+|---|---|
+| Genie Agent calls | By design. Governed by the Genie space and Unity Catalog permissions |
+| The MCP server's HTTP call to the Open-Meteo weather API | Made inside the MCP server's code. The gateway governs the MCP tool call, not the HTTP request behind it |
+| The MCP app's admin "compare models" UI | Demo tool that calls serving endpoints directly. Not used by the store-manager flows |
+| MLflow evaluation judges | Evaluation tooling, not app traffic |
 
-### 9.6 Other planned changes 🟡
+`ai_parse_document` is no longer used: document parsing now goes through `kaapi_llm`.
+
+### 9.6 Remaining planned changes 🟡
 
 | Change | Why |
 |---|---|
+| Gateway policies (UI-only): built-in jailbreak / unsafe-content on `kaapi_llm`; optional `kaapi_guard` strict lane for question-level policies | Guardrails; policy refusal demo beat |
 | Lakebase write-through on invoice approval | The inventory panel updates the moment the manager approves |
-| Prep-plan path (weekday baseline + Genie + MCP + LLM) | Fixes the "prepare for today" answer: it used one Thursday instead of the Monday average, and had no weather |
-| Remove stale app resources and unused endpoints | Least privilege; accurate resource list |
 | Narrow `MODIFY` to the two app-write tables | Least privilege |
-| Schedule sync after the pipeline (job task) or use Lakebase synced tables | Removes the manual sync step |
+| Schedule the sync after the pipeline (job task) or use Lakebase synced tables | Removes the manual sync step |
+| Cost-per-store query on gateway usage system tables | Replaces the assumed AI cost with a measured one |
+| Delete the connector SP's older secret (2026-07-07) if unused | Credential hygiene |
 
 ---
 
@@ -349,16 +390,21 @@ The guard runs **before** the cache, so a cached answer can never bypass a polic
   deprecated in favour of Genie Agents; one agent now covers table and document questions.
 - **Agent mode, not Chat mode.** Chat mode only sees tables (eval run 1: Correctness 0.00). Agent
   mode reads the PDF volume, at a cost of ~23–40 s per uncached answer.
+- **Every non-Genie AI call through Unity AI Gateway, no ungoverned fallback.** Access, limits and
+  logs live in Unity Catalog next to the data. The only fallback (Sonnet → Haiku) is inside the gateway.
+- **Document parsing as one governed model call.** Sending the PDF to `kaapi_llm` replaced
+  `ai_parse_document` + a separate extraction call. It was faster (18.4 s vs 22.7 s server) and
+  gave the same reconciliation result.
 - **Structured facts from tables, not the model.** Eval run 3 showed a prompt instruction does
   not make the model reliably include menu prices; a deterministic lookup against
-  `products.base_price` does (run 5).
+  `products.base_price` does (run 5). The preparation plan applies the same rule: the demand
+  baseline and stock come from SQL and Lakebase, and the model only writes the plan.
 - **Deterministic gold, LLM on top.** Stock, open POs and delivery exceptions are SQL; the model
   explains, it does not compute.
 - **The system compares, the manager decides.** Invoice reconciliation never writes on its own;
   approval is an explicit human step.
-- **Guard rails fail loudly.** A PO reference from another supplier is rejected with a
-  warning, not reconciled silently. The planned gateway integration has no fallback that skips
-  governance.
+- **Guard rails fail loudly.** A PO reference from another supplier is rejected with a warning,
+  not reconciled silently.
 - **Lakebase for per-store point lookups, Delta and Genie for analytics.**
 - **Measure the product, not a component.** The headline evaluation (run 5) calls the deployed
   app, with the cache skipped, rather than Genie alone.
@@ -370,12 +416,16 @@ The guard runs **before** the cache, so a cached answer can never bypass a polic
 | Limit | Impact | Plan |
 |---|---|---|
 | ⚠️ Lakebase freshness depends on a manual sync | approval not visible in the panel until the next sync | write-through (§9.6) |
-| ⚠️ MCP ops advisor not called | no weather or holiday input to preparation advice | prep path via the MCP service (§9) |
-| ⚠️ Agent mode latency 23–40 s uncached | slow first answer | semantic cache; guard adds ~1–2 s |
+| ⚠️ Agent mode latency 23–40 s uncached; preparation plan ~36 s | slow first answer | semantic cache for Q&A; preparation plans are deliberately not cached (weather changes) |
+| ⚠️ Gateway rate-limit changes take >20 s to propagate | a limit change is not instant | observed in evidence/11 §4.4; plan changes ahead of demos |
+| ⚠️ No gateway policies attached yet | no content guardrails on model calls | attach in the UI (§9.6) |
 | ⚠️ Correctness 0.70 on 10 questions | below the 0.80 target; ±0.1–0.2 run-to-run variation | 30+ question set, must-have / nice-to-have rubric |
-| ⚠️ Synthetic data ends May/July 2026 | "today" questions are answered from older data, and the answer says so | regenerate through the current date after submission |
+| ⚠️ Synthetic data ends May/July 2026 | "today" answers use older sales history, and the answer says so | regenerate through the current date after submission |
 | ⚠️ Invoice fallback store is hard-coded to STR-001 | multi-store invoices need a store mapping | map store name → id |
 | ⚠️ Header totals not reconciled | synthetic `purchase_orders.total_amount` is independent of line items | line-level reconciliation only |
+
+Resolved on 2026-09-29: the MCP ops advisor was not called (now called through the gateway); the
+app declared stale and unused resources (removed); `user_api_scopes` was empty (now includes `ai-gateway`).
 
 ---
 
@@ -388,8 +438,9 @@ The guard runs **before** the cache, so a cached answer can never bypass a polic
 | `evidence/03_data_quality_results.txt` | 45 expectations from the event log |
 | `evidence/04_lakebase_queries.txt` | Lakebase tables, counts, sample queries |
 | `evidence/05_genie_questions_and_answers.md` | Genie SQL answers checked against the data |
-| `evidence/06_genai_model_outputs.md` + `raw/06_*` | captured invoice runs and preparation answer |
+| `evidence/06_genai_model_outputs.md` + `raw/06_*` | captured invoice runs and preparation answer (pre-gateway path) |
 | `evidence/07_app_health_and_api_tests.txt` | app status and authenticated API responses |
 | `evidence/08_end_to_end_record_trace.md` + `raw/08_*` | PO-00006 raw → app, with MLflow trace |
 | `evidence/09_mlflow_evaluation_results.md` | 5 evaluation runs, per-question results |
 | `evidence/10_business_kpi_calculations.md` | value assumptions and formulas |
+| `evidence/11_unity_ai_gateway.md` + `raw/11_*` | gateway services, grants, invoice / preparation / cache through the gateway, payload logs, a real 429 |

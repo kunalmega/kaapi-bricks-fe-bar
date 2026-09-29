@@ -58,15 +58,17 @@ means fewer calls to the area manager and faster onboarding for new baristas."
 
 ## Scene 2 — The delivery (4 min) ⭐
 
-**TELL:** "It's 9am. A truck from Coorg Coffee Estates arrives with a paper invoice."
+**TELL:** "It's 9am. A truck from Mysore Sweet Works arrives with a paper invoice."
 
 **SHOW:** Delivery & Invoice tab
-1. Upload `invoice_complex_coorg.pdf` and click **Parse Invoice**.
-2. `ai_parse_document` reads the PDF; an LLM structures the line items, rates, and GST.
+1. Upload `invoice_mysore_po01057.pdf` (it matches the real open PO-01057) and click **Parse Invoice**.
+2. The PDF is parsed and structured (lines, rates, GST) in one governed call through the
+   **Unity AI Gateway** (`kaapi_llm`).
 3. The app finds the matching purchase order and compares each line with `po_line_items`.
 4. Walk through the flagged lines on screen: matches, quantity differences, price differences,
-   and items not on the PO. **Read the actual figures from the screen**; the captured output and
-   timing for this invoice are in `evidence/06`.
+   and items not on the PO. Expected (measured, evidence/11): Rose Syrup price +₹30, Jaggery quantity
+   +1.3 kg, Sugar not on the PO, Palm Jaggery missing, and Badam Paste as the clean control line.
+   About 18 s.
 5. Click **View Current Inventory**. The panel is served from Lakebase.
 6. Click **Approve**. The receipt is written to `app_inventory_receipts` and the PO approval to
    `app_po_approvals`.
@@ -74,6 +76,23 @@ means fewer calls to the area manager and faster onboarding for new baristas."
 **TELL:** "The system does the comparison; Priya still makes the decision. Every discrepancy is on
 record, which is where invoice leakage stops. One thing to be precise about: the approved receipt
 flows into the inventory numbers after the next pipeline refresh and Lakebase sync, not instantly."
+
+---
+
+## Scene 2b — Today's preparation plan (2 min)
+
+**TELL:** "Before the lunch rush Priya wants to know how to prepare, and today it's raining."
+
+**SHOW:** main chat → "How should I prepare for today?"
+- The same-weekday demand baseline comes from gold (SQL); stock and overdue POs come from Lakebase.
+- The operations advisor is called through the **Unity AI Gateway MCP service**; it pulls live
+  weather and the holiday calendar and writes the plan through `kaapi_llm`.
+- Captured on a Tuesday (evidence/11): thunderstorm, 21 mm → hot drinks up, cold down; Classic
+  Filter Coffee typical 12.1 → forecast 14–15. Point at the "Store data used" block under the plan.
+- About 35 s; preparation plans are never cached because the weather changes.
+
+**TELL:** "Her own history for this weekday sets the numbers; the model only adjusts for today's
+weather and writes it up. Every AI call in this plan went through the governed gateway."
 
 ---
 
@@ -104,6 +123,10 @@ becomes your team's quality gate before any change ships."
 **SHOW:** Unity Catalog lineage on `gold_inventory_position`, then the architecture in `ARCHITECTURE.md`:
 raw volume → Lakeflow bronze/silver/gold (45 quality checks, all passed) → Lakebase for the app →
 Genie Agent over the same governed tables plus the SOP volume → the app.
+Then the **Unity AI Gateway** in Catalog Explorer: `kaapi_llm`, `kaapi_embed` and the MCP service
+`kaapi_ops_advisor` with their `EXECUTE` grants and rate limits. Open `kaapi_llm_payload`: rows from
+both the main app (invoice parse) and the MCP app (plan writing). A real 429 from the rate-limit test
+is in `evidence/11`.
 Mention `evidence/08`: one purchase order, PO-00006, traced through every layer.
 
 **TELL:** "Everything is governed in one place, runs serverless, and the pipeline, the Genie
@@ -127,10 +150,11 @@ configuration, and the app are all deployed from code."
 | Opening | 1 |
 | Scene 1 — Morning questions | 3 |
 | Scene 2 — The delivery | 4 |
+| Scene 2b — Preparation plan | 2 |
 | Scene 3 — Evaluation | 3 |
 | Scene 4 — Under the hood | 2 |
 | Close | 1 |
-| **Total** | **~14**, leaving time for questions |
+| **Total** | **~16**, leaving time for questions |
 
 ## If something goes wrong
 
@@ -138,7 +162,9 @@ configuration, and the app are all deployed from code."
 |---|---|
 | A document answer is slow (~20–25 s) | Narrate: "It's reading our SOP documents and citing them." Use a pre-warmed question next. |
 | Chat returns an error | Ask a table question (inventory, suppliers); those are fast. Show the answer in `evidence/05`. |
-| Invoice parse is slow | Narrate the steps (parse, structure, match). If it fails, walk through `evidence/06`. |
+| Invoice parse is slow | Narrate the steps (governed parse, match). If it fails, walk through `evidence/11` §4.1. |
+| Preparation plan errors | Show the captured plan in `evidence/11` §4.2; explain the gateway MCP call. |
+| Gateway returns 429 | That's the rate limit working; wait a minute and retry, and use it as a governance talking point. |
 | Inventory panel is empty | Lakebase permissions or sync; fall back to `evidence/07` and explain the sync step. |
 
 ## Rules

@@ -36,7 +36,9 @@ scripts/generate_data.py          synthetic POS, supplier, PO, inventory data (F
   → Lakeflow gold                 7 operational + KPI views
   → Lakebase                      4 gold tables synced for the app's point lookups
   → Genie Agent (Agent mode)      21 silver + gold tables + 6 SOP/recipe PDFs
-  → ai_parse_document + LLM       invoice parsing; human approval writes app tables
+  → Unity AI Gateway              every non-Genie AI call: invoice document parsing (kaapi_llm),
+                                  cache embeddings (kaapi_embed), weather/holiday advice (MCP service
+                                  kaapi_ops_advisor); human approval writes app tables
   → MLflow evaluation             Correctness / Relevance / Safety on 10 store-manager questions
   → Databricks App                store manager console (main-chat-app)
 ```
@@ -53,9 +55,10 @@ real purchase order from raw file to app response.
 | **Lakeflow** | Serverless declarative pipeline `kaapi_bricks_medallion`: 14 bronze + 14 silver + 7 gold. Run 065d6a70 completed | `databricks.yml`, `resources/kaapi_pipeline.pipeline.yml`, `src/pipeline/` | 01, 03 |
 | **Unity Catalog** | `kaapi_bricks` schema, raw/invoice volumes, table comments, lineage, app service-principal grants | pipeline, `scripts/generate_data.py` | 02 |
 | **Lakebase** | `lb_inventory_position`, `lb_open_purchase_orders`, `lb_delivery_exceptions`, `lb_product_demand`; the inventory panel reads `/api/lakebase/inventory/{store}`. Also chat history + answer cache | `scripts/sync_gold_to_lakebase.py`, `apps/main-chat-app/` | 04, 07 |
-| **ML / GenAI** | `ai_parse_document` invoice extraction; MLflow `genai.evaluate` with Correctness, Relevance, Safety | `apps/main-chat-app/app.py`, `scripts/run_genie_evaluation.py` | 06, 09 |
+| **ML / GenAI** | Invoice document parsing + extraction through Unity AI Gateway (`kaapi_llm`); daily preparation plan (SQL + Lakebase + MCP weather/holiday advisor); MLflow `genai.evaluate` with Correctness, Relevance, Safety | `apps/main-chat-app/app.py`, `scripts/run_app_evaluation.py` | 06, 09, 11 |
 | **Genie Agent** | One space: 21 tables + SOP PDF volume, called through the **Agent mode** API so it can read documents | `resources/genie_space.json`, `scripts/create_genie_agent.py` | 05, 09 |
-| **Databricks App** | Store manager console: chat, inventory panel, invoice upload and approval | `apps/main-chat-app/` | 07 |
+| **Databricks App** | Store manager console: chat, preparation plan, inventory panel, invoice upload and approval | `apps/main-chat-app/` | 07, 11 |
+| **Unity AI Gateway** | Every AI call except Genie goes through governed UC services: `kaapi_llm`, `kaapi_embed`, MCP service `kaapi_ops_advisor`. `EXECUTE` grants, service-wide rate limits (a real 429 captured), payload logs, no ungoverned fallback | UC services in `kaapi_bricks`; `app.yaml` `GW_*` | 11 |
 
 **Replaced:** Knowledge Assistant and Supervisor Agent (being deprecated). One Genie Agent now covers
 structured data and documents.
@@ -76,6 +79,7 @@ structured data and documents.
 | `evidence/08_end_to_end_record_trace.md` | PO-00006 traced raw → bronze → silver → gold → Lakebase → app |
 | `evidence/09_mlflow_evaluation_results.md` | MLflow run IDs, scores per iteration, per-question traces, failure analysis |
 | `evidence/10_business_kpi_calculations.md` | Value model: every assumption labeled, payback and ROI formulas |
+| `evidence/11_unity_ai_gateway.md` | Gateway services, grants, invoice / preparation plan / cache through the gateway, payload-log rows, a real HTTP 429 |
 
 ---
 
@@ -95,9 +99,9 @@ resources/               ← kaapi_pipeline.pipeline.yml · genie_space.json
 src/pipeline/            ← 01_bronze.sql · 02_silver.sql · 03_gold.sql
 scripts/                 ← data generation, migration, Lakebase sync, Genie config, evaluation
 apps/main-chat-app/      ← the store manager console (deployed)
-apps/mcp-server/         ← operations-advisor MCP server (deployed by deploy.sh; not called by chat)
+apps/mcp-server/         ← operations-advisor MCP server, called through the Unity AI Gateway MCP service
 sample-invoices/         ← invoice PDFs for the demo
-evidence/                ← execution evidence 01–10
+evidence/                ← execution evidence 01–11
 ```
 
 Legacy files kept for history, not part of the current flow: `scripts/create_agents.py`,
@@ -138,8 +142,25 @@ python scripts/create_genie_agent.py --create --catalog <catalog> # or create a 
 # 7. Deploy the apps and grant the app service principal access
 ./deploy.sh DEFAULT <catalog> <warehouse_id>
 
-# 8. Evaluate the agent (runs as a notebook job; results land in MLflow)
-#    import scripts/run_genie_evaluation.py to the workspace and run it on serverless
+# 7b. Unity AI Gateway (exact JSON in evidence/11): create the governed services…
+databricks ai-gateway create-model-service schemas/<catalog>.kaapi_bricks kaapi_llm   --json '…'  # Sonnet 4.6 → Haiku 4.5 fallback
+databricks ai-gateway create-model-service schemas/<catalog>.kaapi_bricks kaapi_embed --json '…'  # BGE-large-en
+databricks ai-gateway create-mcp-service   schemas/<catalog>.kaapi_bricks kaapi_ops_advisor \
+  --json '{"config":{"source_connection":{"name":"connections/kaapi_ops_mcp"}}}'
+#     …add rate limits and payload logs…
+databricks ai-gateway update-model-service model-services/<catalog>.kaapi_bricks.kaapi_llm config.rate_limits \
+  --json '{"config":{"rate_limits":[{"key":"RATE_LIMIT_KEY_SERVICE","renewal_period":"RATE_LIMIT_RENEWAL_PERIOD_MINUTE","requests":300}]}}'
+databricks ai-gateway update-model-service model-services/<catalog>.kaapi_bricks.kaapi_llm config.inference_table \
+  --json '{"config":{"inference_table":{"parent":"schemas/<catalog>.kaapi_bricks","table_name_prefix":"kaapi_llm"}}}'
+#     …grant EXECUTE to the app service principals (main app: all three; MCP app: kaapi_llm)…
+databricks grants update model_service <catalog>.kaapi_bricks.kaapi_llm \
+  --json '{"changes":[{"principal":"<app-sp-client-id>","add":["EXECUTE"]}]}'
+#     …and give both apps the ai-gateway scope, then redeploy them
+databricks apps update <app> --json '{"user_api_scopes":["serving.serving-endpoints","ai-gateway","sql","dashboards.genie"], …}'
+
+# 8. Evaluate (results land in MLflow)
+python scripts/run_app_evaluation.py --app-url <app-url>   # the deployed app, end to end
+#    scripts/run_genie_evaluation.py evaluates Genie directly (serverless notebook job)
 ```
 
 ---

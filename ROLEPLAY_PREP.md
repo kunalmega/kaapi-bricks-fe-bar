@@ -35,9 +35,10 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
 | Scene | Tell (what you'll see) | Show | Tell (what it means) |
 |---|---|---|---|
 | 1. Morning questions | "Priya asks about her numbers and her procedures in plain English." | Below-reorder items (SQL on gold) → decoction hold time (SOP PDF, cited) → top drinks | "Data and SOPs in one governed assistant: fewer escalations, faster barista onboarding." |
-| 2. Delivery | "A supplier invoice arrives on paper." | Upload → `ai_parse_document` → PO match → flagged lines → Lakebase inventory → approve | "The system compares; the manager decides. Every discrepancy is recorded. This is the leakage and labor line of the business case." |
+| 2. Delivery | "A supplier invoice arrives on paper." | Upload → governed parse through the Unity AI Gateway (`kaapi_llm`) → PO match → 4 flagged lines + 1 clean match → Lakebase inventory → approve | "The system compares; the manager decides. Every discrepancy is recorded. This is the leakage and labor line of the business case." |
+| 2b. Preparation | "How should Priya prepare for today?" | Same-weekday baseline (SQL) + Lakebase stock → gateway MCP service (live weather, holidays) → plan | "Her own history sets the numbers; today's weather adjusts them. Every AI call went through the governed gateway." |
 | 3. Evaluation | "How do we know it's right?" | MLflow: 0.00 → 0.50 → 0.70 Correctness (app end to end), Relevance 1.00, Safety 1.00; a failed case with the judge's reason | "We found the root cause and fixed it. We're below our 0.80 target and we know why. This becomes your quality gate." |
-| 4. Architecture | "One journey, not six demos." | UC lineage, PO-00006 trace raw → app | "Governed in one place, serverless, deployed from code." |
+| 4. Architecture | "One journey, not six demos." | UC lineage, PO-00006 trace raw → app, gateway services + payload log | "Governed in one place, serverless, deployed from code." |
 | 5. Close | "What it's worth and how to prove it." | Value table with assumptions | "Next step is a six-week, five-store pilot with a timed baseline." |
 
 ---
@@ -61,8 +62,9 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
   approval writes to two separate Delta tables, `app_inventory_receipts` and `app_po_approvals`.
   Gold unions them in, so stock and open-PO numbers reflect the approval after the next refresh.
   That separation means a pipeline full-refresh can never erase an approval, and the app can never
-  corrupt pipeline tables. Parsing uses `ai_parse_document`, then an LLM structures the fields, then
-  the PO comparison is deterministic code, not the model."
+  corrupt pipeline tables. Parsing is one governed call: the PDF goes to `kaapi_llm` through the
+  Unity AI Gateway, which returns the structured fields (18.4 s server time, all 4 planted
+  discrepancies caught, evidence/11). The PO comparison itself is deterministic code, not the model."
 
 ### "Your correctness is only 0.70"
 - **Business:** "Yes, and I'm showing you on purpose. It was 0.00 on the first run; we found the
@@ -133,12 +135,47 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
     (evidence/03 shows 45/45 passed, 0 failed).
   - **Model or Genie unavailable:** the app returns a clear "couldn't get an answer" message and
     logs the error to `inference_logs`; cached answers still serve.
-  - **Invoice parse fails:** an LLM vision fallback exists in code; any parse still needs human
-    approval.
+  - **Invoice parse fails:** the gateway retries on the fallback model (Haiku 4.5) if Sonnet is
+    unavailable; if the gateway itself refuses, the app shows the error. There is no ungoverned
+    fallback. Any parse still needs human approval.
   - **Lakebase unavailable:** the Delta-backed `/api/inventory` endpoint returns the same gold
     data, only slower. The UI does not fail over to it automatically today; that is a small
     production change.
   - **Observability:** every chat request is traced in MLflow and logged with latency.
+
+### "How do you govern AI calls?"
+- **Business:** "Every AI call except the Genie assistant goes through one governed gateway.
+  Only this app is allowed to call it, there's a spending brake (a rate limit), and every request
+  is logged. If someone asks 'what did the AI see on that invoice?', we can show them."
+- **Technical:** "Unity AI Gateway services in the same Unity Catalog schema as the data:
+  `kaapi_llm` (Sonnet 4.6 → Haiku 4.5), `kaapi_embed` (BGE) and the MCP service
+  `kaapi_ops_advisor`. The app service principals get `EXECUTE`, nothing else. Service-wide limits
+  are 300, 600 and 120 per minute; at 1/min in testing the gateway returned HTTP 429 on the
+  second call. Every model call lands in `kaapi_llm_payload` / `kaapi_embed_payload` with the
+  requester, so you can see the main app parsing invoices and the MCP app writing plans. The app
+  has no direct serving-endpoint path, so a gateway error surfaces instead of bypassing governance.
+  Guardrail policies are attached in the UI; that's the next hardening step." (evidence/11)
+
+### "What if the model provider is down?"
+- **Business:** "There's a backup model behind the same gateway, so the manager doesn't notice."
+- **Technical:** "`kaapi_llm` routes to Claude Sonnet 4.6 with Claude Haiku 4.5 as the gateway
+  fallback destination. The fallback is configured in the service, not in app code, so it's
+  governed and logged the same way."
+
+### "Why is Genie not behind the gateway?"
+- **Business:** "Genie is already governed: it only sees the tables and documents we gave it, with
+  the same Unity Catalog permissions."
+- **Technical:** "Genie Agent is its own governed product. Its access is the Genie space plus
+  Unity Catalog grants, and its model calls are managed inside Genie. We chose not to add a guard
+  step in front of it because it would add latency to every question. If question-level policies
+  are needed, the design has a strict-lane `kaapi_guard` service ready to add (ARCHITECTURE §9.6)."
+
+### "What about the weather API?"
+- **Business:** "The weather feed is used only to adjust the preparation plan, and the call to it is governed."
+- **Technical:** "The app calls the operations advisor through the gateway MCP service, which is
+  `EXECUTE`-granted and rate-limited at 120/min. The MCP server then calls Open-Meteo itself, so the
+  gateway governs the tool call, not that HTTP request. If that mattered, the next step is a UC
+  HTTP connection for Open-Meteo."
 
 ### Other likely questions
 - **"How fast can we pilot in five stores?"** Six weeks: two for baseline and data connection, two

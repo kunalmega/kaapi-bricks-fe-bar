@@ -92,9 +92,16 @@ Recipes, decoction timing, allergen handling, and equipment cleaning live in six
 ### Scene 2 — The Delivery
 **TELL:** *"A truck arrives from Coorg Coffee Estates with a paper invoice."*
 
-**SHOW:** Upload the invoice PDF → `ai_parse_document` extracts line items → matched to the open PO → discrepancies flagged line by line → Priya approves → receipt written to `app_inventory_receipts`; the inventory panel (served from Lakebase) reflects it after the next pipeline refresh and sync. Captured parse output and timing: `evidence/06`.
+**SHOW:** Upload the invoice PDF → the PDF is parsed and structured in one governed call through the **Unity AI Gateway** (`kaapi_llm`) → matched to the open PO → discrepancies flagged line by line → Priya approves → receipt written to `app_inventory_receipts`; the inventory panel (served from Lakebase) reflects it after the next pipeline refresh and sync. Measured through the gateway: all 4 planted discrepancies detected, the clean control line matched, 18.4 s server time (`evidence/11`).
 
 **TELL:** *"The machine does the comparison; the manager still makes the decision. Every discrepancy is on record."*
+
+### Scene 2b — Today's Preparation Plan
+**TELL:** *"Before the rush, Priya asks how to prepare for today."*
+
+**SHOW:** "How should I prepare for today?" → the app takes the same-weekday demand from gold (SQL) and stock plus overdue POs from Lakebase, then calls the operations advisor through the Unity AI Gateway MCP service. It pulls live weather and the holiday calendar and writes the plan through `kaapi_llm`. Captured: *Tuesday, thunderstorm 21 mm; Classic Filter Coffee typical 12.1 → forecast 14–15; Cold Coffee 3.6 → 2–3* (`evidence/11`, trace tr-aaeed488…).
+
+**TELL:** *"The numbers come from her own history for this weekday; the model only adjusts for today's weather and writes it up."*
 
 ### Scene 3 — How We Know It Works
 **TELL:** *"How do we know the answers are right?"*
@@ -129,13 +136,17 @@ LAKEFLOW PIPELINE  kaapi_bricks_medallion  [serverless, declarative]
     │
     ├─► GENIE AGENT (Agent mode) — 21 silver + gold tables + 6 SOP PDFs in a volume
     │
-    └─► GenAI + evaluation
-          ai_parse_document + LLM extraction — invoice parsing
-          MLflow mlflow.genai.evaluate — Correctness, Relevance, Safety
+    ├─► UNITY AI GATEWAY — every non-Genie AI call, EXECUTE-granted, rate-limited, logged
+    │     kaapi_llm (Sonnet 4.6 → Haiku 4.5) — invoice document parsing, preparation plan
+    │     kaapi_embed (BGE) — semantic-cache embeddings
+    │     MCP service kaapi_ops_advisor — live weather + holiday calendar
+    │
+    └─► Evaluation — MLflow mlflow.genai.evaluate: Correctness, Relevance, Safety
     │
     ▼
 DATABRICKS APP — Store Manager Console (main-chat-app)
-  chat → Genie Agent mode · inventory panel → Lakebase · invoice upload → ai_parse_document
+  chat → Genie Agent mode · prep plan → SQL + Lakebase + gateway MCP · inventory panel → Lakebase
+  invoice upload → gateway kaapi_llm
 ```
 
 The same keys (store_id, ingredient_id, po_id) flow raw → bronze → silver → gold → Lakebase → app. `evidence/08` traces one real delivery (PO-00006) through every layer.
@@ -159,6 +170,14 @@ The same keys (store_id, ingredient_id, po_id) flow raw → bronze → silver �
 - Invoice approvals write to separate `app_inventory_receipts` and `app_po_approvals` Delta tables.
 - Gold views UNION both sources. The calculation is deterministic SQL; the LLM only explains results.
 
+### AI Governance: Unity AI Gateway
+- Every AI call except Genie goes through Unity Catalog services: `kaapi_llm`, `kaapi_embed`, MCP service `kaapi_ops_advisor`.
+- Access is a UC grant (`EXECUTE` to the app service principals). Nothing else can call them.
+- Rate limits per service (300 / 600 / 120 per minute). Tested: at 1/min the gateway returned **HTTP 429** on the second call.
+- Every model call lands in a payload-log table with requester, status and latency. The logs show both identities: the main app (invoice parsing, embeddings) and the MCP app (plan writing).
+- No ungoverned fallback: if the gateway refuses, the app shows the error. The only fallback (Sonnet → Haiku) is inside the gateway.
+- Evidence: `evidence/11`.
+
 ### Security
 - 100% synthetic data, fictional company.
 - No credentials in the codebase; commits pass a secret-scanning hook. Lakebase uses short-lived OAuth credentials.
@@ -171,7 +190,8 @@ The same keys (store_id, ingredient_id, po_id) flow raw → bronze → silver �
 ### How the AI is Grounded
 - **Genie Agent, structured questions:** generates SQL over governed silver/gold tables. The SQL is visible and runs against real data.
 - **Genie Agent, procedural questions:** reads the six SOP/training PDFs in a Unity Catalog volume and cites the source file.
-- **Invoice parsing:** `ai_parse_document` extracts the text; an LLM structures it; matching against the PO is deterministic code.
+- **Invoice parsing:** the PDF goes to `kaapi_llm` through the Unity AI Gateway, which parses and structures it in one governed call; matching against the PO is deterministic code.
+- **Preparation plan:** demand and stock come from SQL and Lakebase; the model (through the gateway) only adjusts for live weather and holidays and writes the plan.
 
 ### Evaluation Loop (MLflow, measured)
 ```
@@ -248,7 +268,8 @@ Full calculation: `evidence/10_business_kpi_calculations.md`. The first thing a 
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| ai_parse_document accuracy on unusual invoice layouts | Medium | LLM vision fallback in code; every result needs human approval |
+| Document-parsing accuracy on unusual invoice layouts | Medium | Every result needs human approval; line-level checks are deterministic code; the gateway logs every parse for audit |
+| Model provider outage | Low | Fallback Sonnet 4.6 → Haiku 4.5 inside the gateway |
 | Genie Agent correctness on long procedures | Medium | Measured today: 0.70 end to end (target 0.80, see evidence/09); improve instructions and eval rubric before rollout |
 | Agent mode latency (~23 s on SOP questions) | Medium | Semantic answer cache in Lakebase; SOP content changes rarely |
 | Lakebase data is a snapshot | Medium | Sync runs after each pipeline update; move to a scheduled job or synced tables in production |
