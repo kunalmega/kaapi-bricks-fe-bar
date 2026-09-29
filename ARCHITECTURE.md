@@ -112,22 +112,79 @@ appears in gold after the next pipeline refresh.
 
 ## 4. Serving plane: Lakebase
 
-| Schema.table | Rows | Source | Read by |
-|---|---:|---|---|
-| `lb_inventory_position` | 814 | gold_inventory_position | UI inventory panel (`GET /api/lakebase/inventory/{store}`); preparation plan (lowest stock cover) |
-| `lb_open_purchase_orders` | 147 | gold_open_purchase_orders | preparation plan (overdue POs) |
-| `lb_delivery_exceptions` | 339 | gold_delivery_exceptions | (available for panels) |
-| `lb_product_demand` | 6,324 | gold_product_demand, last 7 days of data | (available for panels) |
-| `kaapi_mcp.conversations`, `messages` | — | app writes | chat history |
-| `kaapi_mcp.feedback` | — | app writes | 👍/👎 with MLflow trace ID |
-| `kaapi_mcp.qa_cache` | — | app writes | semantic answer cache (question, answer, 1024-dim embedding, store, latency) |
+**Instance:** `kaapi-bricks` · Postgres 16 · capacity CU_1 · database `databricks_postgres`.
+Row counts below were read from the live instance on 2026-09-29.
 
-**Why Lakebase and not Delta for these:** they are small, per-store point lookups made on every
-screen load. Lakebase answers them at OLTP latency. Multi-store analytics stays on Delta through Genie.
+Lakebase plays **two different roles** in this system.
 
-⚠️ **Freshness:** `lb_*` tables change only when the pipeline runs and
-`sync_gold_to_lakebase.py` is run after it. An approved invoice therefore does not move the
-Lakebase stock number until the next sync (planned fix: write-through, §9.6).
+### 4.1 Role A: operational serving of gold business data
+
+A read-optimized **copy** of four gold tables, for per-store point lookups at OLTP latency. Delta
+stays the system of record.
+
+| Table (`public`) | Rows | Copied from | Read by | Used? |
+|---|---:|---|---|---|
+| `lb_inventory_position` | 814 | `gold_inventory_position` | UI inventory panel (`GET /api/lakebase/inventory/{store}`), and the preparation plan's lowest-stock-cover lines | ✅ |
+| `lb_open_purchase_orders` | 147 | `gold_open_purchase_orders` | preparation plan's overdue-PO lines | ✅ |
+| `lb_delivery_exceptions` | 339 | `gold_delivery_exceptions` | nothing in the app today | ⚠️ synced, unused |
+| `lb_product_demand` | 6,324 | `gold_product_demand` (last 7 days of data) | nothing in the app today | ⚠️ synced, unused |
+
+Delivery-exception and demand answers come from Genie (over gold) or from SQL on gold (the
+preparation plan's weekday baseline needs the full history, which the 7-day Lakebase copy does
+not hold). The two unused tables are candidates for a new UI panel or for removal from the sync.
+
+**How data gets there:** `scripts/sync_gold_to_lakebase.py`, run after the pipeline.
+1. `CREATE TABLE IF NOT EXISTS` for the four `lb_*` tables.
+2. `GRANT SELECT` on them to the app service principal, looked up from the app name.
+3. For each table: read the gold view through the SQL warehouse, `TRUNCATE`, then insert all rows.
+
+This is a snapshot: simple, and correct for a demo. The last sync ran 2026-09-28T13:59:57Z.
+
+### 4.2 Role B: the app's own transactional state
+
+Tables the app creates and writes itself (`init_db()` on start-up), in schema `kaapi_mcp`:
+
+| Table | Rows | Written by | Read by | Purpose |
+|---|---:|---|---|---|
+| `conversations` | 133 | first message of each chat | `GET /api/conversations` | chat history list |
+| `messages` | 646 | every user question and every answer (with MLflow `trace_id`) | `GET /api/conversations/{id}/messages` | chat transcript |
+| `feedback` | 1 | `POST /api/feedback` (👍/👎 + `trace_id`) | `GET /api/stats` | ties user feedback to an MLflow trace |
+| `qa_cache` | 5 | after each fresh non-preparation answer: question, answer, 1024-dim embedding (via `kaapi_embed`), store, latency | every chat request: exact match, then cosine ≥ 0.95, same store, < 48 h | semantic answer cache; cut a repeat answer from 25.3 s to 1.1 s (evidence/11) |
+| `compare_cache` | 0 | nothing | nothing | ⚠️ leftover from the retired model-compare feature |
+| `admin_config` | 1 | seeded on start-up | nothing | ⚠️ leftover (`operations_model` setting) |
+
+Expired cache rows (older than 48 h) are deleted on start-up. Preparation-plan answers are never
+written to `qa_cache`, because they depend on today's weather.
+
+### 4.3 How the app connects
+
+| Aspect | Implementation |
+|---|---|
+| Identity | the app service principal; its client ID is the Postgres role name |
+| Credential | short-lived OAuth token from `generate_database_credential`, refreshed after 50 minutes; no password is stored |
+| Driver | `psycopg` 3, TLS (`sslmode=require`), autocommit |
+| Connection | one shared connection with a `SELECT 1` health check; on failure the token is refreshed and it reconnects |
+| Failure handling | chat-history and cache failures are caught and logged, so the chat still answers; the preparation plan says "stock and purchase-order status unavailable" if Lakebase is down |
+| Declared as | app resource `lakebase` (`CAN_CONNECT_AND_CREATE`) |
+
+### 4.4 Why Lakebase and not Delta for these
+
+- **Point lookups on every screen load.** "Stock for store STR-001" is a single-key read. Postgres
+  answers it at OLTP latency, whereas a SQL-warehouse query on Delta has query-start overhead.
+- **Small, hot, per-store data.** Hundreds of rows per table, read far more often than written.
+- **Transactional app state.** Chat history, feedback and the cache are row-at-a-time writes with
+  foreign keys (messages → conversations), a natural fit for Postgres and a poor one for Delta.
+- **Analytics stays on Delta.** Multi-store and historical questions go to Genie over gold, and
+  the demand baseline uses SQL on gold, because Lakebase only holds the last 7 days of demand.
+
+### 4.5 Limits
+
+- ⚠️ **Freshness:** `lb_*` tables change only when the pipeline runs and the sync is run after
+  it. An approved invoice therefore does not move the Lakebase stock number until the next sync
+  (planned fix: write-through on approval, §9.6).
+- ⚠️ Two synced tables and two app tables are unused (see above).
+- ⚠️ Production would use Lakebase synced tables, or a scheduled job task after the pipeline,
+  instead of the manual truncate-and-reload script.
 
 ---
 
@@ -377,6 +434,7 @@ flowchart TD
 |---|---|
 | Gateway policies (UI-only): built-in jailbreak / unsafe-content on `kaapi_llm`; optional `kaapi_guard` strict lane for question-level policies | Guardrails; policy refusal demo beat |
 | Lakebase write-through on invoice approval | The inventory panel updates the moment the manager approves |
+| Use or drop `lb_delivery_exceptions` / `lb_product_demand`; remove the unused `compare_cache` / `admin_config` tables | Every synced or created Lakebase table has a reader |
 | Narrow `MODIFY` to the two app-write tables | Least privilege |
 | Schedule the sync after the pipeline (job task) or use Lakebase synced tables | Removes the manual sync step |
 | Cost-per-store query on gateway usage system tables | Replaces the assumed AI cost with a measured one |
