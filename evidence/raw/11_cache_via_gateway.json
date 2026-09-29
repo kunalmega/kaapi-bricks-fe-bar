@@ -1,0 +1,18 @@
+[
+  {
+    "call": 1,
+    "elapsed_s": 25.3,
+    "from_cache": false,
+    "match_type": "",
+    "trace_id": "tr-ea576c74b92aa57bea3b7f2434c24e25",
+    "answer_head": "## Lowest On-Time Delivery Rate\n\n**Organic Alternatives India** (SUP-008) has the lowest on-time delivery rate at **80.49%**. This Alt Milks supplier delivered "
+  },
+  {
+    "call": 2,
+    "elapsed_s": 1.1,
+    "from_cache": true,
+    "match_type": "exact",
+    "trace_id": "tr-11ec27d0ed0ca70cea6ad0e702e9a640",
+    "answer_head": "## Lowest On-Time Delivery Rate\n\n**Organic Alternatives India** (SUP-008) has the lowest on-time delivery rate at **80.49%**. This Alt Milks supplier delivered "
+  }
+]

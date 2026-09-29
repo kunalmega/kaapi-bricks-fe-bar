@@ -1,0 +1,50 @@
+[
+  {
+    "tbl": "kaapi_llm_payload",
+    "event_time": "2026-09-29T12:16:58.244Z",
+    "status_code": "200",
+    "latency_ms": "4915",
+    "destination_name": "primary",
+    "destination_model": "primary",
+    "requester": "main app SP",
+    "kind": "chat",
+    "req_bytes": "3424",
+    "resp_bytes": "1322"
+  },
+  {
+    "tbl": "kaapi_llm_payload",
+    "event_time": "2026-09-29T12:17:25.942Z",
+    "status_code": "200",
+    "latency_ms": "26026",
+    "destination_name": "primary",
+    "destination_model": "primary",
+    "requester": "MCP app SP",
+    "kind": "ops advisor plan",
+    "req_bytes": "2810",
+    "resp_bytes": "5316"
+  },
+  {
+    "tbl": "kaapi_embed_payload",
+    "event_time": "2026-09-29T12:18:26.582Z",
+    "status_code": "200",
+    "latency_ms": "713",
+    "destination_name": "primary",
+    "destination_model": "primary",
+    "requester": "main app SP",
+    "kind": "embedding",
+    "req_bytes": "159",
+    "resp_bytes": "19405"
+  },
+  {
+    "tbl": "kaapi_embed_payload",
+    "event_time": "2026-09-29T12:18:50.750Z",
+    "status_code": "200",
+    "latency_ms": "523",
+    "destination_name": "primary",
+    "destination_model": "primary",
+    "requester": "main app SP",
+    "kind": "embedding",
+    "req_bytes": "159",
+    "resp_bytes": "19405"
+  }
+]

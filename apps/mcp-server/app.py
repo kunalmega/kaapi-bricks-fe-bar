@@ -30,6 +30,8 @@ FOUNDATION_MODELS = [
 ]
 
 DEFAULT_MODEL = os.environ.get("OPS_MODEL", "databricks-meta-llama-3-3-70b-instruct")
+# When set, the advisor's LLM call goes through this Unity AI Gateway model service instead
+GW_LLM_MODEL = os.environ.get("GW_LLM_MODEL", "")
 
 CITY_COORDS = {
     "bangalore": (12.97, 77.59), "chennai": (13.08, 80.27), "mumbai": (19.08, 72.88),
@@ -227,13 +229,18 @@ def _generate_ops_plan(query, store, model_endpoint, store_data=""):
     if store_data:
         context = f"## Store Data\n{store_data}\n\n{context}"
     w = _get_workspace_client()
-    url = f"{w.config.host.rstrip('/')}/serving-endpoints/{model_endpoint}/invocations"
     headers = w.config.authenticate()
     headers["Content-Type"] = "application/json"
+    if GW_LLM_MODEL:
+        # Governed path: the kaapi_llm model service on the Unity AI Gateway
+        url = f"{w.config.host.rstrip('/')}/ai-gateway/mlflow/v1/chat/completions"
+    else:
+        url = f"{w.config.host.rstrip('/')}/serving-endpoints/{model_endpoint}/invocations"
     start = time.time()
     try:
         resp = http_requests.post(url, headers=headers,
-            json={"messages": [{"role": "system", "content": OPS_SYSTEM_PROMPT},
+            json={**({"model": GW_LLM_MODEL} if GW_LLM_MODEL else {}),
+                  "messages": [{"role": "system", "content": OPS_SYSTEM_PROMPT},
                                {"role": "user", "content": f"{query}\n\n---\n{context}"}],
                   "max_tokens": 2000, "temperature": 0.3}, timeout=120)
         resp.raise_for_status()

@@ -34,9 +34,16 @@ MCP_SERVER_URL = os.environ.get("MCP_SERVER_URL", "")
 LAKEBASE_INSTANCE_NAME = os.environ.get("LAKEBASE_INSTANCE_NAME", "kaapi-bricks")
 LAKEBASE_DATABASE_NAME = os.environ.get("LAKEBASE_DATABASE_NAME", "databricks_postgres")
 SQL_WAREHOUSE_ID = os.environ.get("SQL_WAREHOUSE_ID", "e755eae9d758fdf7")
-EMBEDDING_ENDPOINT = os.environ.get("EMBEDDING_ENDPOINT", "databricks-bge-large-en")
 SIMILARITY_THRESHOLD = float(os.environ.get("SIMILARITY_THRESHOLD", "0.95"))
 CACHE_TTL_HOURS = int(os.environ.get("CACHE_TTL_HOURS", "48"))
+
+# Unity AI Gateway: every AI call except Genie goes through governed Unity Catalog
+# services (EXECUTE-granted, rate-limited, payload-logged). There is deliberately no
+# fallback to direct serving endpoints — a gateway failure must surface, not bypass governance.
+GW_SCHEMA = os.environ.get("GW_SCHEMA", "fevm_cme_conde_catalog.kaapi_bricks")
+GW_LLM_MODEL = os.environ.get("GW_LLM_MODEL", f"{GW_SCHEMA}.kaapi_llm")        # Claude Sonnet 4.6 (+ Haiku fallback)
+GW_EMBED_MODEL = os.environ.get("GW_EMBED_MODEL", f"{GW_SCHEMA}.kaapi_embed")  # BGE-large-en, same as cached vectors
+GW_MCP_SERVICE = os.environ.get("GW_MCP_SERVICE", f"{GW_SCHEMA}.kaapi_ops_advisor")
 
 # =============================================================================
 # MLFLOW TRACING
@@ -236,19 +243,41 @@ def save_feedback(msg_id, conv_id, trace_id, value):
 # =============================================================================
 # EMBEDDING & SEMANTIC CACHE
 # =============================================================================
-@mlflow.trace(name="get_embedding", span_type=SpanType.EMBEDDING)
-def get_embedding(text: str) -> list:
-    """Get embedding vector from Databricks BGE endpoint."""
+def _gateway_post(path, payload, timeout=180, accept=None):
+    """POST to the Unity AI Gateway as the app service principal. Raises on any error."""
     w = _get_workspace_client()
-    url = f"{w.config.host.rstrip('/')}/serving-endpoints/{EMBEDDING_ENDPOINT}/invocations"
     headers = w.config.authenticate()
     headers["Content-Type"] = "application/json"
-    resp = http_requests.post(
-        url, headers=headers,
-        json={"input": [text[:8000]]},  # BGE max input ~8K chars
-        timeout=15,
-    )
-    resp.raise_for_status()
+    if accept:
+        headers["Accept"] = accept
+    resp = http_requests.post(f"{w.config.host.rstrip('/')}/ai-gateway/{path}",
+                              headers=headers, json=payload, timeout=timeout)
+    if resp.status_code >= 400:
+        raise RuntimeError(f"Unity AI Gateway {resp.status_code} on {path}: {resp.text[:400]}")
+    return resp
+
+
+def _message_text(content):
+    """Chat-completion content may be a string or a list of typed blocks."""
+    if isinstance(content, list):
+        return "\n".join(b.get("text", "") for b in content if isinstance(b, dict)).strip()
+    return (content or "").strip()
+
+
+@mlflow.trace(name="gateway_llm", span_type=SpanType.CHAT_MODEL)
+def gateway_chat(messages, max_tokens=1000):
+    """Chat completion through the governed kaapi_llm model service."""
+    resp = _gateway_post("mlflow/v1/chat/completions",
+                         {"model": GW_LLM_MODEL, "messages": messages, "max_tokens": max_tokens})
+    return _message_text(resp.json()["choices"][0]["message"].get("content"))
+
+
+@mlflow.trace(name="get_embedding", span_type=SpanType.EMBEDDING)
+def get_embedding(text: str) -> list:
+    """Embedding through the governed kaapi_embed model service (BGE-large-en)."""
+    resp = _gateway_post("mlflow/v1/embeddings",
+                         {"model": GW_EMBED_MODEL, "input": [text[:8000]]},  # BGE max input ~8K chars
+                         timeout=30)
     return resp.json()["data"][0]["embedding"]
 
 
@@ -687,6 +716,106 @@ async def post_feedback(request: Request):
     return {"ok": True}
 
 
+_PREP_RE = re.compile(
+    r"\b(prepare|prep|preparation)\b|\bplan\b.*\b(today|tomorrow|weekend)\b", re.IGNORECASE)
+
+
+def is_prep_question(query):
+    return bool(_PREP_RE.search(query or ""))
+
+
+def _prep_target_day(query):
+    """Target date in store time (IST) and its Spark dayofweek (1 = Sunday … 7 = Saturday)."""
+    now = datetime.utcnow() + timedelta(hours=5, minutes=30)
+    q = (query or "").lower()
+    target = now + timedelta(days=1) if "tomorrow" in q and "today" not in q else now
+    return target, (target.weekday() + 1) % 7 + 1
+
+
+@mlflow.trace(name="prep_store_data", span_type=SpanType.TOOL)
+def build_prep_store_data(query, store_location):
+    """Deterministic store facts for a preparation plan.
+
+    Demand comes from the SAME weekday across the full history (gold_product_demand),
+    not from the most recent single day. Stock and overdue POs come from Lakebase,
+    the operational serving copy.
+    """
+    target, dow = _prep_target_day(query)
+    db_name = STORE_DB_NAMES.get(store_location, f"Kaapi Bricks {store_location}").replace("'", "''")
+    rows = _run_sql(f"SELECT store_id FROM {CATALOG_SCHEMA}.stores WHERE name = '{db_name}'")
+    if not rows:
+        return None, target
+    store_id = rows[0]["store_id"]
+    day = target.strftime("%A")
+    demand = _run_sql(f"""
+        SELECT product_name, ROUND(AVG(units), 1) AS avg_units, COUNT(*) AS days
+        FROM {CATALOG_SCHEMA}.gold_product_demand
+        WHERE store_id = '{store_id}' AND dayofweek(order_date) = {dow}
+        GROUP BY product_name ORDER BY avg_units DESC LIMIT 8""")
+    volume = _run_sql(f"""
+        SELECT ROUND(AVG(orders), 0) AS avg_orders, ROUND(AVG(revenue), 0) AS avg_revenue, COUNT(*) AS days
+        FROM {CATALOG_SCHEMA}.gold_store_daily_kpis
+        WHERE store_id = '{store_id}' AND dayofweek(order_date) = {dow}""")
+    lines = [f"Store: {db_name.replace(chr(39) * 2, chr(39))} ({store_id}). Target day: {day} {target:%Y-%m-%d}.",
+             f"Order history covers 2026-02-01 to 2026-05-14; figures are averages over past {day}s."]
+    if volume and volume[0].get("avg_orders"):
+        v = volume[0]
+        lines.append(f"Typical {day}: {v['avg_orders']} orders, Rs.{v['avg_revenue']} revenue (over {v['days']} {day}s).")
+    lines.append(f"Average units per drink on a {day}:")
+    lines += [f"- {d['product_name']}: {d['avg_units']}" for d in demand]
+    try:
+        cur = get_conn().cursor()
+        cur.execute("SELECT ingredient_name, current_stock, unit, days_cover FROM lb_inventory_position "
+                    "WHERE store_id = %s ORDER BY days_cover NULLS LAST LIMIT 4", (store_id,))
+        stock = cur.fetchall()
+        cur.execute("SELECT po_id, supplier_name, days_overdue, total_amount FROM lb_open_purchase_orders "
+                    "WHERE store_id = %s AND is_overdue ORDER BY days_overdue DESC LIMIT 5", (store_id,))
+        overdue = cur.fetchall()
+        lines.append("Lowest stock cover (Lakebase):")
+        lines += [f"- {r[0]}: {r[1]} {r[2]}, {r[3]} days of cover" for r in stock]
+        lines.append(f"Overdue purchase orders (Lakebase): {len(overdue)}")
+        lines += [f"- {r[0]} {r[1]}: {r[2]} days overdue, Rs.{r[3]}" for r in overdue]
+    except Exception as e:
+        print(f"[Prep] Lakebase read failed: {e}")
+        lines.append("Stock and purchase-order status unavailable right now.")
+    return "\n".join(lines), target
+
+
+@mlflow.trace(name="mcp_ops_advisor", span_type=SpanType.TOOL)
+def call_ops_advisor(query, store_location, store_data):
+    """operations_advisor tool on the governed MCP service, through the Unity AI Gateway."""
+    resp = _gateway_post(
+        f"mcp-services/{GW_MCP_SERVICE}",
+        {"jsonrpc": "2.0", "id": str(uuid.uuid4()), "method": "tools/call",
+         "params": {"name": "operations_advisor",
+                    "arguments": {"query": query, "store": store_location, "store_data": store_data}}},
+        timeout=240, accept="application/json, text/event-stream")
+    body = resp.text
+    if "text/event-stream" in resp.headers.get("content-type", ""):
+        body = [l[5:].strip() for l in body.splitlines() if l.startswith("data:")][-1]
+    msg = json.loads(body)
+    if "error" in msg:
+        raise RuntimeError(f"MCP service error: {msg['error'].get('message')}")
+    return "\n".join(c.get("text", "") for c in msg["result"].get("content", []) if c.get("type") == "text")
+
+
+@mlflow.trace(name="prep_brief", span_type=SpanType.AGENT)
+def prep_brief(query, store_location):
+    start = time.time()
+    try:
+        store_data, _ = build_prep_store_data(query, store_location)
+        if not store_data:
+            return {"text": f"I couldn't find the store '{store_location}'.", "latency_ms": 0,
+                    "input_tokens": 0, "output_tokens": 0, "error": "unknown_store"}
+        plan = call_ops_advisor(query, store_location, store_data)
+        text = plan + "\n\n---\n**Store data used** (SQL on gold + Lakebase):\n" + store_data
+        return {"text": text, "latency_ms": (time.time() - start) * 1000,
+                "input_tokens": 0, "output_tokens": 0, "error": None}
+    except Exception as e:
+        return {"text": f"Error building the preparation plan: {e}", "latency_ms": (time.time() - start) * 1000,
+                "input_tokens": 0, "output_tokens": 0, "error": str(e)}
+
+
 _menu_lock = threading.Lock()
 _menu = None  # [(name_lower, display_name, base_price)], longest names first
 
@@ -734,8 +863,10 @@ def add_menu_prices(query, answer):
 @mlflow.trace(name="chat_request", span_type=SpanType.AGENT)
 def process_chat(query, store, history, conv_id, skip_cache=False):
     """Traced end-to-end chat processing with cache check and Genie Agent call."""
+    # Preparation plans depend on today's weather, so they bypass the cache entirely
+    prep = is_prep_question(query)
     # 1. Check short-term memory
-    cached = None if skip_cache else find_cached_answer(query, store)
+    cached = None if (skip_cache or prep) else find_cached_answer(query, store)
     if cached:
         trace_id = None
         try:
@@ -758,11 +889,15 @@ def process_chat(query, store, history, conv_id, skip_cache=False):
             "error": None,
         }
 
-    # 2. Call Genie Agent (replaces MAS + KA)
-    messages = history + [{"role": "user", "content": query}]
-    result = call_genie_sync(messages, store)
-    if not result.get("error"):
-        result["text"] = add_menu_prices(query, result["text"])
+    # 2. Preparation plan (SQL + Lakebase + MCP via Unity AI Gateway) or Genie Agent
+    if prep:
+        result = prep_brief(query, store)
+        result["no_cache"] = True
+    else:
+        messages = history + [{"role": "user", "content": query}]
+        result = call_genie_sync(messages, store)
+        if not result.get("error"):
+            result["text"] = add_menu_prices(query, result["text"])
 
     # 3. Update trace metadata with token usage
     trace_id = None
@@ -771,7 +906,7 @@ def process_chat(query, store, history, conv_id, skip_cache=False):
         if span:
             trace_id = span.request_id
             mlflow.update_current_trace(
-                tags={"cache_hit": "false", "endpoint": GENIE_SPACE_ID},
+                tags={"cache_hit": "false", "route": "prep_mcp" if prep else "genie"},
                 metadata={
                     "input_tokens": str(result["input_tokens"]),
                     "output_tokens": str(result["output_tokens"]),
@@ -815,11 +950,11 @@ async def chat(request: Request):
     # Background: cache + log inference
     if not result["from_cache"]:
         def _cache_and_log():
-            try:
-                embedding = get_embedding(query)
-            except Exception:
-                embedding = None
-            if not skip_cache:
+            if not skip_cache and not result.get("no_cache"):
+                try:
+                    embedding = get_embedding(query)
+                except Exception:
+                    embedding = None
                 save_to_cache(query, result["text"], embedding, store, result["latency_ms"])
             log_inference(
                 result.get("trace_id"), conv_id, store, query, result["text"],
@@ -844,7 +979,7 @@ async def chat(request: Request):
 
 
 # =============================================================================
-# INVOICE PARSER — Upload, Parse with ai_parse_document, Match PO, Update Inventory
+# INVOICE PARSER — Upload, parse via Unity AI Gateway (kaapi_llm), match PO, approve
 # =============================================================================
 import base64
 from fastapi import UploadFile, File, Form
@@ -885,7 +1020,7 @@ def _run_sql(sql, warehouse_id=None):
 
 @app.post("/api/parse-invoice")
 async def parse_invoice(file: UploadFile = File(...), store: str = Form("Koramangala, Bangalore")):
-    """Upload invoice PDF/image → parse with ai_parse_document → match PO → return results."""
+    """Upload invoice PDF/image → parse + extract via Unity AI Gateway → match PO → return results."""
     start_time = time.time()
 
     # Step 1: Save file to Unity Catalog Volume
@@ -899,59 +1034,28 @@ async def parse_invoice(file: UploadFile = File(...), store: str = Form("Koraman
     except Exception as e:
         return JSONResponse({"error": f"Upload failed: {e}"}, status_code=500)
 
-    # Step 2: Parse with ai_parse_document — get all text elements
-    parse_sql = f"""
-    SELECT to_json(ai_parse_document(content, MAP('version', '2.0'))) AS parsed
-    FROM READ_FILES('{INVOICE_VOLUME}/{filename}', format => 'binaryFile')
-    """
+    # Step 2: Parse + extract in ONE governed call. The PDF (or image) goes to the kaapi_llm
+    # model service through the Unity AI Gateway, so document parsing is EXECUTE-checked,
+    # rate-limited and payload-logged like every other non-Genie AI call.
+    json_schema = '{"supplier_name":"string","invoice_number":"string","invoice_date":"YYYY-MM-DD","po_reference":"string or null","delivery_to":"string","items":[{"name":"string","quantity":0.0,"unit":"kg/liter/case","rate":0.0,"amount":0.0}],"subtotal":0.0,"gst_amount":0.0,"total_amount":0.0}'
+    file_b64 = base64.b64encode(file_content).decode("utf-8")
+    if filename.lower().endswith(".pdf"):
+        doc_block = {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": file_b64}}
+    else:
+        mime = "image/jpeg" if filename.lower().endswith((".jpg", ".jpeg")) else "image/png"
+        doc_block = {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{file_b64}"}}
     try:
-        rows = _run_sql(parse_sql)
-        if not rows or not rows[0].get("parsed"):
-            return JSONResponse({"error": "Failed to parse document"}, status_code=500)
-
-        parsed_doc = json.loads(rows[0]["parsed"])
-        # Extract all text content from the parsed document
-        elements = parsed_doc.get("document", {}).get("elements", [])
-        full_text = "\n".join(e.get("content", "") for e in elements if e.get("content"))
-        print(f"[Invoice] Parsed text: {full_text[:300]}")
-    except Exception as e:
-        print(f"[Invoice] ai_parse_document failed: {e}, falling back to LLM vision")
-        # Fallback: send the file directly to LLM as base64 image
-        full_text = None
-        file_b64 = base64.b64encode(file_content).decode("utf-8")
-
-    # Step 3: Use a Foundation Model to extract structured fields
-    try:
-        w = _get_workspace_client()
-        llm_url = f"{w.config.host.rstrip('/')}/serving-endpoints/databricks-claude-sonnet-4-6/invocations"
-        llm_headers = w.config.authenticate()
-        llm_headers["Content-Type"] = "application/json"
-
-        json_schema = '{"supplier_name":"string","invoice_number":"string","invoice_date":"YYYY-MM-DD","po_reference":"string or null","delivery_to":"string","items":[{"name":"string","quantity":0.0,"unit":"kg/liter/case","rate":0.0,"amount":0.0}],"subtotal":0.0,"gst_amount":0.0,"total_amount":0.0}'
-
-        if full_text:
-            # ai_parse_document succeeded — use extracted text
-            messages = [{"role": "user", "content": f"Extract from this invoice text. Return ONLY valid JSON matching this schema: {json_schema}\n\nInvoice text:\n{full_text}"}]
-        else:
-            # Fallback — send as base64 image to vision model
-            mime = "application/pdf" if filename.endswith(".pdf") else "image/png"
-            messages = [{"role": "user", "content": [
-                {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{file_b64}"}},
-                {"type": "text", "text": f"Extract from this invoice. Return ONLY valid JSON matching this schema: {json_schema}"}
-            ]}]
-
-        llm_resp = http_requests.post(llm_url, headers=llm_headers,
-            json={"messages": messages, "max_tokens": 1000, "temperature": 0},
-            timeout=60)
-        llm_resp.raise_for_status()
-        llm_text = llm_resp.json()["choices"][0]["message"]["content"]
+        llm_text = gateway_chat([{"role": "user", "content": [
+            doc_block,
+            {"type": "text", "text": f"Extract from this invoice. Return ONLY valid JSON matching this schema: {json_schema}"},
+        ]}], max_tokens=1500)
         # Extract JSON from response (handle markdown code blocks)
         if "```" in llm_text:
             llm_text = llm_text.split("```")[1]
             if llm_text.startswith("json"):
                 llm_text = llm_text[4:]
         extracted = json.loads(llm_text.strip())
-        print(f"[Invoice] Extracted: {json.dumps(extracted)[:300]}")
+        print(f"[Invoice] Extracted via Unity AI Gateway: {json.dumps(extracted)[:300]}")
     except Exception as e:
         return JSONResponse({"error": f"Extraction failed: {e}"}, status_code=500)
 

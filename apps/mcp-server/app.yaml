@@ -3,6 +3,9 @@ command: ["python", "app.py"]
 env:
   - name: OPS_MODEL
     value: "databricks-meta-llama-3-3-70b-instruct"
+  # Advisor LLM calls go through the Unity AI Gateway model service (overrides OPS_MODEL)
+  - name: GW_LLM_MODEL
+    value: "fevm_cme_conde_catalog.kaapi_bricks.kaapi_llm"
 
 resources:
   - name: llama-endpoint

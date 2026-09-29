@@ -1,0 +1,26 @@
+[
+  {
+    "call": 1,
+    "utc": "12:24:12",
+    "http": 200,
+    "body": "{\"model\":\"us.anthropic.claude-sonnet-4-6\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"OK\"},\"index\":0,\"finish_reason\":\"length\"}],\"usage\":{\"cache_read_input_tokens\":0,\"completion_tokens\":3,\"pro"
+  },
+  {
+    "call": 2,
+    "utc": "12:24:13",
+    "http": 429,
+    "body": "{\"error_code\":\"REQUEST_LIMIT_EXCEEDED\",\"message\":\"User defined rate limit(s) exceeded for 'fevm_cme_conde_catalog.kaapi_bricks.kaapi_llm'. Requests-per-minute (RPM) rate limit exceeded for endpoint\"}"
+  },
+  {
+    "call": 3,
+    "utc": "12:24:16",
+    "http": 200,
+    "body": "{\"model\":\"us.anthropic.claude-sonnet-4-6\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"OK\"},\"index\":0,\"finish_reason\":\"length\"}],\"usage\":{\"cache_read_input_tokens\":0,\"completion_tokens\":3,\"pro"
+  },
+  {
+    "call": 4,
+    "utc": "12:24:17",
+    "http": 429,
+    "body": "{\"error_code\":\"REQUEST_LIMIT_EXCEEDED\",\"message\":\"User defined rate limit(s) exceeded for 'fevm_cme_conde_catalog.kaapi_bricks.kaapi_llm'. Requests-per-minute (RPM) rate limit exceeded for endpoint\"}"
+  }
+]
