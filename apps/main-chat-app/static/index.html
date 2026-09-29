@@ -198,8 +198,217 @@ function BrewingWait(){
   );
 }
 
+// ===== STORE LIVE DASHBOARD (reads Lakebase only) =====
+const DASH_REFRESH_MS=10000;
+const INK={primary:'#0b0b0b',secondary:'#52514e',muted:'#8a8984',grid:'#e8e6e1',surface:'#ffffff'};
+const STATUS={good:'#0ca30c',warning:'#fab219',serious:'#ec835a',critical:'#d03b3b'};
+const SEQ='#2a78d6';
+const inr=v=>'₹'+Math.round(Number(v)||0).toLocaleString('en-IN');
+const fmtDate=d=>{if(!d)return'—';const x=new Date(d+'T00:00:00');return x.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});};
+const coverStatus=s=>s.below_reorder?{c:STATUS.critical,icon:'⛔',label:'Reorder now'}
+  :(s.days_cover!=null&&s.days_cover<21)?{c:STATUS.warning,icon:'⚠',label:'Watch'}
+  :{c:STATUS.good,icon:'✓',label:'OK'};
+
+function DashTile({label,value,sub,status}){
+  return(
+    <div style={{background:INK.surface,border:'1px solid #E8DFD3',borderRadius:12,padding:'14px 16px',minWidth:0}}>
+      <div style={{fontSize:'0.72rem',fontWeight:700,letterSpacing:'.04em',textTransform:'uppercase',color:INK.secondary}}>{label}</div>
+      <div style={{fontSize:'1.9rem',fontWeight:800,color:INK.primary,lineHeight:1.15,marginTop:4}}>{value}</div>
+      <div style={{fontSize:'0.78rem',color:INK.secondary,marginTop:2,display:'flex',alignItems:'center',flexWrap:'wrap',columnGap:8,rowGap:2}}>
+        {status&&<span style={{display:'inline-flex',alignItems:'center',gap:4,fontWeight:700,color:INK.primary,whiteSpace:'nowrap'}}>
+          <span style={{width:8,height:8,borderRadius:4,background:status.c,display:'inline-block'}}/>{status.icon} {status.label}</span>}
+        <span>{sub}</span>
+      </div>
+    </div>
+  );
+}
+
+function StockCoverBars({stock}){
+  if(!stock.length)return <div style={{color:INK.muted,fontSize:'0.85rem'}}>No stock rows for this store.</div>;
+  const max=Math.max(60,...stock.map(s=>s.days_cover||0));
+  return(
+    <div style={{display:'flex',flexDirection:'column',gap:6}}>
+      {stock.map(s=>{const st=coverStatus(s);const w=Math.max(2,(s.days_cover||0)/max*100);
+        return(
+          <div key={s.ingredient_id} title={`${s.ingredient_name}: ${s.current_stock} ${s.unit} · ${s.days_cover} days of cover · reorder at ${s.reorder_threshold} ${s.unit} · avg use ${s.avg_daily_usage} ${s.unit}/day`}
+            style={{display:'grid',gridTemplateColumns:'minmax(120px,190px) 1fr 150px',alignItems:'center',gap:10,fontSize:'0.8rem'}}>
+            <div style={{color:INK.primary,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.ingredient_name}</div>
+            <div style={{height:14,background:'#f3f1ec',borderRadius:4,position:'relative'}}>
+              <div style={{width:w+'%',height:'100%',background:st.c,borderRadius:'0 4px 4px 0'}}/>
+            </div>
+            <div style={{color:INK.secondary,whiteSpace:'nowrap'}}>
+              <span style={{color:INK.primary,fontWeight:700}}>{s.days_cover!=null?s.days_cover.toFixed(1):'—'} d</span> · {Number(s.current_stock).toFixed(1)} {s.unit} <span title={st.label}>{st.icon}</span>
+            </div>
+          </div>);})}
+      <div style={{display:'flex',gap:14,fontSize:'0.72rem',color:INK.secondary,marginTop:4}}>
+        {[['critical','⛔','Below reorder threshold'],['warning','⚠','Under 21 days of cover'],['good','✓','21+ days']].map(([k,i,l])=>
+          <span key={k} style={{display:'inline-flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,borderRadius:2,background:STATUS[k]}}/>{i} {l}</span>)}
+      </div>
+    </div>
+  );
+}
+
+function DemandColumns({days}){
+  const[hover,setHover]=useState(null);
+  if(!days.length)return <div style={{color:INK.muted,fontSize:'0.85rem'}}>No recent demand rows for this store.</div>;
+  const W=520,H=170,pad={l:36,r:8,t:18,b:26},iw=W-pad.l-pad.r,ih=H-pad.t-pad.b;
+  const max=Math.max(...days.map(d=>d.units));const top=Math.ceil(max/50)*50||50;
+  const band=iw/days.length,bw=Math.min(24,band*0.55);
+  const maxIdx=days.findIndex(d=>d.units===max);
+  const y=v=>pad.t+ih-(v/top)*ih;
+  const r=4;
+  return(
+    <div style={{position:'relative'}}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',maxWidth:W,height:'auto',display:'block'}} role="img" aria-label="Units sold per day">
+        {[0,top/2,top].map(t=><g key={t}>
+          <line x1={pad.l} x2={W-pad.r} y1={y(t)} y2={y(t)} stroke={INK.grid} strokeWidth="1"/>
+          <text x={pad.l-6} y={y(t)+3} textAnchor="end" fontSize="10" fill={INK.secondary}>{t.toLocaleString('en-IN')}</text></g>)}
+        {days.map((d,i)=>{const x=pad.l+i*band+(band-bw)/2,h=ih-(y(d.units)-pad.t),yy=y(d.units);
+          const path=`M${x},${pad.t+ih} V${yy+r} Q${x},${yy} ${x+r},${yy} H${x+bw-r} Q${x+bw},${yy} ${x+bw},${yy+r} V${pad.t+ih} Z`;
+          const label=i===maxIdx||i===days.length-1;
+          return(<g key={d.order_date} onMouseEnter={()=>setHover(i)} onMouseLeave={()=>setHover(null)}>
+            <rect x={pad.l+i*band} y={pad.t} width={band} height={ih} fill="transparent"/>
+            <path d={h>r?path:`M${x},${pad.t+ih} h${bw} v-${Math.max(h,1)} h-${bw} Z`} fill={SEQ} opacity={hover===null||hover===i?1:0.45}/>
+            {label&&<text x={x+bw/2} y={yy-5} textAnchor="middle" fontSize="10" fontWeight="700" fill={INK.primary}>{d.units}</text>}
+            <text x={x+bw/2} y={H-8} textAnchor="middle" fontSize="10" fill={INK.secondary}>{fmtDate(d.order_date)}</text>
+          </g>);})}
+      </svg>
+      {hover!==null&&<div style={{position:'absolute',top:0,right:0,background:'#1f1f1e',color:'#fff',borderRadius:8,padding:'6px 10px',fontSize:'0.75rem',pointerEvents:'none'}}>
+        <b>{fmtDate(days[hover].order_date)}</b> · {days[hover].units} units · {inr(days[hover].revenue)}</div>}
+    </div>
+  );
+}
+
+function DashTable({cols,rows,empty}){
+  if(!rows.length)return <div style={{color:INK.muted,fontSize:'0.85rem'}}>{empty}</div>;
+  return(
+    <div style={{overflowX:'auto'}}>
+      <table style={{width:'100%',borderCollapse:'collapse',fontSize:'0.8rem'}}>
+        <thead><tr>{cols.map(c=><th key={c.k} style={{textAlign:c.num?'right':'left',padding:'6px 8px',borderBottom:`1px solid ${INK.grid}`,color:INK.secondary,fontWeight:700,whiteSpace:'nowrap'}}>{c.h}</th>)}</tr></thead>
+        <tbody>{rows.map((r,i)=><tr key={i}>{cols.map(c=><td key={c.k} style={{textAlign:c.num?'right':'left',padding:'6px 8px',borderBottom:`1px solid #f3f1ec`,color:INK.primary,whiteSpace:'nowrap'}}>{c.f?c.f(r):r[c.k]}</td>)}</tr>)}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function DashCard({title,sub,children}){
+  return(
+    <div style={{background:INK.surface,border:'1px solid #E8DFD3',borderRadius:12,padding:'14px 16px',minWidth:0}}>
+      <div style={{fontSize:'0.9rem',fontWeight:800,color:'#3C1810'}}>{title}</div>
+      {sub&&<div style={{fontSize:'0.74rem',color:INK.secondary,margin:'2px 0 10px'}}>{sub}</div>}
+      {children}
+    </div>
+  );
+}
+
+function StoreDashboard({store,setStore,stores,onBack,onInvoice}){
+  const[data,setData]=useState(null);
+  const[err,setErr]=useState(null);
+  const[lastOk,setLastOk]=useState(null);
+  const[,setTick]=useState(0);
+  useEffect(()=>{
+    let alive=true;
+    const load=async()=>{
+      try{
+        const r=await fetch('/api/lakebase/dashboard?store='+encodeURIComponent(store));
+        const d=await r.json();
+        if(!alive)return;
+        if(!r.ok||d.error){setErr(d.error||('HTTP '+r.status));}else{setData(d);setErr(null);setLastOk(Date.now());}
+      }catch(e){if(alive)setErr(e.message);}
+    };
+    setData(null);load();
+    const t=setInterval(load,DASH_REFRESH_MS);
+    const clock=setInterval(()=>setTick(x=>x+1),1000);
+    return()=>{alive=false;clearInterval(t);clearInterval(clock);};
+  },[store]);
+  const ago=lastOk?Math.round((Date.now()-lastOk)/1000):null;
+  const k=data?.kpis;
+  const syncedAt=data?.synced?.length?data.synced.map(s=>s.synced_at).sort()[0]:null;
+  return(
+    <div className="chat-page">
+      <div className="left">
+        <button className="back-btn" onClick={onBack}>&#8592; Back to Home</button>
+        <div className="lb-card" style={{background:'#10231a'}}>
+          <div className="lb-top">
+            <div className="lb-title"><div className="lb-dot" style={{background:err?STATUS.critical:STATUS.good,animation:'pulse 2s infinite'}}/>{err?'OFFLINE':'LIVE'}</div>
+            <span className="lb-status" style={{color:'#86efac'}}>Lakebase</span>
+          </div>
+          <div className="lb-row"><div className="lb-label">Refreshes</div><div className="lb-value">every {DASH_REFRESH_MS/1000}s</div></div>
+          <div className="lb-row"><div className="lb-label">Updated</div><div className="lb-value">{ago==null?'—':ago+'s ago'}</div></div>
+          <div className="lb-row"><div className="lb-label">Query time</div><div className="lb-value">{data?data.query_ms+' ms':'—'}</div></div>
+          <div className="lb-row"><div className="lb-label">Synced from gold</div><div className="lb-value" style={{fontSize:'0.72rem'}}>{syncedAt?new Date(syncedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—'}</div></div>
+        </div>
+        <div className="section-lbl">Store</div>
+        <select className="store-sel" value={store} onChange={e=>setStore(e.target.value)}>
+          {stores.map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
+        <div className="section-lbl">Live activity</div>
+        <div style={{display:'flex',flexDirection:'column',gap:6}}>
+          {!data?.activity?.length&&<div style={{fontSize:'0.76rem',color:'#8B7355'}}>No approvals yet. Approve an invoice and it appears here within {DASH_REFRESH_MS/1000}s.</div>}
+          {(data?.activity||[]).map((a,i)=><div key={i} style={{fontSize:'0.74rem',background:'white',border:'1px solid #E8DFD3',borderRadius:8,padding:'6px 8px'}}>
+            <div style={{color:'#3C1810',fontWeight:600}}>{a.kind==='receipt'?'📦':'✅'} {a.detail}</div>
+            <div style={{color:'#8B7355'}}>{new Date(a.created_at).toLocaleTimeString('en-GB')}</div></div>)}
+        </div>
+        <button className="back-btn" style={{marginTop:12}} onClick={onInvoice}>&#128230; Go to Delivery &amp; Invoice</button>
+      </div>
+      <div className="center" style={{display:'flex',flexDirection:'column',overflow:'auto',background:'#FAF7F2'}}>
+        <div className="ch-header">
+          <div className="ch-header-left">
+            <span className="ch-title">&#128202; Store Live Dashboard</span>
+            <span className="ch-sub">{data?`${store} (${data.store_id})`:store} · served from Lakebase · approvals update it instantly</span>
+          </div>
+        </div>
+        <div style={{padding:'18px 22px',display:'flex',flexDirection:'column',gap:14}}>
+          {err&&<div style={{background:'#FEF2F2',border:`1px solid ${STATUS.critical}`,borderRadius:10,padding:'10px 14px',fontSize:'0.85rem',color:INK.primary}}>⛔ Lakebase unavailable — {err}. Retrying every {DASH_REFRESH_MS/1000}s{data?'; showing the last good data.':'.'}</div>}
+          {!data&&!err&&<div style={{padding:30,textAlign:'center',color:'#8B5E3C'}}>&#9749; Loading live store data…</div>}
+          {data&&<>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:12}}>
+              <DashTile label="Items below reorder" value={k.below_reorder}
+                status={k.below_reorder?{c:STATUS.critical,icon:'⛔',label:'Reorder'}:{c:STATUS.good,icon:'✓',label:'All clear'}}
+                sub={k.lowest_cover?`lowest: ${k.lowest_cover.ingredient_name}, ${k.lowest_cover.days_cover} d`:''}/>
+              <DashTile label="Overdue purchase orders" value={k.overdue_pos}
+                status={k.overdue_pos?{c:STATUS.serious,icon:'⚠',label:'Chase'}:{c:STATUS.good,icon:'✓',label:'None'}}
+                sub={k.overdue_pos?inr(k.overdue_value)+' outstanding':''}/>
+              <DashTile label="Late deliveries on record" value={k.late_deliveries} sub={k.late_deliveries?`avg ${k.avg_days_late} days late`:''}/>
+              <DashTile label={`Units sold · last ${data.demand_daily.length} days of data`} value={k.units_7d.toLocaleString('en-IN')}
+                sub={data.demand_daily.length?`${fmtDate(data.demand_daily[0].order_date)} – ${fmtDate(data.demand_daily[data.demand_daily.length-1].order_date)} 2026`:''}/>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(360px,1fr))',gap:14}}>
+              <DashCard title="Stock cover by ingredient" sub="Days of stock left at the average daily usage · hover a row for detail">
+                <StockCoverBars stock={data.stock}/>
+              </DashCard>
+              <div style={{display:'flex',flexDirection:'column',gap:14}}>
+                <DashCard title="Units sold per day" sub={`Last ${data.demand_daily.length} days of sales data (the synthetic order history ends 14 May 2026) · hover a column`}>
+                  <DemandColumns days={data.demand_daily}/>
+                </DashCard>
+                <DashCard title={`Top drinks · last ${data.demand_daily.length} days of data`}>
+                  <DashTable empty="No demand rows." rows={data.top_products}
+                    cols={[{k:'product_name',h:'Drink'},{k:'units',h:'Units',num:true}]}/>
+                </DashCard>
+              </div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(360px,1fr))',gap:14}}>
+              <DashCard title="Open purchase orders" sub="Days overdue are computed live from today's date">
+                <DashTable empty="No open purchase orders." rows={data.open_pos}
+                  cols={[{k:'po_id',h:'PO'},{k:'supplier_name',h:'Supplier'},{k:'expected_delivery_date',h:'Expected',f:r=>fmtDate(r.expected_delivery_date)},
+                    {k:'days_overdue',h:'Status',f:r=>r.is_overdue?<span style={{fontWeight:700}}><span style={{color:STATUS.critical}}>⛔</span> {r.days_overdue} d overdue</span>:<span><span style={{color:STATUS.good}}>✓</span> on time</span>},
+                    {k:'total_amount',h:'Value',num:true,f:r=>inr(r.total_amount)}]}/>
+              </DashCard>
+              <DashCard title="Recent delivery exceptions" sub="Late or cancelled supplier deliveries, latest first">
+                <DashTable empty="No delivery exceptions." rows={data.exceptions}
+                  cols={[{k:'po_id',h:'PO'},{k:'supplier_name',h:'Supplier'},{k:'exception_type',h:'Type',f:r=>r.exception_type==='late'?`late ${r.days_late} d`:'cancelled'},
+                    {k:'actual_delivery_date',h:'Delivered',f:r=>fmtDate(r.actual_delivery_date)},{k:'total_amount',h:'Value',num:true,f:r=>inr(r.total_amount)}]}/>
+              </DashCard>
+            </div>
+          </>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App(){
-  const[view,setView]=useState('landing'); // 'landing', 'chat', or 'compare'
+  const[view,setView]=useState('landing'); // 'landing', 'chat', 'invoice', 'dashboard'
   const[query,setQuery]=useState('');
   const[msgs,setMsgs]=useState([]);
   const[streaming,setStreaming]=useState(false);
@@ -218,6 +427,7 @@ function App(){
   const[invParsing,setInvParsing]=useState(false);
   const[invResult,setInvResult]=useState(null);
   const[invApproved,setInvApproved]=useState(false);
+  const[invLakebase,setInvLakebase]=useState(null);
   const[invInventory,setInvInventory]=useState(null);
   const[invLoadingInv,setInvLoadingInv]=useState(false);
 
@@ -333,6 +543,11 @@ function App(){
   const md=(t)=>({__html:marked.parse(t||'')});
 
   // ===== LANDING PAGE =====
+  if(view==='dashboard'){
+    return <StoreDashboard store={store} setStore={setStore} stores={stores}
+      onBack={()=>setView('landing')} onInvoice={()=>setView('invoice')}/>;
+  }
+
   if(view==='landing'){
     return(
       <div className="landing">
@@ -343,6 +558,7 @@ function App(){
             <a href="#about">About</a>
             <a href="#" className="nav-chat" onClick={e=>{e.preventDefault();setView('chat')}}>Ask AI Assistant</a>
             <a href="#" className="nav-chat" style={{background:'#5C2E1A'}} onClick={e=>{e.preventDefault();setView('invoice')}}>Delivery &amp; Invoice</a>
+            <a href="#" className="nav-chat" style={{background:'#10231a'}} onClick={e=>{e.preventDefault();setView('dashboard')}}>&#128202; Live Dashboard</a>
           </div>
         </nav>
         <section className="hero">
@@ -424,8 +640,10 @@ function App(){
     if(!invResult||invApproved)return;
     const items=(invResult.matched_items||[]).filter(i=>i.ingredient_id&&i.invoice_qty);
     try{
-      await fetch('/api/approve-invoice',{method:'POST',headers:{'Content-Type':'application/json'},
+      const resp=await fetch('/api/approve-invoice',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({items,store_id:'STR-001',po_id:invResult.po_match?.po_id})});
+      const d=await resp.json();
+      setInvLakebase(d.lakebase||null);
       setInvApproved(true);
       // Auto-refresh inventory after approval
       setTimeout(fetchInventory,2000);
@@ -444,9 +662,9 @@ function App(){
           <div className="lb-card" style={{background:'#1a1a2e'}}>
             <div className="lb-top">
               <div className="lb-title"><div className="lb-dot" style={{background:'#F59E0B'}}/>INVOICE PARSER</div>
-              <span className="lb-status" style={{color:'#F59E0B'}}>ai_parse_document</span>
+              <span className="lb-status" style={{color:'#F59E0B'}}>Unity AI Gateway</span>
             </div>
-            <div className="lb-row"><div className="lb-label">Powered by</div><div className="lb-value" style={{fontSize:'0.75rem'}}>Databricks SQL AI Functions</div></div>
+            <div className="lb-row"><div className="lb-label">Powered by</div><div className="lb-value" style={{fontSize:'0.75rem'}}>kaapi_llm model service</div></div>
           </div>
           <div className="section-lbl">Store</div>
           <select className="store-sel" value={store} onChange={e=>setStore(e.target.value)}>
@@ -482,7 +700,7 @@ function App(){
               )}
             </div>
 
-            {invParsing&&<div style={{textAlign:'center',padding:'20px',color:'#8B5E3C'}}>&#9749; Parsing invoice with ai_parse_document...</div>}
+            {invParsing&&<div style={{textAlign:'center',padding:'20px',color:'#8B5E3C'}}>&#9749; Parsing invoice through Unity AI Gateway...</div>}
 
             {r&&!r.error&&(
               <div>
@@ -573,7 +791,10 @@ function App(){
                   <button style={{padding:'10px 24px',background:'white',color:'#3C1810',border:'1.5px solid #D4C4B0',borderRadius:'10px',fontSize:'0.88rem',fontWeight:600,cursor:'pointer'}} onClick={fetchInventory} disabled={invLoadingInv}>
                     {invLoadingInv?'Loading...':'View Current Inventory'}
                   </button>
-                  {invApproved&&<span style={{color:'#16A34A',fontSize:'0.85rem',fontWeight:600}}>Inventory transactions created. PO marked as delivered.</span>}
+                  {invApproved&&<span style={{color:'#16A34A',fontSize:'0.85rem',fontWeight:600}}>
+                    Receipts recorded in Delta.{invLakebase&&!invLakebase.error?` Lakebase updated live: ${invLakebase.updated_items} stock item(s)${invLakebase.po_closed?', PO closed':''}.`:''}
+                    {invLakebase&&invLakebase.error?' (Lakebase update failed; it will catch up on the next sync.)':''}
+                    {' '}<a href="#" onClick={e=>{e.preventDefault();setView('dashboard')}} style={{color:'#10231a'}}>Open live dashboard →</a></span>}
                   {r.latency_ms&&<span style={{color:'#8B7355',fontSize:'0.78rem',marginLeft:'auto'}}>Parsed in {(r.latency_ms/1000).toFixed(1)}s</span>}
                 </div>
 

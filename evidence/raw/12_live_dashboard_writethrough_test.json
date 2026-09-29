@@ -1,0 +1,1063 @@
+{
+  "before": {
+    "store": "Koramangala, Bangalore",
+    "store_id": "STR-001",
+    "source": "lakebase",
+    "server_time": "2026-09-29T13:01:48.382018Z",
+    "query_ms": 37.0,
+    "kpis": {
+      "below_reorder": 0,
+      "lowest_cover": {
+        "ingredient_id": "ING-002",
+        "ingredient_name": "Chikmagalur Robusta Beans",
+        "unit": "kg",
+        "current_stock": 69.93,
+        "reorder_threshold": 15.0,
+        "below_reorder": false,
+        "days_cover": 18.2,
+        "avg_daily_usage": 3.836,
+        "last_txn_date": "2026-07-31"
+      },
+      "overdue_pos": 8,
+      "overdue_value": 31065.06,
+      "late_deliveries": 9,
+      "avg_days_late": 1.6,
+      "units_7d": 744
+    },
+    "stock": [
+      {
+        "ingredient_id": "ING-002",
+        "ingredient_name": "Chikmagalur Robusta Beans",
+        "unit": "kg",
+        "current_stock": 69.93,
+        "reorder_threshold": 15.0,
+        "below_reorder": false,
+        "days_cover": 18.2,
+        "avg_daily_usage": 3.836,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-011",
+        "ingredient_name": "Almond Milk",
+        "unit": "liter",
+        "current_stock": 67.49,
+        "reorder_threshold": 15.0,
+        "below_reorder": false,
+        "days_cover": 28.2,
+        "avg_daily_usage": 2.395,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-004",
+        "ingredient_name": "Chicory",
+        "unit": "kg",
+        "current_stock": 45.06,
+        "reorder_threshold": 8.0,
+        "below_reorder": false,
+        "days_cover": 31.1,
+        "avg_daily_usage": 1.447,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-013",
+        "ingredient_name": "Rose Syrup",
+        "unit": "liter",
+        "current_stock": 16.79,
+        "reorder_threshold": 8.0,
+        "below_reorder": false,
+        "days_cover": 35.0,
+        "avg_daily_usage": 0.479,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-008",
+        "ingredient_name": "Full Cream Milk",
+        "unit": "liter",
+        "current_stock": 921.27,
+        "reorder_threshold": 50.0,
+        "below_reorder": false,
+        "days_cover": 38.5,
+        "avg_daily_usage": 23.927,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-017",
+        "ingredient_name": "Sugar",
+        "unit": "kg",
+        "current_stock": 191.94,
+        "reorder_threshold": 25.0,
+        "below_reorder": false,
+        "days_cover": 39.3,
+        "avg_daily_usage": 4.89,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-021",
+        "ingredient_name": "Paper Cups (200ml)",
+        "unit": "case",
+        "current_stock": 76.14,
+        "reorder_threshold": 5.0,
+        "below_reorder": false,
+        "days_cover": 39.6,
+        "avg_daily_usage": 1.923,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-006",
+        "ingredient_name": "Cardamom",
+        "unit": "kg",
+        "current_stock": 5.83,
+        "reorder_threshold": 2.0,
+        "below_reorder": false,
+        "days_cover": 39.8,
+        "avg_daily_usage": 0.146,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-001",
+        "ingredient_name": "Coorg Arabica Beans",
+        "unit": "kg",
+        "current_stock": 125.62,
+        "reorder_threshold": 10.0,
+        "below_reorder": false,
+        "days_cover": 44.3,
+        "avg_daily_usage": 2.833,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-005",
+        "ingredient_name": "Jaggery",
+        "unit": "kg",
+        "current_stock": 43.67,
+        "reorder_threshold": 20.0,
+        "below_reorder": false,
+        "days_cover": 44.6,
+        "avg_daily_usage": 0.979,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-012",
+        "ingredient_name": "Coconut Milk",
+        "unit": "liter",
+        "current_stock": 86.72,
+        "reorder_threshold": 15.0,
+        "below_reorder": false,
+        "days_cover": 44.8,
+        "avg_daily_usage": 1.935,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-020",
+        "ingredient_name": "Vanilla Extract",
+        "unit": "liter",
+        "current_stock": 2.16,
+        "reorder_threshold": 2.0,
+        "below_reorder": false,
+        "days_cover": 45.9,
+        "avg_daily_usage": 0.047,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-019",
+        "ingredient_name": "Cocoa Powder",
+        "unit": "kg",
+        "current_stock": 8.98,
+        "reorder_threshold": 4.0,
+        "below_reorder": false,
+        "days_cover": 46.5,
+        "avg_daily_usage": 0.193,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-022",
+        "ingredient_name": "Stirrer Sticks",
+        "unit": "case",
+        "current_stock": 45.65,
+        "reorder_threshold": 5.0,
+        "below_reorder": false,
+        "days_cover": 47.9,
+        "avg_daily_usage": 0.953,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-009",
+        "ingredient_name": "Toned Milk",
+        "unit": "liter",
+        "current_stock": 456.41,
+        "reorder_threshold": 40.0,
+        "below_reorder": false,
+        "days_cover": 48.8,
+        "avg_daily_usage": 9.344,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-015",
+        "ingredient_name": "Nannari Syrup",
+        "unit": "liter",
+        "current_stock": 14.66,
+        "reorder_threshold": 6.0,
+        "below_reorder": false,
+        "days_cover": 50.5,
+        "avg_daily_usage": 0.291,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-018",
+        "ingredient_name": "Palm Jaggery",
+        "unit": "kg",
+        "current_stock": 25.15,
+        "reorder_threshold": 10.0,
+        "below_reorder": false,
+        "days_cover": 52.1,
+        "avg_daily_usage": 0.483,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-007",
+        "ingredient_name": "Dry Ginger (Sukku)",
+        "unit": "kg",
+        "current_stock": 10.54,
+        "reorder_threshold": 3.0,
+        "below_reorder": false,
+        "days_cover": 55.4,
+        "avg_daily_usage": 0.19,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-003",
+        "ingredient_name": "Araku Valley Blend",
+        "unit": "kg",
+        "current_stock": 82.7,
+        "reorder_threshold": 5.0,
+        "below_reorder": false,
+        "days_cover": 57.6,
+        "avg_daily_usage": 1.435,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-010",
+        "ingredient_name": "Oat Milk",
+        "unit": "liter",
+        "current_stock": 165.26,
+        "reorder_threshold": 20.0,
+        "below_reorder": false,
+        "days_cover": 57.7,
+        "avg_daily_usage": 2.866,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-014",
+        "ingredient_name": "Badam Paste",
+        "unit": "kg",
+        "current_stock": 16.71,
+        "reorder_threshold": 5.0,
+        "below_reorder": false,
+        "days_cover": 58.6,
+        "avg_daily_usage": 0.285,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-016",
+        "ingredient_name": "Masala Chai Spice Mix",
+        "unit": "kg",
+        "current_stock": 29.03,
+        "reorder_threshold": 3.0,
+        "below_reorder": false,
+        "days_cover": 60.6,
+        "avg_daily_usage": 0.479,
+        "last_txn_date": "2026-07-31"
+      }
+    ],
+    "open_pos": [
+      {
+        "po_id": "PO-01559",
+        "supplier_name": "Organic Alternatives India",
+        "order_date": "2026-02-28",
+        "expected_delivery_date": "2026-03-03",
+        "total_amount": 4742.6,
+        "days_overdue": 210,
+        "is_overdue": true
+      },
+      {
+        "po_id": "PO-01654",
+        "supplier_name": "Kerala Spice Traders",
+        "order_date": "2026-03-08",
+        "expected_delivery_date": "2026-03-13",
+        "total_amount": 2924.47,
+        "days_overdue": 200,
+        "is_overdue": true
+      },
+      {
+        "po_id": "PO-00343",
+        "supplier_name": "Araku Valley Organics",
+        "order_date": "2026-03-06",
+        "expected_delivery_date": "2026-03-15",
+        "total_amount": 2207.56,
+        "days_overdue": 198,
+        "is_overdue": true
+      },
+      {
+        "po_id": "PO-00816",
+        "supplier_name": "Mysore Sweet Works",
+        "order_date": "2026-04-21",
+        "expected_delivery_date": "2026-04-24",
+        "total_amount": 6017.21,
+        "days_overdue": 158,
+        "is_overdue": true
+      },
+      {
+        "po_id": "PO-00791",
+        "supplier_name": "Mysore Sweet Works",
+        "order_date": "2026-05-31",
+        "expected_delivery_date": "2026-06-03",
+        "total_amount": 2464.5,
+        "days_overdue": 118,
+        "is_overdue": true
+      },
+      {
+        "po_id": "PO-00951",
+        "supplier_name": "Mysore Sweet Works",
+        "order_date": "2026-06-07",
+        "expected_delivery_date": "2026-06-09",
+        "total_amount": 4967.38,
+        "days_overdue": 112,
+        "is_overdue": true
+      },
+      {
+        "po_id": "PO-01314",
+        "supplier_name": "Coorg Coffee Estates",
+        "order_date": "2026-06-08",
+        "expected_delivery_date": "2026-06-15",
+        "total_amount": 6340.84,
+        "days_overdue": 106,
+        "is_overdue": true
+      },
+      {
+        "po_id": "PO-01057",
+        "supplier_name": "Mysore Sweet Works",
+        "order_date": "2026-07-22",
+        "expected_delivery_date": "2026-07-25",
+        "total_amount": 1400.5,
+        "days_overdue": 66,
+        "is_overdue": true
+      }
+    ],
+    "exceptions": [
+      {
+        "po_id": "PO-01001",
+        "supplier_name": "Chennai Packaging Co.",
+        "exception_type": "late",
+        "days_late": 2,
+        "expected_delivery_date": "2026-07-09",
+        "actual_delivery_date": "2026-07-11",
+        "total_amount": 6708.92
+      },
+      {
+        "po_id": "PO-00944",
+        "supplier_name": "Chikmagalur Plantations",
+        "exception_type": "late",
+        "days_late": 1,
+        "expected_delivery_date": "2026-07-04",
+        "actual_delivery_date": "2026-07-05",
+        "total_amount": 11375.26
+      },
+      {
+        "po_id": "PO-01050",
+        "supplier_name": "Chikmagalur Plantations",
+        "exception_type": "late",
+        "days_late": 2,
+        "expected_delivery_date": "2026-05-13",
+        "actual_delivery_date": "2026-05-15",
+        "total_amount": 7136.04
+      },
+      {
+        "po_id": "PO-01705",
+        "supplier_name": "Coorg Coffee Estates",
+        "exception_type": "late",
+        "days_late": 2,
+        "expected_delivery_date": "2026-04-01",
+        "actual_delivery_date": "2026-04-03",
+        "total_amount": 6930.19
+      },
+      {
+        "po_id": "PO-01021",
+        "supplier_name": "Kerala Spice Traders",
+        "exception_type": "late",
+        "days_late": 1,
+        "expected_delivery_date": "2026-03-22",
+        "actual_delivery_date": "2026-03-23",
+        "total_amount": 3224.71
+      },
+      {
+        "po_id": "PO-00427",
+        "supplier_name": "Organic Alternatives India",
+        "exception_type": "late",
+        "days_late": 2,
+        "expected_delivery_date": "2026-03-14",
+        "actual_delivery_date": "2026-03-16",
+        "total_amount": 9517.91
+      },
+      {
+        "po_id": "PO-01370",
+        "supplier_name": "Organic Alternatives India",
+        "exception_type": "late",
+        "days_late": 1,
+        "expected_delivery_date": "2026-03-14",
+        "actual_delivery_date": "2026-03-15",
+        "total_amount": 8523.05
+      },
+      {
+        "po_id": "PO-00142",
+        "supplier_name": "Mysore Sweet Works",
+        "exception_type": "late",
+        "days_late": 2,
+        "expected_delivery_date": "2026-02-10",
+        "actual_delivery_date": "2026-02-12",
+        "total_amount": 5046.9
+      },
+      {
+        "po_id": "PO-00466",
+        "supplier_name": "Nandini Dairy",
+        "exception_type": "late",
+        "days_late": 1,
+        "expected_delivery_date": "2026-02-08",
+        "actual_delivery_date": "2026-02-09",
+        "total_amount": 2959.69
+      }
+    ],
+    "demand_daily": [
+      {
+        "order_date": "2026-05-07",
+        "units": 87,
+        "revenue": 6815.0
+      },
+      {
+        "order_date": "2026-05-08",
+        "units": 77,
+        "revenue": 5755.0
+      },
+      {
+        "order_date": "2026-05-09",
+        "units": 130,
+        "revenue": 10720.0
+      },
+      {
+        "order_date": "2026-05-10",
+        "units": 136,
+        "revenue": 10840.0
+      },
+      {
+        "order_date": "2026-05-11",
+        "units": 64,
+        "revenue": 5230.0
+      },
+      {
+        "order_date": "2026-05-12",
+        "units": 80,
+        "revenue": 6140.0
+      },
+      {
+        "order_date": "2026-05-13",
+        "units": 82,
+        "revenue": 6490.0
+      },
+      {
+        "order_date": "2026-05-14",
+        "units": 88,
+        "revenue": 6635.0
+      }
+    ],
+    "top_products": [
+      {
+        "product_name": "Classic Filter Coffee",
+        "units": 98
+      },
+      {
+        "product_name": "Strong Decoction",
+        "units": 72
+      },
+      {
+        "product_name": "Masala Chai",
+        "units": 70
+      },
+      {
+        "product_name": "Degree Coffee",
+        "units": 59
+      },
+      {
+        "product_name": "Bella Kaapi (Jaggery)",
+        "units": 54
+      },
+      {
+        "product_name": "Cold Coffee",
+        "units": 38
+      }
+    ],
+    "activity": [],
+    "synced": [
+      {
+        "table_name": "lb_delivery_exceptions",
+        "synced_at": "2026-09-29 12:57:44.552242+00:00",
+        "row_count": 339
+      },
+      {
+        "table_name": "lb_inventory_position",
+        "synced_at": "2026-09-29 12:57:39.469254+00:00",
+        "row_count": 814
+      },
+      {
+        "table_name": "lb_open_purchase_orders",
+        "synced_at": "2026-09-29 12:57:41.878641+00:00",
+        "row_count": 147
+      },
+      {
+        "table_name": "lb_product_demand",
+        "synced_at": "2026-09-29 12:57:48.963121+00:00",
+        "row_count": 6324
+      }
+    ],
+    "_client_ms": 6611
+  },
+  "approve_utc": "2026-09-29T13:01:59.540880+00:00",
+  "approve_response": {
+    "ok": true,
+    "inserted": 3,
+    "po_updated": "PO-01057",
+    "lakebase": {
+      "updated_items": 3,
+      "po_closed": true,
+      "error": null
+    }
+  },
+  "after": {
+    "store": "Koramangala, Bangalore",
+    "store_id": "STR-001",
+    "source": "lakebase",
+    "server_time": "2026-09-29T13:02:15.332413Z",
+    "query_ms": 29.0,
+    "kpis": {
+      "below_reorder": 0,
+      "lowest_cover": {
+        "ingredient_id": "ING-002",
+        "ingredient_name": "Chikmagalur Robusta Beans",
+        "unit": "kg",
+        "current_stock": 69.93,
+        "reorder_threshold": 15.0,
+        "below_reorder": false,
+        "days_cover": 18.2,
+        "avg_daily_usage": 3.836,
+        "last_txn_date": "2026-07-31"
+      },
+      "overdue_pos": 7,
+      "overdue_value": 29664.56,
+      "late_deliveries": 9,
+      "avg_days_late": 1.6,
+      "units_7d": 744
+    },
+    "stock": [
+      {
+        "ingredient_id": "ING-002",
+        "ingredient_name": "Chikmagalur Robusta Beans",
+        "unit": "kg",
+        "current_stock": 69.93,
+        "reorder_threshold": 15.0,
+        "below_reorder": false,
+        "days_cover": 18.2,
+        "avg_daily_usage": 3.836,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-011",
+        "ingredient_name": "Almond Milk",
+        "unit": "liter",
+        "current_stock": 67.49,
+        "reorder_threshold": 15.0,
+        "below_reorder": false,
+        "days_cover": 28.2,
+        "avg_daily_usage": 2.395,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-004",
+        "ingredient_name": "Chicory",
+        "unit": "kg",
+        "current_stock": 45.06,
+        "reorder_threshold": 8.0,
+        "below_reorder": false,
+        "days_cover": 31.1,
+        "avg_daily_usage": 1.447,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-008",
+        "ingredient_name": "Full Cream Milk",
+        "unit": "liter",
+        "current_stock": 921.27,
+        "reorder_threshold": 50.0,
+        "below_reorder": false,
+        "days_cover": 38.5,
+        "avg_daily_usage": 23.927,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-017",
+        "ingredient_name": "Sugar",
+        "unit": "kg",
+        "current_stock": 191.94,
+        "reorder_threshold": 25.0,
+        "below_reorder": false,
+        "days_cover": 39.3,
+        "avg_daily_usage": 4.89,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-021",
+        "ingredient_name": "Paper Cups (200ml)",
+        "unit": "case",
+        "current_stock": 76.14,
+        "reorder_threshold": 5.0,
+        "below_reorder": false,
+        "days_cover": 39.6,
+        "avg_daily_usage": 1.923,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-006",
+        "ingredient_name": "Cardamom",
+        "unit": "kg",
+        "current_stock": 5.83,
+        "reorder_threshold": 2.0,
+        "below_reorder": false,
+        "days_cover": 39.8,
+        "avg_daily_usage": 0.146,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-001",
+        "ingredient_name": "Coorg Arabica Beans",
+        "unit": "kg",
+        "current_stock": 125.62,
+        "reorder_threshold": 10.0,
+        "below_reorder": false,
+        "days_cover": 44.3,
+        "avg_daily_usage": 2.833,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-012",
+        "ingredient_name": "Coconut Milk",
+        "unit": "liter",
+        "current_stock": 86.72,
+        "reorder_threshold": 15.0,
+        "below_reorder": false,
+        "days_cover": 44.8,
+        "avg_daily_usage": 1.935,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-020",
+        "ingredient_name": "Vanilla Extract",
+        "unit": "liter",
+        "current_stock": 2.16,
+        "reorder_threshold": 2.0,
+        "below_reorder": false,
+        "days_cover": 45.9,
+        "avg_daily_usage": 0.047,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-019",
+        "ingredient_name": "Cocoa Powder",
+        "unit": "kg",
+        "current_stock": 8.98,
+        "reorder_threshold": 4.0,
+        "below_reorder": false,
+        "days_cover": 46.5,
+        "avg_daily_usage": 0.193,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-022",
+        "ingredient_name": "Stirrer Sticks",
+        "unit": "case",
+        "current_stock": 45.65,
+        "reorder_threshold": 5.0,
+        "below_reorder": false,
+        "days_cover": 47.9,
+        "avg_daily_usage": 0.953,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-013",
+        "ingredient_name": "Rose Syrup",
+        "unit": "liter",
+        "current_stock": 23.18,
+        "reorder_threshold": 8.0,
+        "below_reorder": false,
+        "days_cover": 48.4,
+        "avg_daily_usage": 0.479,
+        "last_txn_date": "2026-09-29"
+      },
+      {
+        "ingredient_id": "ING-009",
+        "ingredient_name": "Toned Milk",
+        "unit": "liter",
+        "current_stock": 456.41,
+        "reorder_threshold": 40.0,
+        "below_reorder": false,
+        "days_cover": 48.8,
+        "avg_daily_usage": 9.344,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-015",
+        "ingredient_name": "Nannari Syrup",
+        "unit": "liter",
+        "current_stock": 14.66,
+        "reorder_threshold": 6.0,
+        "below_reorder": false,
+        "days_cover": 50.5,
+        "avg_daily_usage": 0.291,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-018",
+        "ingredient_name": "Palm Jaggery",
+        "unit": "kg",
+        "current_stock": 25.15,
+        "reorder_threshold": 10.0,
+        "below_reorder": false,
+        "days_cover": 52.1,
+        "avg_daily_usage": 0.483,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-007",
+        "ingredient_name": "Dry Ginger (Sukku)",
+        "unit": "kg",
+        "current_stock": 10.54,
+        "reorder_threshold": 3.0,
+        "below_reorder": false,
+        "days_cover": 55.4,
+        "avg_daily_usage": 0.19,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-003",
+        "ingredient_name": "Araku Valley Blend",
+        "unit": "kg",
+        "current_stock": 82.7,
+        "reorder_threshold": 5.0,
+        "below_reorder": false,
+        "days_cover": 57.6,
+        "avg_daily_usage": 1.435,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-010",
+        "ingredient_name": "Oat Milk",
+        "unit": "liter",
+        "current_stock": 165.26,
+        "reorder_threshold": 20.0,
+        "below_reorder": false,
+        "days_cover": 57.7,
+        "avg_daily_usage": 2.866,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-005",
+        "ingredient_name": "Jaggery",
+        "unit": "kg",
+        "current_stock": 57.67,
+        "reorder_threshold": 20.0,
+        "below_reorder": false,
+        "days_cover": 58.9,
+        "avg_daily_usage": 0.979,
+        "last_txn_date": "2026-09-29"
+      },
+      {
+        "ingredient_id": "ING-016",
+        "ingredient_name": "Masala Chai Spice Mix",
+        "unit": "kg",
+        "current_stock": 29.03,
+        "reorder_threshold": 3.0,
+        "below_reorder": false,
+        "days_cover": 60.6,
+        "avg_daily_usage": 0.479,
+        "last_txn_date": "2026-07-31"
+      },
+      {
+        "ingredient_id": "ING-014",
+        "ingredient_name": "Badam Paste",
+        "unit": "kg",
+        "current_stock": 18.86,
+        "reorder_threshold": 5.0,
+        "below_reorder": false,
+        "days_cover": 66.2,
+        "avg_daily_usage": 0.285,
+        "last_txn_date": "2026-09-29"
+      }
+    ],
+    "open_pos": [
+      {
+        "po_id": "PO-01559",
+        "supplier_name": "Organic Alternatives India",
+        "order_date": "2026-02-28",
+        "expected_delivery_date": "2026-03-03",
+        "total_amount": 4742.6,
+        "days_overdue": 210,
+        "is_overdue": true
+      },
+      {
+        "po_id": "PO-01654",
+        "supplier_name": "Kerala Spice Traders",
+        "order_date": "2026-03-08",
+        "expected_delivery_date": "2026-03-13",
+        "total_amount": 2924.47,
+        "days_overdue": 200,
+        "is_overdue": true
+      },
+      {
+        "po_id": "PO-00343",
+        "supplier_name": "Araku Valley Organics",
+        "order_date": "2026-03-06",
+        "expected_delivery_date": "2026-03-15",
+        "total_amount": 2207.56,
+        "days_overdue": 198,
+        "is_overdue": true
+      },
+      {
+        "po_id": "PO-00816",
+        "supplier_name": "Mysore Sweet Works",
+        "order_date": "2026-04-21",
+        "expected_delivery_date": "2026-04-24",
+        "total_amount": 6017.21,
+        "days_overdue": 158,
+        "is_overdue": true
+      },
+      {
+        "po_id": "PO-00791",
+        "supplier_name": "Mysore Sweet Works",
+        "order_date": "2026-05-31",
+        "expected_delivery_date": "2026-06-03",
+        "total_amount": 2464.5,
+        "days_overdue": 118,
+        "is_overdue": true
+      },
+      {
+        "po_id": "PO-00951",
+        "supplier_name": "Mysore Sweet Works",
+        "order_date": "2026-06-07",
+        "expected_delivery_date": "2026-06-09",
+        "total_amount": 4967.38,
+        "days_overdue": 112,
+        "is_overdue": true
+      },
+      {
+        "po_id": "PO-01314",
+        "supplier_name": "Coorg Coffee Estates",
+        "order_date": "2026-06-08",
+        "expected_delivery_date": "2026-06-15",
+        "total_amount": 6340.84,
+        "days_overdue": 106,
+        "is_overdue": true
+      }
+    ],
+    "exceptions": [
+      {
+        "po_id": "PO-01001",
+        "supplier_name": "Chennai Packaging Co.",
+        "exception_type": "late",
+        "days_late": 2,
+        "expected_delivery_date": "2026-07-09",
+        "actual_delivery_date": "2026-07-11",
+        "total_amount": 6708.92
+      },
+      {
+        "po_id": "PO-00944",
+        "supplier_name": "Chikmagalur Plantations",
+        "exception_type": "late",
+        "days_late": 1,
+        "expected_delivery_date": "2026-07-04",
+        "actual_delivery_date": "2026-07-05",
+        "total_amount": 11375.26
+      },
+      {
+        "po_id": "PO-01050",
+        "supplier_name": "Chikmagalur Plantations",
+        "exception_type": "late",
+        "days_late": 2,
+        "expected_delivery_date": "2026-05-13",
+        "actual_delivery_date": "2026-05-15",
+        "total_amount": 7136.04
+      },
+      {
+        "po_id": "PO-01705",
+        "supplier_name": "Coorg Coffee Estates",
+        "exception_type": "late",
+        "days_late": 2,
+        "expected_delivery_date": "2026-04-01",
+        "actual_delivery_date": "2026-04-03",
+        "total_amount": 6930.19
+      },
+      {
+        "po_id": "PO-01021",
+        "supplier_name": "Kerala Spice Traders",
+        "exception_type": "late",
+        "days_late": 1,
+        "expected_delivery_date": "2026-03-22",
+        "actual_delivery_date": "2026-03-23",
+        "total_amount": 3224.71
+      },
+      {
+        "po_id": "PO-00427",
+        "supplier_name": "Organic Alternatives India",
+        "exception_type": "late",
+        "days_late": 2,
+        "expected_delivery_date": "2026-03-14",
+        "actual_delivery_date": "2026-03-16",
+        "total_amount": 9517.91
+      },
+      {
+        "po_id": "PO-01370",
+        "supplier_name": "Organic Alternatives India",
+        "exception_type": "late",
+        "days_late": 1,
+        "expected_delivery_date": "2026-03-14",
+        "actual_delivery_date": "2026-03-15",
+        "total_amount": 8523.05
+      },
+      {
+        "po_id": "PO-00142",
+        "supplier_name": "Mysore Sweet Works",
+        "exception_type": "late",
+        "days_late": 2,
+        "expected_delivery_date": "2026-02-10",
+        "actual_delivery_date": "2026-02-12",
+        "total_amount": 5046.9
+      },
+      {
+        "po_id": "PO-00466",
+        "supplier_name": "Nandini Dairy",
+        "exception_type": "late",
+        "days_late": 1,
+        "expected_delivery_date": "2026-02-08",
+        "actual_delivery_date": "2026-02-09",
+        "total_amount": 2959.69
+      }
+    ],
+    "demand_daily": [
+      {
+        "order_date": "2026-05-07",
+        "units": 87,
+        "revenue": 6815.0
+      },
+      {
+        "order_date": "2026-05-08",
+        "units": 77,
+        "revenue": 5755.0
+      },
+      {
+        "order_date": "2026-05-09",
+        "units": 130,
+        "revenue": 10720.0
+      },
+      {
+        "order_date": "2026-05-10",
+        "units": 136,
+        "revenue": 10840.0
+      },
+      {
+        "order_date": "2026-05-11",
+        "units": 64,
+        "revenue": 5230.0
+      },
+      {
+        "order_date": "2026-05-12",
+        "units": 80,
+        "revenue": 6140.0
+      },
+      {
+        "order_date": "2026-05-13",
+        "units": 82,
+        "revenue": 6490.0
+      },
+      {
+        "order_date": "2026-05-14",
+        "units": 88,
+        "revenue": 6635.0
+      }
+    ],
+    "top_products": [
+      {
+        "product_name": "Classic Filter Coffee",
+        "units": 98
+      },
+      {
+        "product_name": "Strong Decoction",
+        "units": 72
+      },
+      {
+        "product_name": "Masala Chai",
+        "units": 70
+      },
+      {
+        "product_name": "Degree Coffee",
+        "units": 59
+      },
+      {
+        "product_name": "Bella Kaapi (Jaggery)",
+        "units": 54
+      },
+      {
+        "product_name": "Cold Coffee",
+        "units": 38
+      }
+    ],
+    "activity": [
+      {
+        "kind": "po_approved",
+        "detail": "PO-01057 (Mysore Sweet Works) invoice approved and closed",
+        "created_at": "2026-09-29 13:02:12.116857+00:00"
+      },
+      {
+        "kind": "receipt",
+        "detail": "+14 kg Jaggery received (stock now 57.67 kg)",
+        "created_at": "2026-09-29 13:02:12.103606+00:00"
+      },
+      {
+        "kind": "receipt",
+        "detail": "+6.39 liter Rose Syrup received (stock now 23.18 liter)",
+        "created_at": "2026-09-29 13:02:12.092775+00:00"
+      },
+      {
+        "kind": "receipt",
+        "detail": "+2.15 kg Badam Paste received (stock now 18.86 kg)",
+        "created_at": "2026-09-29 13:02:12.077971+00:00"
+      }
+    ],
+    "synced": [
+      {
+        "table_name": "lb_delivery_exceptions",
+        "synced_at": "2026-09-29 12:57:44.552242+00:00",
+        "row_count": 339
+      },
+      {
+        "table_name": "lb_inventory_position",
+        "synced_at": "2026-09-29 12:57:39.469254+00:00",
+        "row_count": 814
+      },
+      {
+        "table_name": "lb_open_purchase_orders",
+        "synced_at": "2026-09-29 12:57:41.878641+00:00",
+        "row_count": 147
+      },
+      {
+        "table_name": "lb_product_demand",
+        "synced_at": "2026-09-29 12:57:48.963121+00:00",
+        "row_count": 6324
+      }
+    ],
+    "_client_ms": 1212
+  }
+}

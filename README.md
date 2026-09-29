@@ -16,7 +16,7 @@ This solution gives the manager one governed assistant:
 
 - **Invoice check:** upload an invoice → it is parsed, matched to the PO, and every quantity and
   price discrepancy is flagged → the manager approves.
-- **Inventory:** current stock, below-reorder items, open and late POs, served from Lakebase.
+- **Live Dashboard:** stock cover, overdue and late POs, recent demand and an activity feed, served from Lakebase and refreshed every 10 s; approving an invoice updates it instantly.
 - **Questions in plain English:** sales, suppliers, and inventory from governed tables; recipes,
   SOPs, and food safety from the company's own documents, with citations.
 
@@ -54,7 +54,7 @@ real purchase order from raw file to app response.
 |---|---|---|---|
 | **Lakeflow** | Serverless declarative pipeline `kaapi_bricks_medallion`: 14 bronze + 14 silver + 7 gold. Run 065d6a70 completed | `databricks.yml`, `resources/kaapi_pipeline.pipeline.yml`, `src/pipeline/` | 01, 03 |
 | **Unity Catalog** | `kaapi_bricks` schema, raw/invoice volumes, table comments, lineage, app service-principal grants | pipeline, `scripts/generate_data.py` | 02 |
-| **Lakebase** | `lb_inventory_position`, `lb_open_purchase_orders`, `lb_delivery_exceptions`, `lb_product_demand`; the inventory panel reads `/api/lakebase/inventory/{store}`. Also chat history + answer cache | `scripts/sync_gold_to_lakebase.py`, `apps/main-chat-app/` | 04, 07 |
+| **Lakebase** | `lb_inventory_position`, `lb_open_purchase_orders`, `lb_delivery_exceptions`, `lb_product_demand`; the **Live Dashboard** (`/api/lakebase/dashboard`) reads all four, and invoice approvals write through to stock and open POs. Also chat history, activity feed + answer cache | `scripts/sync_gold_to_lakebase.py`, `apps/main-chat-app/` | 04, 07 |
 | **ML / GenAI** | Invoice document parsing + extraction through Unity AI Gateway (`kaapi_llm`); daily preparation plan (SQL + Lakebase + MCP weather/holiday advisor); MLflow `genai.evaluate` with Correctness, Relevance, Safety | `apps/main-chat-app/app.py`, `scripts/run_app_evaluation.py` | 06, 09, 11 |
 | **Genie Agent** | One space: 21 tables + SOP PDF volume, called through the **Agent mode** API so it can read documents | `resources/genie_space.json`, `scripts/create_genie_agent.py` | 05, 09 |
 | **Databricks App** | Store manager console: chat, preparation plan, inventory panel, invoice upload and approval | `apps/main-chat-app/` | 07, 11 |
@@ -80,6 +80,7 @@ structured data and documents.
 | `evidence/09_mlflow_evaluation_results.md` | MLflow run IDs, scores per iteration, per-question traces, failure analysis |
 | `evidence/10_business_kpi_calculations.md` | Value model: every assumption labeled, payback and ROI formulas |
 | `evidence/11_unity_ai_gateway.md` | Gateway services, grants, invoice / preparation plan / cache through the gateway, payload-log rows, a real HTTP 429 |
+| `evidence/12_live_store_dashboard.md` | Live Dashboard on Lakebase: write-through before/after test (stock +2.15/+6.39/+14, PO closed), 23–37 ms queries |
 
 ---
 

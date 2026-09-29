@@ -160,6 +160,11 @@ def init_db():
             latency_ms DOUBLE PRECISION,
             created_at TIMESTAMP DEFAULT NOW())""")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_qa_cache_time ON kaapi_mcp.qa_cache(created_at)")
+        # Store activity feed for the live dashboard (invoice approvals written through to Lakebase)
+        cur.execute("""CREATE TABLE IF NOT EXISTS kaapi_mcp.activity_log (
+            id BIGSERIAL PRIMARY KEY, store_id TEXT, kind TEXT, detail TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW())""")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_activity_store ON kaapi_mcp.activity_log(store_id, created_at DESC)")
         # Compare cache table
         cur.execute("""CREATE TABLE IF NOT EXISTS kaapi_mcp.compare_cache (
             id TEXT PRIMARY KEY, question TEXT NOT NULL, answer TEXT NOT NULL,
@@ -1198,7 +1203,54 @@ async def approve_invoice(request: Request):
             (approval_id, po_id, actual_delivery)
             VALUES ('{approval_id}', '{po_id}', CURRENT_DATE())""")
 
-    return {"ok": True, "inserted": inserted, "po_updated": po_id}
+    lakebase = write_through_approval(store_id, po_id, items)
+    return {"ok": True, "inserted": inserted, "po_updated": po_id, "lakebase": lakebase}
+
+
+def write_through_approval(store_id, po_id, items):
+    """Apply an approved invoice to the Lakebase serving copy immediately.
+
+    The Delta inserts above stay the system of record (gold picks them up on the next
+    pipeline refresh, and the next sync reloads Lakebase from gold). Updating Lakebase
+    here as well means the live dashboard and inventory panel move the moment the
+    manager approves, instead of waiting for pipeline + sync. Failures are reported,
+    not raised: the approval itself has already been recorded in Delta.
+    """
+    result = {"updated_items": 0, "po_closed": False, "error": None}
+    try:
+        cur = get_conn().cursor()
+        for item in items:
+            if not item.get("ingredient_id") or not item.get("invoice_qty"):
+                continue
+            qty = float(item["invoice_qty"])
+            cur.execute(
+                """UPDATE lb_inventory_position
+                   SET current_stock = ROUND((current_stock + %s)::numeric, 2)::double precision,
+                       below_reorder = (current_stock + %s) < reorder_threshold,
+                       days_cover = CASE WHEN avg_daily_usage > 0
+                                         THEN ROUND(((current_stock + %s) / avg_daily_usage)::numeric, 1)::double precision
+                                         ELSE days_cover END,
+                       last_txn_date = CURRENT_DATE
+                   WHERE store_id = %s AND ingredient_id = %s
+                   RETURNING ingredient_name, current_stock, unit""",
+                (qty, qty, qty, store_id, item["ingredient_id"]))
+            row = cur.fetchone()
+            if row:
+                result["updated_items"] += 1
+                cur.execute("INSERT INTO kaapi_mcp.activity_log (store_id, kind, detail) VALUES (%s, %s, %s)",
+                            (store_id, "receipt", f"+{qty:g} {row[2]} {row[0]} received (stock now {row[1]:g} {row[2]})"))
+        if po_id:
+            cur.execute("DELETE FROM lb_open_purchase_orders WHERE po_id = %s AND store_id = %s RETURNING supplier_name",
+                        (po_id, store_id))
+            row = cur.fetchone()
+            result["po_closed"] = row is not None
+            cur.execute("INSERT INTO kaapi_mcp.activity_log (store_id, kind, detail) VALUES (%s, %s, %s)",
+                        (store_id, "po_approved", f"{po_id}{' (' + row[0] + ')' if row else ''} invoice approved"
+                                                  f"{' and closed' if row else ''}"))
+    except Exception as e:
+        print(f"[Lakebase] write-through failed: {e}")
+        result["error"] = str(e)
+    return result
 
 
 @app.get("/api/inventory/{store_id}")
@@ -1235,6 +1287,93 @@ def get_lakebase_inventory(store_id: str):
         return {"store_id": store_id, "source": "lakebase", "inventory": rows}
     except Exception as e:
         return {"store_id": store_id, "source": "lakebase", "error": str(e), "inventory": []}
+
+
+_store_ids_lock = threading.Lock()
+_store_ids = None  # display name -> store_id, loaded once from the stores table
+
+
+def _store_id_for(location):
+    global _store_ids
+    with _store_ids_lock:
+        if _store_ids is None:
+            _store_ids = {r["name"]: r["store_id"]
+                          for r in _run_sql(f"SELECT store_id, name FROM {CATALOG_SCHEMA}.stores")}
+    return _store_ids.get(STORE_DB_NAMES.get(location, f"Kaapi Bricks {location}"))
+
+
+def _rows(cur, sql, params):
+    cur.execute(sql, params)
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+
+@app.get("/api/lakebase/dashboard")
+def lakebase_dashboard(store: str = "Koramangala, Bangalore"):
+    """Live store dashboard, served entirely from Lakebase.
+
+    Overdue days are computed at query time from today's date, and invoice approvals
+    are written through to Lakebase, so the numbers move without waiting for a sync.
+    """
+    store_id = _store_id_for(store)
+    if not store_id:
+        return JSONResponse({"error": f"Unknown store: {store}"}, status_code=404)
+    start = time.time()
+    try:
+        cur = get_conn().cursor()
+        stock = _rows(cur, """
+            SELECT ingredient_id, ingredient_name, unit, current_stock, reorder_threshold,
+                   below_reorder, days_cover, avg_daily_usage, last_txn_date
+            FROM lb_inventory_position WHERE store_id = %s
+            ORDER BY days_cover NULLS LAST""", (store_id,))
+        open_pos = _rows(cur, """
+            SELECT po_id, supplier_name, order_date, expected_delivery_date, total_amount,
+                   GREATEST(CURRENT_DATE - expected_delivery_date, 0) AS days_overdue,
+                   expected_delivery_date < CURRENT_DATE AS is_overdue
+            FROM lb_open_purchase_orders WHERE store_id = %s
+            ORDER BY expected_delivery_date""", (store_id,))
+        exceptions = _rows(cur, """
+            SELECT po_id, supplier_name, exception_type, days_late,
+                   expected_delivery_date, actual_delivery_date, total_amount
+            FROM lb_delivery_exceptions WHERE store_id = %s
+            ORDER BY COALESCE(actual_delivery_date, expected_delivery_date) DESC""", (store_id,))
+        demand_daily = _rows(cur, """
+            SELECT order_date, SUM(units)::int AS units, ROUND(SUM(revenue)::numeric, 0)::float AS revenue
+            FROM lb_product_demand WHERE store_id = %s
+            GROUP BY order_date ORDER BY order_date""", (store_id,))
+        top_products = _rows(cur, """
+            SELECT product_name, SUM(units)::int AS units
+            FROM lb_product_demand WHERE store_id = %s
+            GROUP BY product_name ORDER BY units DESC LIMIT 6""", (store_id,))
+        activity = _rows(cur, """
+            SELECT kind, detail, created_at FROM kaapi_mcp.activity_log
+            WHERE store_id = %s ORDER BY created_at DESC LIMIT 8""", (store_id,))
+        try:
+            synced = _rows(cur, "SELECT table_name, synced_at, row_count FROM lb_sync_log ORDER BY table_name", ())
+        except Exception:  # sync log absent until the sync script has run once
+            synced = []
+        query_ms = round((time.time() - start) * 1000, 1)
+    except Exception as e:
+        return JSONResponse({"error": f"Lakebase unavailable: {e}"}, status_code=503)
+
+    overdue = [p for p in open_pos if p["is_overdue"]]
+    late = [e for e in exceptions if e["exception_type"] == "late"]
+    return json.loads(json.dumps({
+        "store": store, "store_id": store_id, "source": "lakebase",
+        "server_time": datetime.utcnow().isoformat() + "Z", "query_ms": query_ms,
+        "kpis": {
+            "below_reorder": sum(1 for s in stock if s["below_reorder"]),
+            "lowest_cover": stock[0] if stock else None,
+            "overdue_pos": len(overdue),
+            "overdue_value": round(sum(p["total_amount"] or 0 for p in overdue), 2),
+            "late_deliveries": len(late),
+            "avg_days_late": round(sum(e["days_late"] or 0 for e in late) / len(late), 1) if late else 0,
+            "units_7d": sum(d["units"] for d in demand_daily),
+        },
+        "stock": stock, "open_pos": open_pos, "exceptions": exceptions[:10],
+        "demand_daily": demand_daily, "top_products": top_products,
+        "activity": activity, "synced": synced,
+    }, default=str))
 
 
 # Serve static files and index.html

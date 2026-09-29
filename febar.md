@@ -29,6 +29,8 @@ credential file were left out.
 - [x] MCP operations advisor now called (through the gateway), fixing the "prepare for today"
       answer (same-weekday baseline, live weather)
 - [x] App resources cleaned: retired KA/MAS endpoints and unused model endpoints removed
+- [x] **Store Live Dashboard** on Lakebase (all 4 `lb_*` tables read), 10 s refresh, and invoice
+      approvals written through to Lakebase with an activity feed; before/after test (evidence/12)
 
 ## Evidence (text, committed)
 

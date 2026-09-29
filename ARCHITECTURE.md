@@ -60,6 +60,7 @@ Everything runs in one Databricks workspace on serverless compute, and one Unity
 | Intelligence | Semantic answer cache | Exact match, then embedding similarity ≥ 0.95 (embeddings via `kaapi_embed`), 48 h TTL, per store | ✅ | 11 |
 | Intelligence | MCP ops advisor `kaapi-ops-mcp` | Tool `operations_advisor`: live weather (Open-Meteo) + 2026 holiday calendar + plan; called through MCP service `kaapi_ops_advisor`; its own LLM call goes through `kaapi_llm` | ✅ | 11 |
 | App | `apps/main-chat-app` | FastAPI backend + single-page React UI | ✅ ACTIVE | 07 |
+| App | Store Live Dashboard | Lakebase-only view, 10 s polling; invoice approvals written through to Lakebase + activity feed | ✅ | 12 |
 | Quality | `scripts/run_genie_evaluation.py` | MLflow eval of Genie directly (serverless job) | ✅ runs 1–3 | 09 |
 | Quality | `scripts/run_app_evaluation.py` | MLflow eval of the **deployed app** end to end | ✅ run 5 | 09 |
 | Governance | Unity Catalog grants, lineage, comments | App SP granted directly, not through groups | ✅ | 02, 07 |
@@ -124,14 +125,15 @@ stays the system of record.
 
 | Table (`public`) | Rows | Copied from | Read by | Used? |
 |---|---:|---|---|---|
-| `lb_inventory_position` | 814 | `gold_inventory_position` | UI inventory panel (`GET /api/lakebase/inventory/{store}`), and the preparation plan's lowest-stock-cover lines | ✅ |
-| `lb_open_purchase_orders` | 147 | `gold_open_purchase_orders` | preparation plan's overdue-PO lines | ✅ |
-| `lb_delivery_exceptions` | 339 | `gold_delivery_exceptions` | nothing in the app today | ⚠️ synced, unused |
-| `lb_product_demand` | 6,324 | `gold_product_demand` (last 7 days of data) | nothing in the app today | ⚠️ synced, unused |
+| `lb_inventory_position` | 814 | `gold_inventory_position` | **Live Dashboard** (tile + stock-cover bars), invoice-screen inventory panel, preparation plan · **written through** on invoice approval | ✅ |
+| `lb_open_purchase_orders` | 147 | `gold_open_purchase_orders` | **Live Dashboard** (tile + table, days overdue computed at query time), preparation plan · approved PO **deleted** on approval | ✅ |
+| `lb_delivery_exceptions` | 339 | `gold_delivery_exceptions` | **Live Dashboard** (late-deliveries tile + recent-exceptions table) | ✅ |
+| `lb_product_demand` | 6,324 | `gold_product_demand` (latest 8 days of data) | **Live Dashboard** (units tile, daily columns, top drinks) | ✅ |
+| `lb_sync_log` | 4 | written by the sync script | Live Dashboard status card ("synced from gold") | ✅ |
 
-Delivery-exception and demand answers come from Genie (over gold) or from SQL on gold (the
-preparation plan's weekday baseline needs the full history, which the 7-day Lakebase copy does
-not hold). The two unused tables are candidates for a new UI panel or for removal from the sync.
+The preparation plan's weekday baseline still uses SQL on gold, because it needs the full sales
+history and the Lakebase copy holds only the latest 8 days. Chat answers about delivery
+exceptions come from Genie over gold.
 
 **How data gets there:** `scripts/sync_gold_to_lakebase.py`, run after the pipeline.
 1. `CREATE TABLE IF NOT EXISTS` for the four `lb_*` tables.
@@ -150,6 +152,7 @@ Tables the app creates and writes itself (`init_db()` on start-up), in schema `k
 | `messages` | 646 | every user question and every answer (with MLflow `trace_id`) | `GET /api/conversations/{id}/messages` | chat transcript |
 | `feedback` | 1 | `POST /api/feedback` (👍/👎 + `trace_id`) | `GET /api/stats` | ties user feedback to an MLflow trace |
 | `qa_cache` | 5 | after each fresh non-preparation answer: question, answer, 1024-dim embedding (via `kaapi_embed`), store, latency | every chat request: exact match, then cosine ≥ 0.95, same store, < 48 h | semantic answer cache; cut a repeat answer from 25.3 s to 1.1 s (evidence/11) |
+| `activity_log` | — | invoice approval (one row per received item + one per closed PO) | Live Dashboard activity feed | ✅ store event feed (evidence/12) |
 | `compare_cache` | 0 | nothing | nothing | ⚠️ leftover from the retired model-compare feature |
 | `admin_config` | 1 | seeded on start-up | nothing | ⚠️ leftover (`operations_model` setting) |
 
@@ -179,10 +182,13 @@ written to `qa_cache`, because they depend on today's weather.
 
 ### 4.5 Limits
 
-- ⚠️ **Freshness:** `lb_*` tables change only when the pipeline runs and the sync is run after
-  it. An approved invoice therefore does not move the Lakebase stock number until the next sync
-  (planned fix: write-through on approval, §9.6).
-- ⚠️ Two synced tables and two app tables are unused (see above).
+- ✅ **Write-through on approval (built, evidence/12).** An approved invoice updates
+  `lb_inventory_position` and `lb_open_purchase_orders` in the same request, so the Live
+  Dashboard moves within one 10 s refresh. Delta stays the system of record.
+- ⚠️ **Sync ordering:** if the sync runs after an approval but *before* the next pipeline run, it
+  reloads the pre-approval gold value until the pipeline catches up (gold unions
+  `app_inventory_receipts`). Run the sync only as a task after the pipeline.
+- ⚠️ Two app tables (`compare_cache`, `admin_config`) are unused leftovers.
 - ⚠️ Production would use Lakebase synced tables, or a scheduled job task after the pipeline,
   instead of the manual truncate-and-reload script.
 
@@ -195,7 +201,8 @@ written to `qa_cache`, because they depend on today's weather.
 | `POST /api/chat` | Chat (SSE, single final event) | preparation questions: SQL on gold + Lakebase + MCP service; other questions: Lakebase cache → Genie Agent → `products` | Lakebase messages and cache (embeddings via `kaapi_embed`); Delta `inference_logs`; MLflow trace |
 | `POST /api/parse-invoice` | Upload and reconcile an invoice | `kaapi_llm` (document parsing), `suppliers`, `purchase_orders`, `po_line_items` | the uploaded file in the `invoices/` volume |
 | `POST /api/approve-invoice` | Manager approves reconciled lines | — | `app_inventory_receipts`, `app_po_approvals` |
-| `GET /api/lakebase/inventory/{store}` | Inventory panel (UI uses this) | Lakebase `lb_inventory_position` | — |
+| `GET /api/lakebase/dashboard?store=` | **Live Dashboard** (polled every 10 s) | Lakebase: 4 `lb_*` tables, `lb_sync_log`, `activity_log` | — |
+| `GET /api/lakebase/inventory/{store}` | Invoice-screen inventory panel | Lakebase `lb_inventory_position` | — |
 | `GET /api/inventory/{store}` | Same data from Delta gold (backup path) | `gold_inventory_position` | — |
 | `GET /api/conversations…`, `POST …/clear` | Chat history | Lakebase | Lakebase |
 | `POST /api/feedback` | 👍/👎 on an answer | — | Lakebase `feedback` |
@@ -433,8 +440,7 @@ flowchart TD
 | Change | Why |
 |---|---|
 | Gateway policies (UI-only): built-in jailbreak / unsafe-content on `kaapi_llm`; optional `kaapi_guard` strict lane for question-level policies | Guardrails; policy refusal demo beat |
-| Lakebase write-through on invoice approval | The inventory panel updates the moment the manager approves |
-| Use or drop `lb_delivery_exceptions` / `lb_product_demand`; remove the unused `compare_cache` / `admin_config` tables | Every synced or created Lakebase table has a reader |
+| Remove the unused `compare_cache` / `admin_config` Lakebase tables | Every Lakebase table has a reader |
 | Narrow `MODIFY` to the two app-write tables | Least privilege |
 | Schedule the sync after the pipeline (job task) or use Lakebase synced tables | Removes the manual sync step |
 | Cost-per-store query on gateway usage system tables | Replaces the assumed AI cost with a measured one |
@@ -473,7 +479,7 @@ flowchart TD
 
 | Limit | Impact | Plan |
 |---|---|---|
-| ⚠️ Lakebase freshness depends on a manual sync | approval not visible in the panel until the next sync | write-through (§9.6) |
+| ⚠️ Lakebase sync is a manual snapshot script | a sync run before the pipeline can briefly undo a written-through approval | run sync as a job task after the pipeline, or Lakebase synced tables |
 | ⚠️ Agent mode latency 23–40 s uncached; preparation plan ~36 s | slow first answer | semantic cache for Q&A; preparation plans are deliberately not cached (weather changes) |
 | ⚠️ Gateway rate-limit changes take >20 s to propagate | a limit change is not instant | observed in evidence/11 §4.4; plan changes ahead of demos |
 | ⚠️ No gateway policies attached yet | no content guardrails on model calls | attach in the UI (§9.6) |
@@ -502,3 +508,4 @@ app declared stale and unused resources (removed); `user_api_scopes` was empty (
 | `evidence/09_mlflow_evaluation_results.md` | 5 evaluation runs, per-question results |
 | `evidence/10_business_kpi_calculations.md` | value assumptions and formulas |
 | `evidence/11_unity_ai_gateway.md` + `raw/11_*` | gateway services, grants, invoice / preparation / cache through the gateway, payload logs, a real 429 |
+| `evidence/12_live_store_dashboard.md` + `raw/12_*` | Live Dashboard on Lakebase; write-through before/after test; query times |

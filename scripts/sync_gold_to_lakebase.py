@@ -137,12 +137,21 @@ lb_exec("""CREATE TABLE IF NOT EXISTS lb_product_demand (
 )""")
 print("  Tables ready.")
 
+# Sync bookkeeping, shown on the app's live dashboard ("last synced from gold").
+lb_exec("""CREATE TABLE IF NOT EXISTS lb_sync_log (
+  table_name TEXT PRIMARY KEY, source_table TEXT, row_count INTEGER, synced_at TIMESTAMPTZ
+)""")
+
 # The app reads these tables as its own service principal, so it needs SELECT on them.
+# It also writes approved invoices through to stock and open POs (live dashboard).
 try:
     app_sp = w.apps.get(args.app_name).service_principal_client_id
-    for t in ("lb_inventory_position", "lb_open_purchase_orders", "lb_delivery_exceptions", "lb_product_demand"):
+    for t in ("lb_inventory_position", "lb_open_purchase_orders", "lb_delivery_exceptions",
+              "lb_product_demand", "lb_sync_log"):
         lb_exec(f'GRANT SELECT ON {t} TO "{app_sp}"')
-    print(f"  Granted SELECT on lb_* tables to app {args.app_name}'s service principal.")
+    for t in ("lb_inventory_position", "lb_open_purchase_orders"):
+        lb_exec(f'GRANT UPDATE, DELETE ON {t} TO "{app_sp}"')
+    print(f"  Granted SELECT (and UPDATE/DELETE for write-through) to app {args.app_name}'s service principal.")
 except Exception as e:
     print(f"  WARNING: could not grant app access ({e}); grant SELECT on lb_* tables manually.")
 
@@ -177,6 +186,11 @@ def sync_table(gold_table, lb_table, extra_where=""):
 
     if batch:
         cur.executemany(insert_sql, batch)
+    lb_exec("""INSERT INTO lb_sync_log (table_name, source_table, row_count, synced_at)
+               VALUES (%s, %s, %s, NOW())
+               ON CONFLICT (table_name) DO UPDATE
+               SET source_table = EXCLUDED.source_table, row_count = EXCLUDED.row_count, synced_at = NOW()""",
+            (lb_table, gold_table, len(batch)))
     print(f"  Synced {len(batch):,} rows.")
     return len(batch)
 
