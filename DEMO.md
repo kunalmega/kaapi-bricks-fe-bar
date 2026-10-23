@@ -74,9 +74,12 @@ when the shelf is empty."
 
 **SHOW:** 📊 Live Dashboard, Koramangala
 1. Top tiles: items below reorder, **8 overdue POs worth ₹31,065**, late deliveries, units sold.
-2. Stock cover by ingredient: ⛔ below reorder · ⚠ under 21 days · ✓ OK.
-3. The overdue-PO table, with days late computed live.
-4. The status card: LIVE, "updated a few seconds ago", Lakebase query time of a few tens of
+2. **Today's action plan**: written at 05:30 by the daily job, from SQL facts, with "23/23 numbers
+   verified". Read action 1 aloud.
+3. **Today's demand forecast**: the ML model vs the usual for this weekday.
+4. Stock cover by ingredient: ⛔ below reorder · ⚠ under 21 days · ✓ OK.
+5. The overdue-PO table, with days late computed live.
+6. The status card: LIVE, "updated a few seconds ago", Lakebase query time of a few tens of
    milliseconds.
 
 **TELL (impact):** "She sees the problem days before it hits the counter and chases the supplier
@@ -126,7 +129,8 @@ the dashboard moved without waiting for a pipeline run."
 that's gut feel and a weather app."
 
 **SHOW:** main chat → "How should I prepare for today?"
-- The same-weekday baseline comes from gold; stock and overdue POs come from Lakebase.
+- The per-drink baseline is the **ML forecast** (UC model `demand_forecaster@champion`, 9.3% more
+  accurate than the same-weekday average); stock and overdue POs come from Lakebase.
 - Live weather and holidays come from the operations advisor, through the **gateway MCP service**.
 - Captured on a Tuesday (evidence/11): thunderstorm, 21 mm → Filter Coffee 12.1 → 14–15, Cold
   Coffee 3.6 → 2–3. Point at the "Store data used" block.
@@ -135,7 +139,8 @@ that's gut feel and a weather app."
 **TELL (impact):** "Less milk thrown away on slow days, and no running out on busy ones. A new
 manager plans like an experienced one."
 
-**TELL (technology):** "Her own history from **gold Delta** sets the numbers; **Lakebase** adds
+**TELL (technology):** "A forecasting model trained on her own history in **gold Delta**,
+registered in **Unity Catalog** and scored every morning, sets the numbers; **Lakebase** adds
 current stock; the weather comes through an **MCP service on the gateway**. **MLflow** traces
 every step."
 
@@ -149,12 +154,13 @@ every step."
 1. The test set: 10 store-manager questions, 32 expected facts.
 2. Run 1: Correctness 0.00. The Chat-mode API can't read documents, so it declined; it didn't make
    anything up (Safety 1.00).
-3. After the switch to Genie Agent mode: 0.50. End to end through the app, with prices from the
-   governed products table: **0.70**, Relevance 1.00, Safety 1.00.
-4. Open one failed case and read the judge's reason (evidence/09).
+3. After the switch to Genie Agent mode: 0.50. With prices from the governed products table: 0.70.
+4. Open `eval_history` (or notebook 07): the daily job now scores the app every morning as a
+   service principal. Oct 23: **0.90, 1.00, 1.00**, Relevance 1.00, Safety 1.00.
 
-**TELL:** "We found the root cause, fixed it and measured again. We're below our 0.80 target and
-we know why. In a pilot, this test set becomes your quality gate before any change ships."
+**TELL:** "We found each root cause, fixed it and measured again, and now it's measured every
+morning. Ten questions is a small set, so the next step is 30+ from real traces. In a pilot, this
+becomes your quality gate before any change ships."
 
 ---
 

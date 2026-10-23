@@ -97,6 +97,9 @@ Generate a preparation plan with:
 
 RULES:
 - If store_data is provided, use those ACTUAL numbers for product forecasts.
+- If store_data has an "ML demand forecast" section, use those model units as the per-drink
+  baseline (show the same-weekday average next to them), then adjust ONLY for weather, because
+  the model already accounts for weekday, weekend, holiday and recent demand. Say so in the plan.
 - If no store_data, provide general weather/calendar guidance only.
 - nearby_festivals are NOT on the target date. Only use if is_holiday_on_this_date is true."""
 

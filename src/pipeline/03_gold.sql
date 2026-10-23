@@ -6,6 +6,7 @@
 
 -- 1. Per-store daily operational KPIs.
 CREATE OR REFRESH MATERIALIZED VIEW gold_store_daily_kpis
+WITH ROW FILTER ${row_filter_fn} ON (store_id)
 COMMENT 'Per-store daily KPIs: orders, revenue, discount, refunds, units, AOV.'
 AS
 WITH item_units AS (
@@ -34,6 +35,7 @@ GROUP BY o.store_id, o.order_date;
 -- 2. Current inventory position per store x ingredient (⭐ served via Lakebase).
 -- Unions the pipeline silver MV (historical) with app_inventory_receipts (live app writes).
 CREATE OR REFRESH MATERIALIZED VIEW gold_inventory_position
+WITH ROW FILTER ${row_filter_fn} ON (store_id)
 COMMENT 'Current stock per store x ingredient with below-reorder flag and days of cover.'
 AS
 WITH pos AS (
@@ -65,6 +67,7 @@ JOIN ingredients i ON p.ingredient_id = i.ingredient_id;
 -- 3. Open (pending) purchase orders with overdue flag (⭐ Lakebase).
 -- Excludes POs that the app has approved via app_po_approvals.
 CREATE OR REFRESH MATERIALIZED VIEW gold_open_purchase_orders
+WITH ROW FILTER ${row_filter_fn} ON (store_id)
 COMMENT 'Pending supplier POs with overdue flag and days overdue.'
 AS
 WITH approved AS (
@@ -82,6 +85,7 @@ WHERE po.status = 'pending'
 
 -- 4. Delivery exceptions: late or cancelled POs (⭐ Lakebase).
 CREATE OR REFRESH MATERIALIZED VIEW gold_delivery_exceptions
+WITH ROW FILTER ${row_filter_fn} ON (store_id)
 COMMENT 'Late or cancelled supplier deliveries with days late.'
 AS
 SELECT
@@ -97,6 +101,7 @@ WHERE po.status = 'cancelled'
 
 -- 5. Daily product demand per store with 28-day rolling average (⭐ Lakebase subset).
 CREATE OR REFRESH MATERIALIZED VIEW gold_product_demand
+WITH ROW FILTER ${row_filter_fn} ON (store_id)
 COMMENT 'Daily units/revenue per store x product with 28-day rolling average demand.'
 AS
 WITH daily AS (
@@ -133,6 +138,7 @@ GROUP BY s.supplier_id, s.name, s.category, s.reliability_score;
 
 -- 7. Ingredient waste summary per store.
 CREATE OR REFRESH MATERIALIZED VIEW gold_waste_summary
+WITH ROW FILTER ${row_filter_fn} ON (store_id)
 COMMENT 'Ingredient waste quantity and cost per store.'
 AS
 SELECT

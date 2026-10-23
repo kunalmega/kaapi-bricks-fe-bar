@@ -1,15 +1,19 @@
 # Roleplay Prep — Kaapi Bricks
 
 Two personas in one session:
-- **Business stakeholder** (the executive who funds it): cares about value, cost, risk, time to value.
-- **Technical stakeholder** (the architect or data lead who must run it): cares about architecture,
+- **Business stakeholder**, played as the **COO** (accountable for stockouts and waste) with the
+  **CFO's** questions in mind (invoice leakage, payback). Cares about value, cost, risk, time to value.
+- **Technical stakeholder**, the **Head of Data Platform** who must run it: cares about architecture,
   data quality, security, integration, and failure handling.
+
+Name who owns each number: stockouts and waste → COO; invoice leakage and payback → CFO; adoption
+across 37 stores → Head of Store Operations; platform cost and reliability → Head of Data Platform.
 
 Rule of thumb: answer the business persona in one or two sentences with a number and a decision;
 answer the technical persona with the mechanism, the trade-off, and what you'd change in production.
 When a question spans both, give the business line first, then "for the platform team: …".
 
-Be explicit about what is **measured** (from `evidence/`) and what is an **assumption**
+Be explicit about what is **measured** (from the executed `notebooks/` and `evidence/`) and what is an **assumption**
 (from `evidence/10`).
 
 ---
@@ -49,7 +53,7 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
 | 2. See | "Today she finds out she's low when the shelf is empty." | Live Dashboard: 8 overdue POs worth ₹31,065, stock cover per ingredient, late deliveries | "She sees the problem days earlier and chases the supplier before the stockout. Served from Lakebase in milliseconds." |
 | 3. Act | "A supplier invoice arrives on paper." | Upload → governed read through the Unity AI Gateway (`kaapi_llm`) → PO match → 4 flagged lines + 1 clean match → approve → **the dashboard updates** | "The system compares; the manager decides. Every discrepancy is recorded. This is the leakage and labour line of the business case." |
 | 4. Plan | "How should Priya prepare for today?" | Same-weekday baseline (SQL) + Lakebase stock → gateway MCP service (live weather, holidays) → plan | "Her own history sets the numbers; today's weather adjusts them. Less waste, ready for the rush." |
-| 5. Evaluation | "How do we know it's right?" | MLflow: 0.00 → 0.50 → 0.70 Correctness (app end to end), Relevance 1.00, Safety 1.00; a failed case with the judge's reason | "We found the root cause and fixed it. We're below our 0.80 target and we know why. This becomes your quality gate." |
+| 5. Evaluation | "How do we know it's right?" | MLflow: 0.00 → 0.50 → 0.70 → 0.90 / 1.00 / 1.00 Correctness (app end to end, `eval_history`), Relevance 1.00, Safety 1.00; a failed case with the judge's reason | "We found the root cause and fixed it. We're below our 0.80 target and we know why. This becomes your quality gate." |
 | 6. Architecture | "One journey, not six demos." | UC lineage, PO-00006 trace raw → app, gateway services + payload log | "Delta computes, Lakebase serves, Genie answers, the gateway governs." |
 | 7. Close | "What it's worth and how to prove it." | Value table by capability, with assumptions | "Next step is a six-week, five-store pilot with a timed baseline." |
 
@@ -64,11 +68,10 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
   every 15 minutes during store hours."
 - **Technical:** "Raw files land in a Unity Catalog volume; Lakeflow Auto Loader ingests them into
   bronze; silver and gold are materialized views. The full run took ~61 s serverless (evidence/01).
-  Lakebase is loaded by a truncate-and-reload script after each run, and invoice approvals write
-  through to Lakebase immediately. One caveat: if the sync runs after an approval but before the
-  next pipeline refresh, it reloads the pre-approval value until the pipeline catches up. For
-  production I'd make the sync a job task that runs right after the pipeline, or move to Lakebase
-  synced tables so there is no custom sync code."
+  Invoice approvals write through to Lakebase immediately. The reload of Lakebase is a task in the
+  daily job `kaapi_daily_ops`, right after the pipeline, so it can never run ahead of the pipeline
+  and undo an approval. For production I'd move to Lakebase synced tables so there is no custom
+  sync code, and run the pipeline on a shorter schedule during store hours."
 
 ### "Why Lakebase? Why not read gold directly?"
 - **Business:** "Managers get instant screens all day without us paying for a large analytics
@@ -92,20 +95,51 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
   Unity AI Gateway, which returns the structured fields (18.4 s server time, all 4 planted
   discrepancies caught, evidence/11). The PO comparison itself is deterministic code, not the model."
 
-### "Your correctness is only 0.70"
-- **Business:** "Yes, and I'm showing you on purpose. It was 0.00 on the first run; we found the
-  cause, fixed it, and it's now 0.70 measured through the deployed app. Safety is 1.00: when it doesn't know, it says
-  so instead of guessing. We won't roll out below the 0.80 target; the pilot includes getting there."
-- **Technical:** "Baseline 0.00: we called Genie through the Chat-mode API, which only queries
-  tables, so all SOP questions were declined. We switched to the Agent mode API, which reads the
-  attached PDF volume; Correctness went to 0.50, Relevance 1.00. Most misses were facts the model left out, like menu
-  prices. A prompt change didn't fix that, so we moved prices to a deterministic lookup against the
-  governed `products` table. Measured end to end through the app, Correctness is 0.70. Of the three
-  remaining failures, one is a judge error and two missed one secondary fact each. With 10 questions,
-  run-to-run variation is about ±0.1–0.2, so the next step is a 30+ question set and a
-  must-have/nice-to-have rubric.
-  Latest numbers are in evidence/09. We dropped the groundedness scorer because Agent mode doesn't
-  return the retrieved chunks, so a groundedness score would have been meaningless."
+### "How do you know the AI is right?" / "Is 1.00 too good to be true?"
+- **Business:** "We measure it every morning. The same 10 store-manager questions are scored by
+  MLflow judges against the live app; today's three runs scored 0.90, 1.00 and 1.00 on correctness,
+  with safety at 1.00. In September it was 0.00, then 0.70, while we fixed root causes. We'd rerun
+  this on your own questions in the pilot; 0.80 is a go/no-go criterion."
+- **Technical:** "Ten questions is small: one answer moves the score by 0.10, so I don't read 1.00
+  as 'perfect'. What matters is that it runs daily as a service principal and lands in
+  `eval_history`, so a regression is visible the next morning. History: 0.00 (Chat-mode API can't
+  read documents) → 0.50 (Agent mode) → 0.70 (prices from the governed products table instead of
+  the model) → 0.90–1.00 now. Next step: a 30+ question set from production traces with a
+  must-have / nice-to-have rubric. We dropped the groundedness scorer because Agent mode doesn't
+  return retrieved chunks, so it would have been a meaningless number." (notebook 07, evidence/09)
+
+### "Can a store manager see other stores' numbers?"
+- **Business:** "No. Each manager is mapped to their store, and the platform enforces it, in the
+  chat assistant and in any SQL tool, not just in our app's screens."
+- **Technical:** "A Unity Catalog row filter, `store_row_filter`, is declared on 10 store-keyed
+  silver and gold tables in the pipeline SQL. A `store_access` table maps principals to stores; HQ
+  and the pipeline and app identities get `*`. Proven in notebook 02: the Koramangala manager, a
+  real service principal, sees 1 store and 6,606 orders; HQ sees 200,000; and Genie answers the
+  same question with all stores for HQ and only STR-001 for the manager. Two honest gaps: the
+  app currently calls Genie as its own service principal and scopes by the selected store, so the
+  production step is on-behalf-of-user Genie calls; and Lakebase copies would get Postgres RLS."
+
+### "Where does the forecast come from? Why trust it?"
+- **Business:** "It learns each store's weekday, weekend and holiday patterns from sales history.
+  On the last two weeks it was 9% more accurate than the 'average of past Saturdays' rule managers
+  use today. Weather is then a separate, visible adjustment."
+- **Technical:** "Gradient boosting with a Poisson loss on store × drink × day, features: store,
+  drink, weekday, weekend, country holiday, lag-7, 28-day mean, same-weekday mean. 14-day holdout:
+  MAE 1.42 vs 1.57 for the same-weekday baseline and 1.49 for the 28-day mean. It's logged in
+  MLflow and registered in Unity Catalog; a retrain only becomes `@champion` if it beats the
+  baseline. The daily job scores 7 days ahead into `ml_demand_forecast`, synced to Lakebase.
+  Honest limit: the synthetic history ends in May, so today's lag features are stale; with live
+  POS data they're as of yesterday." (notebook 05)
+
+### "Can the morning brief make up numbers?"
+- **Business:** "It can try, and we catch it. Every number in the brief is checked against the
+  facts we computed; if one doesn't match, the brief is rewritten before anyone sees it."
+- **Technical:** "SQL builds the facts per store (low stock, overdue POs, forecast, waste). The LLM
+  through `kaapi_llm` only ranks and words them. A deterministic check extracts every number and
+  matches it to the facts (±0.5 for rounding). In the first run 11 of 37 briefs failed, mostly the
+  model adding POs up itself, and were rewritten; the prompt now forbids arithmetic. Latest run:
+  882 of 884 numbers verified, and the two misses are logged, not hidden. Each brief has an MLflow
+  trace." (notebook 06)
 
 ### Agent mode latency (~23 s) and the cache
 - **Business:** "Answers from documents take about 20 seconds today; answers from data are
@@ -150,8 +184,10 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
   principal with Unity Catalog grants: use catalog and schema, select, modify for the two
   app-write tables, volume access for raw data and invoices, and select on the Lakebase serving
   tables. Lakebase uses short-lived OAuth credentials, no stored passwords. There are no secrets in
-  the repo, and every commit passes a secret-scanning hook. Hardening item: narrow modify from the
-  schema to the two app-write tables."
+  the repo, and every commit passes a secret-scanning hook. Row-level security limits each store
+  manager to their store (notebook 02). The evaluation runs as its own service principal with only
+  CAN_USE on the app; its OAuth secret lives in a secret scope. Hardening item: narrow modify from
+  the schema to the two app-write tables."
 
 ### Failure handling
 - **Business:** "If the AI can't answer, it says so. If a component is down, the manager can still
@@ -222,6 +258,6 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
 - [ ] Each scene ends with a business "so what", then one line on the Databricks technology
 - [ ] Mention all four capabilities' impact, not just invoices
 - [ ] Say "projected" or "assumed" every time you quote the value model
-- [ ] Practice the 0.70 answer out loud until it sounds confident, not defensive
+- [ ] Practice the "is 1.00 too good to be true?" answer: small set, tracked daily, 30+ questions next
 - [ ] Practice switching altitude mid-answer ("for the platform team: …")
 - [ ] Full run under 15 minutes with pre-warmed cache

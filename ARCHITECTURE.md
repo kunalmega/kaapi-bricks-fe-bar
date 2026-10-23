@@ -185,12 +185,12 @@ written to `qa_cache`, because they depend on today's weather.
 - ✅ **Write-through on approval (built, evidence/12).** An approved invoice updates
   `lb_inventory_position` and `lb_open_purchase_orders` in the same request, so the Live
   Dashboard moves within one 10 s refresh. Delta stays the system of record.
-- ⚠️ **Sync ordering:** if the sync runs after an approval but *before* the next pipeline run, it
-  reloads the pre-approval gold value until the pipeline catches up (gold unions
-  `app_inventory_receipts`). Run the sync only as a task after the pipeline.
+- ✅ **Sync ordering (fixed 2026-10-23):** the sync now runs only as the `sync_lakebase` task of the
+  daily job, right after the pipeline task, so it can no longer reload a pre-approval value.
 - ⚠️ Two app tables (`compare_cache`, `admin_config`) are unused leftovers.
-- ⚠️ Production would use Lakebase synced tables, or a scheduled job task after the pipeline,
-  instead of the manual truncate-and-reload script.
+- ⚠️ Production would use Lakebase synced tables instead of the truncate-and-reload script.
+- The sync also loads `lb_demand_forecast` (7,252 rows) and `lb_store_daily_brief` (37 rows) for
+  the Live Dashboard's "Today's action plan" and "Today's demand forecast" cards.
 
 ---
 
@@ -366,7 +366,11 @@ Evaluation history (evidence/09):
 | 2 | Genie, Agent mode | 0.50 | 1.00 | 1.00 |
 | 3 | + completeness instruction | 0.50 | 1.00 | 1.00 |
 | 4 | Deployed app | void (9/10 scored) | — | — |
-| **5** | **Deployed app + menu-price lookup** | **0.70** | **1.00** | **1.00** |
+| 5 | Deployed app + menu-price lookup | 0.70 | 1.00 | 1.00 |
+| **Oct 23 (scheduled)** | **Deployed app, daily job as SP `kaapi-eval-runner`** | **0.90** | **1.00** | **1.00** |
+| **Oct 23 (notebook ×2)** | **Deployed app, notebook 07** | **1.00 / 1.00** | **1.00** | **1.00** |
+
+From Oct 23 every run appends to the Delta table `eval_history` (notebook 07).
 
 ---
 
@@ -479,11 +483,13 @@ flowchart TD
 
 | Limit | Impact | Plan |
 |---|---|---|
-| ⚠️ Lakebase sync is a manual snapshot script | a sync run before the pipeline can briefly undo a written-through approval | run sync as a job task after the pipeline, or Lakebase synced tables |
+| ⚠️ Lakebase sync is a truncate-and-reload script | none for ordering (it is a job task after the pipeline since Oct 23) | Lakebase synced tables |
 | ⚠️ Agent mode latency 23–40 s uncached; preparation plan ~36 s | slow first answer | semantic cache for Q&A; preparation plans are deliberately not cached (weather changes) |
 | ⚠️ Gateway rate-limit changes take >20 s to propagate | a limit change is not instant | observed in evidence/11 §4.4; plan changes ahead of demos |
 | ⚠️ No gateway policies attached yet | no content guardrails on model calls | attach in the UI (§9.6) |
-| ⚠️ Correctness 0.70 on 10 questions | below the 0.80 target; ±0.1–0.2 run-to-run variation | 30+ question set, must-have / nice-to-have rubric |
+| ⚠️ Evaluation set is 10 questions | 0.90–1.00 on Oct 23, but one question = 0.10 | 30+ question set from real traces, must-have / nice-to-have rubric |
+| ⚠️ App calls Genie as its service principal | row filters apply to direct Genie/SQL users, not per user inside the app's chat | on-behalf-of-user Genie calls (`dashboards.genie` scope is already on the app) |
+| ⚠️ Forecast lag features are stale | synthetic history ends 2026-05-14, so "recent demand" is May's | with live POS data, features are as of yesterday |
 | ⚠️ Synthetic data ends May/July 2026 | "today" answers use older sales history, and the answer says so | regenerate through the current date after submission |
 | ⚠️ Invoice fallback store is hard-coded to STR-001 | multi-store invoices need a store mapping | map store name → id |
 | ⚠️ Header totals not reconciled | synthetic `purchase_orders.total_amount` is independent of line items | line-level reconciliation only |
@@ -494,6 +500,20 @@ app declared stale and unused resources (removed); `user_api_scopes` was empty (
 ---
 
 ## 12. Evidence map
+
+**Executed notebooks (outputs committed, run 2026-10-23/24):**
+
+| Notebook | Proves |
+|---|---|
+| `notebooks/01_pipeline_and_data_quality.ipynb` | update timeline, 14/14/7 tables with row counts, 45/45 expectations from the event log |
+| `notebooks/02_row_level_security.ipynb` | row filter on 10 tables; HQ vs store-manager SQL and Genie answers |
+| `notebooks/03_genie_agent.ipynb` | live Genie answers with the generated SQL and SOP-document search |
+| `notebooks/04_app_lakebase_and_ai_workflows.ipynb` | dashboard latency, invoice check via the gateway, prep plan with ML forecast + weather |
+| `notebooks/05_demand_forecast_model.ipynb` | holdout metrics vs baselines, UC registration and `@champion`, scored forecast |
+| `notebooks/06_store_briefs_and_ai_gateway.ipynb` | 37 briefs, number check 882/884, facts given to the LLM, payload log by caller |
+| `notebooks/07_evaluation_over_time.ipynb` | live evaluation, `eval_history`, per-question judge scores |
+
+**Point-in-time captures:**
 
 | File | Proves |
 |---|---|
@@ -509,3 +529,55 @@ app declared stale and unused resources (removed); `user_api_scopes` was empty (
 | `evidence/10_business_kpi_calculations.md` | value assumptions and formulas |
 | `evidence/11_unity_ai_gateway.md` + `raw/11_*` | gateway services, grants, invoice / preparation / cache through the gateway, payload logs, a real 429 |
 | `evidence/12_live_store_dashboard.md` + `raw/12_*` | Live Dashboard on Lakebase; write-through before/after test; query times |
+
+---
+
+## 13. Daily operations job, ML forecaster, store briefs and row-level security (added 2026-10-23)
+
+### 13.1 `kaapi_daily_ops` (resources/kaapi_daily_ops.job.yml)
+
+```
+05:30 IST, serverless, max 1 concurrent run
+refresh_pipeline ─► train_forecaster ─► score_forecast ─► store_briefs ─► sync_lakebase ─► evaluate_app
+ (Lakeflow SDP)     (MLflow + UC model)  (ml_demand_forecast) (kaapi_llm)   (lb_* tables)   (eval_history)
+```
+
+The bundle target does not use `mode: development`, because that mode force-pauses schedules; the
+`presets.name_prefix` keeps the existing `[dev <user>]` resource names. First full run: all 6 tasks
+succeeded (2026-10-23).
+
+### 13.2 Demand forecaster
+
+| | |
+|---|---|
+| Training data | `gold_product_demand` densified to store × drink × day (0 when nothing sold) |
+| Features | store, drink (categorical), weekday, weekend, country holiday (`holidays`), lag-7, 28-day mean, same-weekday 4-week mean; all strictly backwards-looking |
+| Model | scikit-learn `HistGradientBoostingRegressor`, Poisson loss |
+| Holdout (last 14 days) | MAE **1.42** vs 1.57 same-weekday baseline (−9.3%) and 1.49 28-day mean |
+| Registry | UC model `kaapi_bricks.demand_forecaster`; `@champion` only if it beats the baseline |
+| Serving | next 7 days → `ml_demand_forecast` → `lb_demand_forecast`; read by the prep plan and dashboard |
+
+Weather is deliberately not a feature: there is no weather history in the data. The ops advisor
+applies weather as a separate, visible adjustment on top of the model baseline.
+
+### 13.3 Morning briefs (`src/jobs/store_daily_briefs.py`)
+
+1. SQL builds per-store facts: lowest-cover items below reorder, top overdue POs plus totals,
+   today's forecast vs usual, top waste item.
+2. `kaapi_llm` (Unity AI Gateway) returns JSON: a headline and 3–5 ranked actions.
+3. A deterministic check extracts every number and requires a match in the facts (±0.5). If one
+   fails, the model gets the list of bad numbers and rewrites once.
+4. Each brief is an MLflow trace (tags: store, numbers grounded, attempts) and a row in
+   `store_daily_briefs`, synced to `lb_store_daily_brief`.
+
+### 13.4 Row-level security
+
+- `store_access(principal, store_id, role)`; `*` = all stores.
+- `store_row_filter(store_id)` returns `EXISTS(… principal = current_user() AND store_id IN ('*', row))`
+  and runs with the owner's rights, so readers need no access to `store_access`.
+- Attached in the pipeline SQL (`WITH ROW FILTER ${row_filter_fn} ON (store_id)`) to `orders`,
+  `purchase_orders`, `inventory_transactions`, `promotion_redemptions` and the 6 store-keyed gold
+  tables. Dimension tables and `gold_supplier_performance` (chain-wide) stay unfiltered.
+- `*` principals: the pipeline owner, both app service principals, `kaapi-eval-runner`.
+  Store-scoped: `kaapi-store-manager-str001` → STR-001 (`scripts/apply_store_access.py`).
+

@@ -72,7 +72,9 @@ def run_sql(statement, catalog=CATALOG, schema=SCHEMA):
     if resp.status.state == StatementState.FAILED:
         raise RuntimeError(f"SQL failed: {resp.status.error}\nStatement: {statement[:200]}")
     cols = [c.name for c in (resp.manifest.schema.columns if resp.manifest and resp.manifest.schema else [])]
-    rows = resp.result.data_array if resp.result and resp.result.data_array else []
+    rows = list(resp.result.data_array or []) if resp.result else []
+    for n in range(1, (resp.manifest.total_chunk_count or 1) if resp.manifest else 1):
+        rows.extend(w.statement_execution.get_statement_result_chunk_n(resp.statement_id, n).data_array or [])
     return cols, rows
 
 
@@ -135,6 +137,22 @@ lb_exec("""CREATE TABLE IF NOT EXISTS lb_product_demand (
   synced_at TIMESTAMP DEFAULT NOW(),
   PRIMARY KEY (store_id, product_id, order_date)
 )""")
+# ML forecast and the morning briefs, written by the daily ops job (src/jobs/).
+lb_exec("""CREATE TABLE IF NOT EXISTS lb_demand_forecast (
+  store_id TEXT, product_id TEXT, product_name TEXT, forecast_date DATE,
+  forecast_units DOUBLE PRECISION, baseline_same_weekday DOUBLE PRECISION,
+  is_weekend INTEGER, is_holiday INTEGER, model_version TEXT, scored_at TIMESTAMP,
+  synced_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (store_id, product_id, forecast_date)
+)""")
+
+lb_exec("""CREATE TABLE IF NOT EXISTS lb_store_daily_brief (
+  brief_date DATE, store_id TEXT, store_name TEXT, headline TEXT, actions_json TEXT,
+  facts_json TEXT, numbers_checked INTEGER, numbers_grounded INTEGER, model TEXT,
+  trace_id TEXT, created_at TIMESTAMP,
+  synced_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (brief_date, store_id)
+)""")
 print("  Tables ready.")
 
 # Sync bookkeeping, shown on the app's live dashboard ("last synced from gold").
@@ -147,7 +165,7 @@ lb_exec("""CREATE TABLE IF NOT EXISTS lb_sync_log (
 try:
     app_sp = w.apps.get(args.app_name).service_principal_client_id
     for t in ("lb_inventory_position", "lb_open_purchase_orders", "lb_delivery_exceptions",
-              "lb_product_demand", "lb_sync_log"):
+              "lb_product_demand", "lb_sync_log", "lb_demand_forecast", "lb_store_daily_brief"):
         lb_exec(f'GRANT SELECT ON {t} TO "{app_sp}"')
     for t in ("lb_inventory_position", "lb_open_purchase_orders"):
         lb_exec(f'GRANT UPDATE, DELETE ON {t} TO "{app_sp}"')
@@ -203,6 +221,15 @@ sync_table(
     "gold_product_demand", "lb_product_demand",
     extra_where="order_date >= (SELECT MAX(order_date) - INTERVAL 7 DAYS FROM gold_product_demand)",
 )
+
+# Optional: present once the daily ops job has run the forecaster and the brief writer.
+for src, dst, where in (("ml_demand_forecast", "lb_demand_forecast", ""),
+                        ("store_daily_briefs", "lb_store_daily_brief",
+                         "brief_date = (SELECT MAX(brief_date) FROM store_daily_briefs)")):
+    try:
+        sync_table(src, dst, extra_where=where)
+    except RuntimeError as e:
+        print(f"  Skipped {src}: {str(e).splitlines()[0]}")
 
 print(f"\nSync complete at {datetime.utcnow().isoformat()}Z")
 print("Next: run the app and verify /api/lakebase/inventory/<store_id> responds.")

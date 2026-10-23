@@ -374,6 +374,24 @@ function StoreDashboard({store,setStore,stores,onBack,onInvoice}){
                 sub={data.demand_daily.length?`${fmtDate(data.demand_daily[0].order_date)} – ${fmtDate(data.demand_daily[data.demand_daily.length-1].order_date)} 2026`:''}/>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(360px,1fr))',gap:14}}>
+              <DashCard title="Today's action plan" sub={data.brief?`Written ${fmtDate(data.brief.brief_date)} by the daily ops job · numbers from gold SQL, wording by ${data.brief.model} (AI Gateway) · ${data.brief.numbers_grounded}/${data.brief.numbers_checked} numbers verified against the facts`:'Written each morning by the daily ops job'}>
+                {!data.brief&&<div style={{fontSize:'0.82rem',color:'#8B7355'}}>No brief yet. The daily ops job writes one per store at 05:30.</div>}
+                {data.brief&&<div style={{display:'flex',flexDirection:'column',gap:8}}>
+                  <div style={{fontWeight:700,color:INK.primary,fontSize:'0.9rem'}}>{data.brief.headline}</div>
+                  {data.brief.actions.map((a,i)=><div key={i} style={{display:'flex',gap:8,fontSize:'0.82rem'}}>
+                    <div style={{fontWeight:700,color:'#8B5E3C',minWidth:16}}>{a.priority||i+1}.</div>
+                    <div><div style={{color:INK.primary,fontWeight:600}}>{a.action}</div><div style={{color:'#8B7355'}}>{a.why}</div></div>
+                  </div>)}
+                </div>}
+              </DashCard>
+              <DashCard title="Today's demand forecast" sub={data.forecast_today?.length?`UC model demand_forecaster v${data.forecast_today[0].model_version} vs the usual for this weekday`:'Scored daily by the ops job'}>
+                <DashTable empty="No forecast for today yet." rows={data.forecast_today||[]}
+                  cols={[{k:'product_name',h:'Drink'},{k:'forecast_units',h:'Forecast',num:true,f:r=>Number(r.forecast_units).toFixed(1)},
+                    {k:'baseline_same_weekday',h:'Usual',num:true,f:r=>r.baseline_same_weekday==null?'—':Number(r.baseline_same_weekday).toFixed(1)},
+                    {k:'d',h:'Change',num:true,f:r=>{if(r.baseline_same_weekday==null)return '—';const d=r.forecast_units-r.baseline_same_weekday;return <span style={{color:INK.secondary}}>{d>=0?'▲':'▼'} {Math.abs(d).toFixed(1)}</span>;}}]}/>
+              </DashCard>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(360px,1fr))',gap:14}}>
               <DashCard title="Stock cover by ingredient" sub="Days of stock left at the average daily usage · hover a row for detail">
                 <StockCoverBars stock={data.stock}/>
               </DashCard>

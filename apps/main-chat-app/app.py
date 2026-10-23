@@ -742,8 +742,9 @@ def build_prep_store_data(query, store_location):
     """Deterministic store facts for a preparation plan.
 
     Demand comes from the SAME weekday across the full history (gold_product_demand),
-    not from the most recent single day. Stock and overdue POs come from Lakebase,
-    the operational serving copy.
+    not from the most recent single day, plus the ML forecast for the target day
+    (lb_demand_forecast, scored daily by the ops job). Stock and overdue POs come from
+    Lakebase, the operational serving copy.
     """
     target, dow = _prep_target_day(query)
     db_name = STORE_DB_NAMES.get(store_location, f"Kaapi Bricks {store_location}").replace("'", "''")
@@ -776,6 +777,14 @@ def build_prep_store_data(query, store_location):
         cur.execute("SELECT po_id, supplier_name, days_overdue, total_amount FROM lb_open_purchase_orders "
                     "WHERE store_id = %s AND is_overdue ORDER BY days_overdue DESC LIMIT 5", (store_id,))
         overdue = cur.fetchall()
+        cur.execute("SELECT product_name, forecast_units, baseline_same_weekday, model_version "
+                    "FROM lb_demand_forecast WHERE store_id = %s AND forecast_date = %s "
+                    "ORDER BY forecast_units DESC LIMIT 8", (store_id, target.date()))
+        forecast = cur.fetchall()
+        if forecast:
+            lines.append(f"ML demand forecast for {day} (UC model demand_forecaster v{forecast[0][3]}, "
+                         "learned from weekday, holiday and recent-demand patterns; weather NOT included):")
+            lines += [f"- {r[0]}: {r[1]} units (same-weekday average {r[2]})" for r in forecast]
         lines.append("Lowest stock cover (Lakebase):")
         lines += [f"- {r[0]}: {r[1]} {r[2]}, {r[3]} days of cover" for r in stock]
         lines.append(f"Overdue purchase orders (Lakebase): {len(overdue)}")
@@ -1345,6 +1354,17 @@ def lakebase_dashboard(store: str = "Koramangala, Bangalore"):
             SELECT product_name, SUM(units)::int AS units
             FROM lb_product_demand WHERE store_id = %s
             GROUP BY product_name ORDER BY units DESC LIMIT 6""", (store_id,))
+        try:
+            forecast = _rows(cur, """
+                SELECT product_name, forecast_units, baseline_same_weekday, is_holiday, model_version
+                FROM lb_demand_forecast WHERE store_id = %s AND forecast_date = CURRENT_DATE
+                ORDER BY forecast_units DESC LIMIT 8""", (store_id,))
+            brief = _rows(cur, """
+                SELECT brief_date, headline, actions_json, numbers_checked, numbers_grounded, model, trace_id
+                FROM lb_store_daily_brief WHERE store_id = %s
+                ORDER BY brief_date DESC LIMIT 1""", (store_id,))
+        except Exception:  # tables absent until the daily ops job has run once
+            forecast, brief = [], []
         activity = _rows(cur, """
             SELECT kind, detail, created_at FROM kaapi_mcp.activity_log
             WHERE store_id = %s ORDER BY created_at DESC LIMIT 8""", (store_id,))
@@ -1372,7 +1392,8 @@ def lakebase_dashboard(store: str = "Koramangala, Bangalore"):
         },
         "stock": stock, "open_pos": open_pos, "exceptions": exceptions[:10],
         "demand_daily": demand_daily, "top_products": top_products,
-        "activity": activity, "synced": synced,
+        "activity": activity, "synced": synced, "forecast_today": forecast,
+        "brief": ({**brief[0], "actions": json.loads(brief[0]["actions_json"])} if brief else None),
     }, default=str))
 
 

@@ -8,7 +8,7 @@ Retail & Consumer Goods (restaurants / quick-service)*
 > - Each slide title is the message; the body is the proof.
 > - **Slides 1–5 are for the executive** (outcome, problem, solution, value, plan).
 > - **Slides 6–10 are for the technical architect** (architecture, governance, AI quality, trade-offs, risks).
-> - Every system number is **measured** and links to a file in `evidence/`.
+> - Every system number is **measured** and links to an **executed notebook** in `notebooks/` (outputs committed) or a capture in `evidence/`.
 > - Every business number is a **projection from a labelled assumption** *[assumption]*.
 
 ---
@@ -26,7 +26,13 @@ question. The information for those decisions is spread across five or six disco
 | **Ask** | opening dashboards, spreadsheets and PDFs | asking in plain language about sales, stock, suppliers or recipes | answers in seconds; decisions on data, not memory |
 | **See** | counting stock and chasing suppliers | a live store dashboard of stock cover, overdue orders and late deliveries | problems spotted days earlier; fewer stockouts |
 | **Act** | checking invoices line by line on paper | uploading the invoice and approving the discrepancies the app flags; stock updates instantly | 25–30 min → under 2 min per delivery; leakage stopped |
-| **Plan** | gut feel and a weather app | a daily preparation plan from the store's own history plus today's weather and holidays | less waste; ready for the rush |
+| **Plan** | gut feel and a weather app | a morning action plan and a per-drink prep plan from an ML demand forecast plus today's weather | less waste; ready for the rush |
+
+**Who decides.**
+- **COO**: owns store operations; accountable for stockouts and perishable waste.
+- **CFO**: owns cost and supplier spend; accountable for invoice leakage and the payback.
+- **Head of Store Operations** (with the regional ops directors): owns adoption across 37 managers.
+- **Head of Data Platform**: has to run it; this person is the architect in the room.
 
 **The ask.** A 6-week pilot in 5 stores to replace our assumptions with measured baselines.
 
@@ -84,10 +90,10 @@ serves it, Genie and the Unity AI Gateway put AI on it, and MLflow measures it.*
 | | |
 |---|---|
 | **Before** | Stock is known only after a physical count. An overdue order is noticed when the shelf is empty. HQ reports are a day old |
-| **After** | One screen per store, refreshed every 10 s: items below reorder, days of stock cover per ingredient, overdue POs with days late and value, late deliveries, units sold, and a live activity feed |
+| **After** | One screen per store, refreshed every 10 s: **today's action plan** (written at 05:30), today's **demand forecast**, items below reorder, days of stock cover, overdue POs with days late and value, late deliveries, and a live activity feed |
 | **Business impact** | Problems are visible days before they hit the counter. The manager chases the supplier **before** the morning-rush stockout (target 3.5% → < 1.5% of store-days). Money tied up in late orders is visible: Koramangala showed **8 overdue POs worth ₹31,065** (evidence/12) |
-| **Measured** | Whole dashboard in **23–37 ms**. Stock changes on screen within one refresh after an invoice is approved (evidence/12) |
-| **Databricks behind it** | **Lakeflow** builds the gold inventory, PO and delivery views, with 45 data-quality checks. **Lakebase** serves them per store in milliseconds and takes live writes. **Databricks Apps** hosts the screen, with no extra infrastructure |
+| **Measured** | Whole dashboard in **~33 ms** median (notebook 04). Stock changes on screen within one refresh after an invoice is approved (evidence/12). 37 morning briefs, **882 of 884 numbers verified** against the SQL facts (notebook 06) |
+| **Databricks behind it** | **Lakeflow** builds the gold inventory, PO and delivery views, with 45 data-quality checks. **Lakebase** serves them per store in milliseconds and takes live writes. The brief is written by Claude through **Unity AI Gateway** from SQL facts, with a deterministic number check. **Databricks Apps** hosts the screen |
 
 ### 3 · ACT: invoice checked in seconds, the manager approves
 
@@ -96,7 +102,7 @@ serves it, Genie and the Unity AI Gateway put AI on it, and MLflow measures it.*
 | **Before** | Compare the paper invoice line by line against the PO: 25–30 min per delivery, ~74 deliveries a day, with ~12% of discrepancies paid anyway *[assumption]* |
 | **After** | Upload the invoice. The app extracts the lines, matches them to the PO, and flags price changes, wrong quantities, extra items and missing deliveries. The manager approves, and stock and the PO update at once |
 | **Business impact** | The largest cash line: manager time ($107k) plus leakage stopped ($108k) *[assumption]*. Suppliers are held to the PO price. Every decision is on record for audit |
-| **Measured** | **All 4** planted discrepancies caught and the control line matched, in **18.4 s** (evidence/11) |
+| **Measured** | **All 4** planted discrepancies caught and the control line matched, in **~7 s** server time (notebook 04; 18.4 s in the earlier capture, evidence/11) |
 | **Databricks behind it** | **Claude through Unity AI Gateway** reads the PDF: permissioned, rate-limited and logged. Matching is deterministic code. The approval is written to **Delta** (system of record) and through to **Lakebase**, so the dashboard updates. The invoice is stored in a **UC Volume** |
 
 ### 4 · PLAN: a preparation plan for today, not gut feel
@@ -104,10 +110,10 @@ serves it, Genie and the Unity AI Gateway put AI on it, and MLflow measures it.*
 | | |
 |---|---|
 | **Before** | Prep is based on experience and a weather app. Over-prepare and milk is thrown away; under-prepare and the rush runs out |
-| **After** | *"How should I prepare for today?"* returns a per-drink plan. It uses the store's own same-weekday history, current stock and overdue POs, live weather and upcoming holidays |
+| **After** | *"How should I prepare for today?"* returns a per-drink plan. The baseline is an **ML demand forecast** (weekday, weekend, holiday and recent-demand patterns); the plan adjusts it only for live weather, and adds stock and overdue POs |
 | **Business impact** | Less perishable waste and fewer stockouts on busy days. New managers plan as well as experienced ones |
-| **Measured** | Captured plan: *Tuesday, thunderstorm, 21 mm. Filter Coffee typical 12.1 → forecast 14–15; Cold Coffee 3.6 → 2–3*. The baseline matches an independent SQL check (evidence/11, 06) |
-| **Databricks behind it** | Demand history from **gold Delta** tables (SQL). Stock and POs from **Lakebase**. Weather and holidays from an **MCP service on Unity AI Gateway**. The plan is written by Claude through the gateway, and **MLflow** traces every step |
+| **Measured** | Forecaster beats the same-weekday average by **9.3%** (MAE 1.42 vs 1.57, 14-day holdout) and is registered `@champion` in Unity Catalog (notebook 05). Live plan: *"ML model (UC demand_forecaster v2) + weather adjustment"*, drizzle → hot drinks up (notebook 04) |
+| **Databricks behind it** | A model trained on **gold Delta** demand, tracked in **MLflow**, registered in **Unity Catalog**, scored daily by a **Lakeflow job** into **Lakebase**. Weather and holidays from an **MCP service on Unity AI Gateway**. The plan is written by Claude through the gateway; MLflow traces every step |
 
 ### Together: one source of truth
 
@@ -171,12 +177,12 @@ answer is governed and measured.
 | Weeks | Activity | Output |
 |---|---|---|
 | **1–2 · Baseline** | Time 10 manual invoice checks and log data-gathering time per pilot store. Connect real POS, PO and inventory exports (the pipeline and quality checks stay the same) | Measured baseline replaces assumptions |
-| **3–4 · Live** | App live in 5 stores; managers trained (~1 hour); sync scheduled after every pipeline run | Real usage |
+| **3–4 · Live** | App live in 5 stores, each manager mapped to their store (row-level security); trained in ~1 hour. The daily job already chains pipeline → forecast → briefs → sync → evaluation | Real usage |
 | **5–6 · Measure** | Re-time invoice checks; re-run the AI evaluation on the customer's own SOP questions; count stockouts | Pilot scorecard |
 
 **Go / no-go**
 - ≥ 50% less time on invoice checks and data gathering (measured).
-- AI correctness ≥ 0.80, with safety at 1.00.
+- AI correctness ≥ 0.80 with safety at 1.00 on the customer's own questions (the daily job tracks it; 0.90–1.00 on today's synthetic set).
 - No increase in stockouts.
 - Managers using the app on most store days.
 
@@ -203,11 +209,14 @@ Synthetic source data (37 stores · 28 products · 200k orders · 2k POs · 171k
 LAKEFLOW SPARK DECLARATIVE PIPELINE (serverless, SQL)
    Bronze 14 streaming tables → Silver 14 MVs (45 expectations) → Gold 7 MVs
    inventory position · open POs · delivery exceptions · product demand ·
-   supplier performance · waste · store KPIs
+   supplier performance · waste · store KPIs     (store-keyed tables: UC ROW FILTER on store_id)
+   │
+   ├──► ML  demand_forecaster (UC model @champion, champion-gated) → ml_demand_forecast (next 7 days)
+   ├──► GENAI JOB  37 morning briefs from gold facts via kaapi_llm, number-checked → store_daily_briefs
    │
    ├──► LAKEBASE (Postgres)  operational serving + app state
-   │      4 gold copies: lb_inventory_position · lb_open_purchase_orders ·
-   │                     lb_delivery_exceptions · lb_product_demand
+   │      serving copies: lb_inventory_position · lb_open_purchase_orders ·
+   │        lb_delivery_exceptions · lb_product_demand · lb_demand_forecast · lb_store_daily_brief
    │      app state: conversations · messages · feedback · qa_cache (semantic) · activity_log
    │
    ├──► GENIE AGENT MODE  21 silver/gold tables + SOP PDF volume (config as code)
@@ -217,10 +226,12 @@ LAKEFLOW SPARK DECLARATIVE PIPELINE (serverless, SQL)
    │      kaapi_embed BGE-large · 600 rpm · payload log
    │      kaapi_ops_advisor MCP service → ops-advisor app (weather, holidays) · 120 rpm
    │
-   └──► MLFLOW 3  tracing on every request · mlflow.genai.evaluate
+   └──► MLFLOW 3  tracing on every request · mlflow.genai.evaluate, scheduled daily → eval_history
    ▼
 DATABRICKS APP (FastAPI + React)   Ask → Genie · See → Lakebase · Act → Gateway + Delta + Lakebase
-                                   Plan → SQL + Lakebase + Gateway MCP
+                                   Plan → ML forecast + Lakebase + Gateway MCP
+
+DAILY JOB kaapi_daily_ops (05:30 IST, in the bundle): pipeline → train → score → briefs → sync → evaluate
 ```
 
 **The write path (how "Act" stays consistent)**
@@ -236,13 +247,19 @@ DATABRICKS APP (FastAPI + React)   Ask → Genie · See → Lakebase · Act → 
 | Per-store reads in milliseconds, plus row-level writes | Lakebase | A SQL warehouse is built for scans, not 37 stores polling every 10 s; Delta single-row updates rewrite files |
 | Questions over tables **and** documents | Genie Agent mode | One governed assistant; Chat mode can't read PDFs; Knowledge Assistant / Supervisor Agent are deprecated |
 | Controlled, auditable model use | Unity AI Gateway | Permissions in UC, rate limits, fallback and payload logs in one place |
-| Proof of AI quality | MLflow 3 | Traces per request; repeatable scored evaluation |
+| Learned demand signal | MLflow + UC model registry | Versioned, champion-gated, lineage to the gold table; scored in the same daily job |
+| Proof of AI quality | MLflow 3 | Traces per request; scored evaluation that runs every day, not once |
 
 One record (PO-00006) is traced through every layer, raw → bronze → silver → gold → Lakebase → app: `evidence/08`.
 
 ---
 
 ## Slide 7 · Governance: one permission model for data, documents, AI and the app
+
+**Row-level security (measured, notebook 02)**
+- `store_row_filter` is attached with `WITH ROW FILTER … ON (store_id)` to 10 store-keyed silver and gold tables, declared in the pipeline SQL.
+- `store_access` maps each principal to a store; HQ and the pipeline/app identities get `*`.
+- The Koramangala manager (a real service principal) sees **1 store and 6,606 orders**; HQ sees all **200,000**. Genie respects it: the same question returns all stores for HQ and only STR-001 for the manager.
 
 **Data (Unity Catalog)**
 - One governed schema with table comments, lineage from raw volume → bronze → silver → gold, and the SOP documents in a governed Volume.
@@ -255,7 +272,7 @@ One record (PO-00006) is traced through every layer, raw → bronze → silver �
 - 45 expectations in silver:
   - `DROP ROW` on keys and totals;
   - `WARN` on business rules (e.g. delivery date ≥ order date).
-- Run 065d6a70: **45 of 45 passed, 0 rows failed**, from the pipeline event log (evidence/03).
+- **45 of 45 passed, 0 rows failed**, from the pipeline event log, in every run (latest: notebook 01; first: evidence/03).
 
 **AI (Unity AI Gateway)**
 - Every AI call except Genie goes through UC-registered services; access is `EXECUTE` granted to the app SPs only.
@@ -278,7 +295,8 @@ One record (PO-00006) is traced through every layer, raw → bronze → silver �
 |---|---|---|
 | Ask | Genie-generated SQL over governed tables (visible); cited SOP PDFs | Interprets the question, writes the answer |
 | Act | The PO and price tables; matching in deterministic code | Reads the PDF into structured lines |
-| Plan | Same-weekday demand (SQL), stock and POs (Lakebase), weather and holidays (MCP tool) | Adjusts for context, writes the plan |
+| Plan | ML forecast (UC model), stock and POs (Lakebase), weather and holidays (MCP tool) | Adjusts for weather only, writes the plan |
+| Morning brief | Low stock, overdue POs, forecast, waste (gold SQL) | Ranks and words actions; a deterministic check rejects any number not in the facts and forces one rewrite (882 / 884 verified) |
 
 **Evaluation history** (10 store-manager questions, 32 expected facts; `mlflow.genai.evaluate`)
 
@@ -286,14 +304,14 @@ One record (PO-00006) is traced through every layer, raw → bronze → silver �
 |---|---|---:|---:|---:|
 | 1 | Genie Chat mode (can't read documents) | 0.00 | 0.30 | 1.00 |
 | 2–3 | Genie **Agent mode** + SOP volume | 0.50 | 1.00 | 1.00 |
-| 5 | End to end through the app, with governed price lookup | **0.70** | **1.00** | **1.00** |
+| 5 | End to end through the app, with governed price lookup | 0.70 | 1.00 | 1.00 |
+| Oct 23, scheduled | Daily job, as SP `kaapi-eval-runner` | **0.90** | **1.00** | **1.00** |
+| Oct 23, notebook ×2 | Same set, live in notebook 07 | **1.00 / 1.00** | **1.00** | **1.00** |
 
 - Run 4 was void (one question unscored after an auth refresh) and was re-run, not reported as a pass.
-- Gap to the 0.80 target:
-  - supplier terms from a table;
-  - a must-have / nice-to-have rubric;
-  - a 30+ question set.
-- Failed-case analysis is in `evidence/09`.
+- The 0.80 target is now met in all 3 tracked runs, but 10 questions is a small set: one question moves the score by 0.10. Next: a 30+ question set with a must-have / nice-to-have rubric, built from production traces.
+- Every run appends to `eval_history`, so a regression shows up the next morning, not at the next audit.
+- Failed-case analysis for the September runs: `evidence/09`.
 
 **Humans in the loop.** Approvals are always manual. When a source is missing, the assistant says
 so rather than guessing (Safety 1.00). Every request has an MLflow trace for audit.
@@ -305,7 +323,9 @@ so rather than guessing (Safety 1.00). Every request has an MLflow trace for aud
 | Decision | What it costs | Mitigation |
 |---|---|---|
 | **Genie Agent mode** for tables and PDFs | ~23 s on document questions vs a few seconds in Chat mode | Lakebase semantic cache: repeat questions 25.3 s → **1.1 s** |
-| **Lakebase as a serving copy** of gold | Freshness depends on the sync | Write-through on approval; production uses **Lakebase synced tables** or a sync task after the pipeline |
+| **Lakebase as a serving copy** of gold | Freshness depends on the sync | Write-through on approval; the sync is a task right after the pipeline in the daily job; **Lakebase synced tables** in production |
+| **A simple, explainable forecaster** (gradient boosting on calendar + lag features) | Less accurate than a deep model with weather history | 9.3% better than today's heuristic; champion-gated, so a worse retrain never ships; weather stays a separate, visible adjustment |
+| **LLM writes the brief, code checks every number** | One extra model call when a check fails | In the first full run, 11 of 37 briefs failed the check and were rewritten automatically; latest run: 882 / 884 numbers verified, the 2 left are flagged, not hidden |
 | **All non-Genie AI through the gateway**, no direct fallback | A gateway outage stops "Act" and "Plan" | Model fallback inside the gateway; a failed call errors loudly instead of escaping governance |
 | **SQL computes, AI writes** | Less free-form flexibility | Correctness rose once prices came from tables; numbers are auditable |
 | **One gateway document call** for invoices | Depends on the model's PDF reading | 22.7 s → 18.4 s vs `ai_parse_document` + a second call; human approval on every result |
@@ -318,9 +338,10 @@ so rather than guessing (Safety 1.00). Every request has an MLflow trace for aud
 | Risk | Likelihood | Mitigation |
 |---|---|---|
 | Unusual invoice layouts parse badly | Medium | Human approval on every invoice; deterministic line checks; every parse logged |
-| AI correctness below target on long procedures | Medium | Measured at 0.70 today; target ≥ 0.80 is a pilot go/no-go criterion |
+| AI correctness drops on the customer's own questions | Medium | Daily scheduled evaluation into `eval_history`; ≥ 0.80 is a pilot go/no-go criterion |
+| A store manager sees another store's data | Low | UC row filters on 10 tables, proven in SQL and Genie (notebook 02); the app's Lakebase reads are scoped by store |
 | Document-answer latency (~23 s) | Medium | Semantic cache; SOPs change rarely |
-| Lakebase snapshot drifts from gold | Medium | Write-through now; synced tables or a sync task after the pipeline in production |
+| Lakebase snapshot drifts from gold | Low | Write-through on approval; the sync is a task right after the pipeline in the daily job; Lakebase synced tables in production |
 | Model provider outage | Low | Sonnet → Haiku fallback inside the gateway |
 | Managers don't adopt it | Low | One app instead of five; chat-first; ~1-hour training |
 
@@ -328,11 +349,18 @@ so rather than guessing (Safety 1.00). Every request has an MLflow trace for aud
 - Narrow `MODIFY` to the two app tables.
 - Attach gateway guardrail policies (jailbreak, unsafe content).
 - Cost per store from system tables.
-- Lakebase synced tables.
+- Lakebase synced tables, and Postgres row-level security on the `lb_*` tables.
+- Genie on behalf of the signed-in user, so row filters apply in the app's chat too (today the app calls Genie as its own service principal and scopes by the selected store).
 
 ---
 
 ## Appendix · Evidence index
+
+**Executed notebooks (outputs committed):** `notebooks/01_pipeline_and_data_quality` · `02_row_level_security` ·
+`03_genie_agent` · `04_app_lakebase_and_ai_workflows` · `05_demand_forecast_model` ·
+`06_store_briefs_and_ai_gateway` · `07_evaluation_over_time`.
+
+**Point-in-time captures:**
 
 | # | Evidence | File |
 |---|---|---|

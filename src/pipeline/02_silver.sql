@@ -102,6 +102,7 @@ CREATE OR REFRESH MATERIALIZED VIEW orders (
   CONSTRAINT non_neg_subtotal EXPECT (subtotal >= 0),
   CONSTRAINT valid_status    EXPECT (status IN ('completed','refunded'))
 )
+WITH ROW FILTER ${row_filter_fn} ON (store_id)
 COMMENT 'Conformed order headers (silver); adds order_ts timestamp.'
 AS SELECT order_id, customer_id, store_id,
           CAST(order_date AS DATE) AS order_date,
@@ -145,6 +146,7 @@ CREATE OR REFRESH MATERIALIZED VIEW purchase_orders (
   CONSTRAINT valid_delivery  EXPECT (expected_delivery_date >= order_date),
   CONSTRAINT valid_status    EXPECT (status IN ('delivered','pending','cancelled'))
 )
+WITH ROW FILTER ${row_filter_fn} ON (store_id)
 COMMENT 'Conformed supplier purchase orders (silver).'
 AS SELECT po_id, supplier_id, store_id,
           CAST(order_date AS DATE)              AS order_date,
@@ -160,6 +162,7 @@ CREATE OR REFRESH MATERIALIZED VIEW inventory_transactions (
   CONSTRAINT valid_type   EXPECT (transaction_type IN ('purchase','usage','waste')) ON VIOLATION DROP ROW,
   CONSTRAINT non_neg_cost EXPECT (unit_cost >= 0)
 )
+WITH ROW FILTER ${row_filter_fn} ON (store_id)
 COMMENT 'Conformed inventory movements (silver); quantity is signed.'
 AS SELECT transaction_id, store_id, ingredient_id,
           CAST(transaction_date AS DATE) AS transaction_date,
@@ -174,6 +177,7 @@ CREATE OR REFRESH MATERIALIZED VIEW promotion_redemptions (
   CONSTRAINT valid_refs EXPECT (order_id IS NOT NULL AND promotion_id IS NOT NULL) ON VIOLATION DROP ROW,
   CONSTRAINT non_neg_discount EXPECT (discount_applied >= 0)
 )
+WITH ROW FILTER ${row_filter_fn} ON (store_id)
 COMMENT 'Conformed promotion redemptions (silver).'
 AS SELECT redemption_id, promotion_id, order_id, customer_id, store_id,
           CAST(redemption_date AS DATE) AS redemption_date,

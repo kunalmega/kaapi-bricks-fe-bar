@@ -111,20 +111,12 @@ databricks workspace mkdirs "$WS_PATH/kaapi-bricks-setup" --profile "$PROFILE" 2
 
 # Update catalog in scripts
 cp "$DIR/scripts/generate_data.py" "$TMPDIR/generate_data.py"
-cp "$DIR/scripts/generate_ka_documents.py" "$TMPDIR/generate_ka_documents.py"
+cp "$DIR/scripts/generate_sop_documents.py" "$TMPDIR/generate_sop_documents.py"
 sed -i '' "s/fevm_cme_conde_catalog/$CATALOG/g" "$TMPDIR/generate_data.py" 2>/dev/null || sed -i "s/fevm_cme_conde_catalog/$CATALOG/g" "$TMPDIR/generate_data.py"
-sed -i '' "s/fevm_cme_conde_catalog/$CATALOG/g" "$TMPDIR/generate_ka_documents.py" 2>/dev/null || sed -i "s/fevm_cme_conde_catalog/$CATALOG/g" "$TMPDIR/generate_ka_documents.py"
+sed -i '' "s/fevm_cme_conde_catalog/$CATALOG/g" "$TMPDIR/generate_sop_documents.py" 2>/dev/null || sed -i "s/fevm_cme_conde_catalog/$CATALOG/g" "$TMPDIR/generate_sop_documents.py"
 
 databricks workspace import "$WS_PATH/kaapi-bricks-setup/generate_data" --file "$TMPDIR/generate_data.py" --format SOURCE --language PYTHON --overwrite --profile "$PROFILE" 2>&1
-databricks workspace import "$WS_PATH/kaapi-bricks-setup/generate_ka_documents" --file "$TMPDIR/generate_ka_documents.py" --format SOURCE --language PYTHON --overwrite --profile "$PROFILE" 2>&1
-
-# Sync eval scripts
-for f in run_ka_evaluation.ipynb run_ka_evaluation_incorrect.ipynb run_mas_evaluation.ipynb run_mas_evaluation_incorrect.ipynb; do
-  if [ -f "$DIR/scripts/$f" ]; then
-    name="${f%.ipynb}"
-    databricks workspace import "$WS_PATH/kaapi-bricks-setup/$name" --file "$DIR/scripts/$f" --format JUPYTER --overwrite --profile "$PROFILE" 2>&1
-  fi
-done
+databricks workspace import "$WS_PATH/kaapi-bricks-setup/generate_sop_documents" --file "$TMPDIR/generate_sop_documents.py" --format SOURCE --language PYTHON --overwrite --profile "$PROFILE" 2>&1
 
 echo "  ✓ Scripts synced to $WS_PATH/kaapi-bricks-setup/"
 
@@ -172,13 +164,13 @@ else
   echo "  ✗ Failed to create generate_data job. Run notebook manually."
 fi
 
-# Create and run generate_ka_documents job
-echo "  Starting generate_ka_documents job..."
+# Create and run generate_sop_documents job
+echo "  Starting generate_sop_documents job..."
 JOB2_ID=$(databricks api post "/api/2.0/jobs/create" --profile "$PROFILE" --json "{
   \"name\": \"kaapi-bricks-generate-ka-docs\",
   \"tasks\": [{
     \"task_key\": \"generate_ka_docs\",
-    \"notebook_task\": {\"notebook_path\": \"$WS_PATH/kaapi-bricks-setup/generate_ka_documents\"},
+    \"notebook_task\": {\"notebook_path\": \"$WS_PATH/kaapi-bricks-setup/generate_sop_documents\"},
     \"environment_key\": \"default\"
   }],
   \"environments\": [{
@@ -193,7 +185,7 @@ JOB2_ID=$(databricks api post "/api/2.0/jobs/create" --profile "$PROFILE" --json
 
 if [ -n "$JOB2_ID" ]; then
   RUN2_ID=$(databricks api post "/api/2.0/jobs/run-now" --profile "$PROFILE" --json "{\"job_id\": $JOB2_ID}" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('run_id',''))" 2>/dev/null)
-  echo "  ✓ generate_ka_documents job started (job=$JOB2_ID, run=$RUN2_ID)"
+  echo "  ✓ generate_sop_documents job started (job=$JOB2_ID, run=$RUN2_ID)"
 else
   echo "  ✗ Failed to create ka_documents job. Run notebook manually."
 fi
@@ -314,13 +306,9 @@ cp "$DIR/scripts/create_mcp_connection.py" "$TMPDIR/create_mcp_connection.py"
 sed -i '' "s/fevm_cme_conde_catalog/$CATALOG/g" "$TMPDIR/create_mcp_connection.py" 2>/dev/null || sed -i "s/fevm_cme_conde_catalog/$CATALOG/g" "$TMPDIR/create_mcp_connection.py"
 databricks workspace import "$WS_PATH/kaapi-bricks-setup/create_mcp_connection" --file "$TMPDIR/create_mcp_connection.py" --format SOURCE --language PYTHON --overwrite --profile "$PROFILE" > /dev/null 2>&1
 echo "  ✓ Notebook at $WS_PATH/kaapi-bricks-setup/create_mcp_connection"
-echo "  ℹ Note: requires account-admin to auto-create the SP. If you are not"
-echo "    account-admin, when creating the MAS supervisor in Agent Bricks UI,"
-echo "    add the MCP server directly by URL instead of via UC connection."
+echo "  ℹ Note: creating the connector SP's OAuth secret needs workspace-admin rights;"
+echo "    the Unity AI Gateway MCP service kaapi_ops_advisor sits on this connection."
 
-# Note: Genie Space creation via SDK requires an existing space export in
-# proprietary GenieSpaceExport format — cannot be auto-created from JSON.
-# Marked as manual UI step in the summary below.
 
 # ---- Step 13: Print final status ----
 MAIN_URL=$(databricks apps get kaapi-bricks-finale --profile "$PROFILE" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('url',''))" 2>/dev/null || echo "")
@@ -332,36 +320,18 @@ echo "║              DEPLOYMENT COMPLETE                         ║"
 echo "╠══════════════════════════════════════════════════════════╣"
 echo "║  Main App:    $MAIN_URL"
 echo "║  MCP App:     $MCP_URL"
-echo "║  Data:        $CATALOG.kaapi_bricks (14 tables + 6 PDFs)"
+echo "║  Data:        $CATALOG.kaapi_bricks (raw files + 6 SOP PDFs)"
 echo "║  Lakebase:    kaapi-bricks (with SP roles for both apps)"
 echo "╠══════════════════════════════════════════════════════════╣"
 echo "║                                                          ║"
-echo "║  REMAINING MANUAL STEPS (UI — ~10 min):                  ║"
-echo "║                                                          ║"
-echo "║  1. Create Genie Space in SQL UI                         ║"
-echo "║     • Name: Kaapi Bricks Analytics                       ║"
-echo "║     • Warehouse: $WAREHOUSE_ID"
-echo "║     • Tables: all 14 in $CATALOG.kaapi_bricks"
-echo "║                                                          ║"
-echo "║  2. Create KA tile in Agent Bricks UI                    ║"
-echo "║     • Name: Kaapi Bricks Operations Knowledge            ║"
-echo "║     • Volume: /Volumes/$CATALOG/kaapi_bricks/raw_data/ka_documents"
-echo "║                                                          ║"
-echo "║  3. (Optional) MCP UC Connection                         ║"
-echo "║     If you are account-admin, run the notebook:          ║"
-echo "║     $WS_PATH/kaapi-bricks-setup/create_mcp_connection"
-echo "║     Otherwise, in step 4 add MCP via URL directly:       ║"
-echo "║     $MCP_URL"
-echo "║                                                          ║"
-echo "║  4. Create MAS Supervisor in Agent Bricks UI             ║"
-echo "║     • Name: Kaapi Bricks HQ                              ║"
-echo "║     • Add KA from step 2                                 ║"
-echo "║     • Add Genie Space from step 1                        ║"
-echo "║     • Add MCP server (from step 3 or direct URL)         ║"
-echo "║                                                          ║"
-echo "║  5. Run: ./finalize.sh $PROFILE <MAS_ENDPOINT_NAME>"
-echo "║     (binds the MAS endpoint to the main app + restarts)  ║"
-echo "║                                                          ║"
+echo "║  NEXT (all from code, see README \"Deploy\"):              ║"
+echo "║  1. databricks bundle deploy && bundle run kaapi_bricks_medallion"
+echo "║  2. scripts/init_app_tables.sql, setup_row_level_security.sql"
+echo "║     then python scripts/apply_store_access.py"
+echo "║  3. python scripts/create_genie_agent.py   (Genie Agent space)"
+echo "║  4. python scripts/create_mcp_connection.py + gateway services"
+echo "║  5. databricks bundle run kaapi_daily_ops  (forecast, briefs,"
+echo "║     Lakebase sync, app evaluation; then daily at 05:30 IST)"
 echo "╚══════════════════════════════════════════════════════════╝"
 
 # Cleanup

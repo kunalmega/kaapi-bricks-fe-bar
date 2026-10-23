@@ -28,3 +28,7 @@ build/
 
 # Archives
 *.zip
+
+# Local MLflow store created when no tracking URI is set
+mlflow.db
+mlruns/

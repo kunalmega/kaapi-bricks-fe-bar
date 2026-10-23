@@ -1,5 +1,5 @@
 # Databricks Asset Bundle — Kaapi Bricks
-# Bundle root for the Lakeflow medallion pipeline (and future jobs).
+# Bundle root: the Lakeflow medallion pipeline and the daily store-operations job.
 # Deploy:  databricks bundle validate --profile DEFAULT
 #          databricks bundle deploy -t dev --profile DEFAULT
 #          databricks bundle run kaapi_bricks_medallion -t dev --profile DEFAULT
@@ -16,11 +16,18 @@ variables:
   schema:
     description: Schema that holds the medallion tables
     default: kaapi_bricks
+  warehouse_id:
+    description: SQL warehouse for the Lakebase sync and job SQL
+    default: e755eae9d758fdf7
 
 targets:
   dev:
-    mode: development
     default: true
+    # Not `mode: development`: that mode force-pauses schedules, and the daily ops job
+    # must run. The presets keep development-style names for the existing resources.
+    presets:
+      name_prefix: "[dev ${workspace.current_user.short_name}] "
+      trigger_pause_status: UNPAUSED
     # host is taken from the --profile you pass; set it here to pin a workspace.
     variables:
       catalog: fevm_cme_conde_catalog

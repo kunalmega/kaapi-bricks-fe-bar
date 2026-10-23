@@ -1,0 +1,62 @@
+# Daily store-operations job: everything after raw data lands, in dependency order.
+#   refresh pipeline → retrain forecaster (champion only if it beats the baseline)
+#   → score next 7 days → write each store's morning brief → sync gold + ML + briefs to Lakebase
+#   → evaluate the deployed app end to end (scores appended to eval_history)
+# Running the sync as a task after the pipeline also removes the "sync before pipeline
+# reverts an approval" risk of running the steps by hand.
+resources:
+  jobs:
+    kaapi_daily_ops:
+      name: kaapi_daily_ops
+      description: Kaapi Bricks daily store operations — pipeline, demand forecast, store briefs, Lakebase sync, app evaluation.
+      schedule:
+        quartz_cron_expression: "0 30 5 * * ?"   # 05:30 IST, before stores open
+        timezone_id: Asia/Kolkata
+        pause_status: UNPAUSED
+      max_concurrent_runs: 1
+      environments:
+        - environment_key: ops
+          spec:
+            environment_version: "3"
+            dependencies:
+              - "mlflow[databricks]>=3.4"
+              - "databricks-sdk>=0.60"
+              - scikit-learn
+              - holidays
+              - "psycopg[binary]"
+      tasks:
+        - task_key: refresh_pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.kaapi_bricks_medallion.id}
+
+        - task_key: train_forecaster
+          depends_on: [{task_key: refresh_pipeline}]
+          environment_key: ops
+          spark_python_task:
+            python_file: ../src/jobs/train_demand_forecast.py
+
+        - task_key: score_forecast
+          depends_on: [{task_key: train_forecaster}]
+          environment_key: ops
+          spark_python_task:
+            python_file: ../src/jobs/score_demand_forecast.py
+
+        - task_key: store_briefs
+          depends_on: [{task_key: score_forecast}]
+          environment_key: ops
+          spark_python_task:
+            python_file: ../src/jobs/store_daily_briefs.py
+
+        - task_key: sync_lakebase
+          depends_on: [{task_key: store_briefs}]
+          environment_key: ops
+          spark_python_task:
+            python_file: ../scripts/sync_gold_to_lakebase.py
+            parameters: ["--warehouse-id", "${var.warehouse_id}"]
+
+        - task_key: evaluate_app
+          depends_on: [{task_key: sync_lakebase}]
+          environment_key: ops
+          spark_python_task:
+            python_file: ../src/jobs/evaluate_app.py
+            parameters: ["--source", "scheduled"]
