@@ -28,11 +28,15 @@ question. The information for those decisions is spread across five or six disco
 | **Act** | checking invoices line by line on paper | uploading the invoice and approving the discrepancies the app flags; stock updates instantly | 25–30 min → under 2 min per delivery; leakage stopped |
 | **Plan** | gut feel and a weather app | a morning action plan and a per-drink prep plan from an ML demand forecast plus today's weather | less waste; ready for the rush |
 
-**Who decides.**
-- **COO**: owns store operations; accountable for stockouts and perishable waste.
-- **CFO**: owns cost and supplier spend; accountable for invoice leakage and the payback.
-- **Head of Store Operations** (with the regional ops directors): owns adoption across 37 managers.
-- **Head of Data Platform**: has to run it; this person is the architect in the room.
+**Who owns which number.** Each executive is measured on something this moves:
+
+| Executive | Measured on | Today | 12-month target | Moved by |
+|---|---|---|---|---|
+| **COO** (economic buyer) | Stockout store-days; ingredient waste ₹/store | 3.5% *[assumption]*; ₹4,572/store/month *(measured)* | < 1.5%; −25% | See + Plan |
+| **CFO** (signs the budget) | Invoice leakage; food cost % of sales; payback | ~12% of invoices *[assumption]*; 23.1% *(measured)* | < 3%; held; < 6 months | Act |
+| **VP Store Operations** (owns the 37 managers) | Manager hours on admin; SOP compliance | ~45 min/day + 25–30 min per invoice *[assumption]* | < 5 min/day; < 2 min | Ask + Act |
+| **Head of Procurement** | Supplier on-time rate; ₹ in overdue POs | 83.8% chain *(measured)*; ₹8.9 lakh in 147 POs *(measured)* | > 92%; halved | See |
+| **CIO / Head of Data Platform** (the architect) | Cost per store; data incidents; AI quality | — | ≈ $113/store/month; 0 cross-store leaks; correctness ≥ 0.80 | Platform |
 
 **The ask.** A 6-week pilot in 5 stores to replace our assumptions with measured baselines.
 
@@ -40,6 +44,9 @@ question. The information for those decisions is spread across five or six disco
 
 > **Say:** "This isn't an invoice tool or a chatbot. It's the operating system for the store
 > manager: ask, see, act and plan in one place, on data HQ also trusts."
+>
+> **To the COO:** "Fewer empty shelves at 8am and less milk in the bin, store by store."
+> **To the CFO:** "Stop paying for what didn't arrive; the invoice line alone pays this back in about five months."
 
 ---
 
@@ -59,11 +66,17 @@ question. The information for those decisions is spread across five or six disco
 - **Perishables:** milk, cardamom and coconut milk. Over-order and you waste; under-order and you miss the morning rush.
 - **Demand moves:** weather and festivals shift hot vs cold drinks.
 - **Scale:** 37 stores in 8 countries, 8 suppliers and ~74 deliveries a day, each store working its own way.
+- **Thin QSR margins** (measured in gold): average order ₹148, ₹8,009 revenue per store-day (~₹10.8 crore a year chain-wide), food cost 23.1% of sales. One percentage point of food cost is ~₹10.8 lakh a year, which is why leakage and waste matter to the CFO.
 
-**The cost of fragmentation**
-- ~45 min per manager per day spent gathering data *[assumption]*.
-- Invoice leakage, stockouts and waste.
-- HQ has no consistent view of how stores are run.
+**The cost of fragmentation, by the executive who carries it** (measured in the gold tables unless marked)
+
+| Executive | What it costs them today |
+|---|---|
+| **COO** | 27 store-ingredient positions below reorder right now; ₹10.1 lakh of ingredient waste in the data window (₹4,572 per store per month) |
+| **CFO** | Invoices checked by eye, so overbilling gets paid (~12% exception rate *[assumption]*); food cost runs at 23.1% of sales, so every leaked rupee comes straight off margin |
+| **Head of Procurement** | Chain on-time rate 83.8% (worst supplier 80.5%); 321 late and 18 cancelled deliveries; 147 open POs worth ₹8.9 lakh past their expected date |
+| **VP Store Operations** | ~45 min per manager per day gathering data *[assumption]*; 37 stores, 37 ways of working |
+| **CIO** | Five tools per store with separate logins and no single permission model |
 
 > **Say:** "Your managers are the most information-dense role in the company, and they're working
 > from paper, spreadsheets and memory."
@@ -81,7 +94,7 @@ serves it, Genie and the Unity AI Gateway put AI on it, and MLflow measures it.*
 |---|---|
 | **Before** | Open the sales dashboard, the stock sheet, supplier emails and the SOP PDFs, or call HQ. It takes minutes to hours, so it's often skipped and decided from memory |
 | **After** | *"Which ingredients are below reorder at my store?" · "Which supplier is late most often?" · "How long can decoction be kept?"* One chat answers from 21 governed business tables **and** 6 SOP documents |
-| **Business impact** | Decisions made on data, not memory. ~15 min a day back per manager *[assumption]*. New baristas look up recipes and allergen rules themselves, so procedures stay consistent across 37 stores |
+| **Business impact** (VP Store Operations) | Decisions made on data, not memory. ~15 min a day back per manager *[assumption]*. New baristas look up recipes and allergen rules themselves, so procedures stay consistent across 37 stores |
 | **Measured** | 27 below-reorder positions answered with SQL (evidence/05). SOP answer with a cited source (evidence/07). Repeat questions in **1.1 s** (evidence/11) |
 | **Databricks behind it** | **Genie Agent mode** writes SQL over **Unity Catalog** tables and reads the SOP PDFs in a UC Volume. **Lakebase** stores chat history and a semantic answer cache. Cache embeddings go through **Unity AI Gateway** |
 
@@ -91,7 +104,7 @@ serves it, Genie and the Unity AI Gateway put AI on it, and MLflow measures it.*
 |---|---|
 | **Before** | Stock is known only after a physical count. An overdue order is noticed when the shelf is empty. HQ reports are a day old |
 | **After** | One screen per store, refreshed every 10 s: **today's action plan** (written at 05:30), today's **demand forecast**, items below reorder, days of stock cover, overdue POs with days late and value, late deliveries, and a live activity feed |
-| **Business impact** | Problems are visible days before they hit the counter. The manager chases the supplier **before** the morning-rush stockout (target 3.5% → < 1.5% of store-days). Money tied up in late orders is visible: Koramangala showed **8 overdue POs worth ₹31,065** (evidence/12) |
+| **Business impact** (COO · Head of Procurement) | Problems are visible days before they hit the counter. The manager chases the supplier **before** the morning-rush stockout (target 3.5% → < 1.5% of store-days). Money tied up in late orders is visible: Koramangala showed **8 overdue POs worth ₹31,065** (evidence/12) |
 | **Measured** | Whole dashboard in **~33 ms** median (notebook 04). Stock changes on screen within one refresh after an invoice is approved (evidence/12). 37 morning briefs, **882 of 884 numbers verified** against the SQL facts (notebook 06) |
 | **Databricks behind it** | **Lakeflow** builds the gold inventory, PO and delivery views, with 45 data-quality checks. **Lakebase** serves them per store in milliseconds and takes live writes. The brief is written by Claude through **Unity AI Gateway** from SQL facts, with a deterministic number check. **Databricks Apps** hosts the screen |
 
@@ -101,7 +114,7 @@ serves it, Genie and the Unity AI Gateway put AI on it, and MLflow measures it.*
 |---|---|
 | **Before** | Compare the paper invoice line by line against the PO: 25–30 min per delivery, ~74 deliveries a day, with ~12% of discrepancies paid anyway *[assumption]* |
 | **After** | Upload the invoice. The app extracts the lines, matches them to the PO, and flags price changes, wrong quantities, extra items and missing deliveries. The manager approves, and stock and the PO update at once |
-| **Business impact** | The largest cash line: manager time ($107k) plus leakage stopped ($108k) *[assumption]*. Suppliers are held to the PO price. Every decision is on record for audit |
+| **Business impact** (CFO · VP Store Operations) | The largest cash line: manager time ($107k) plus leakage stopped ($108k) *[assumption]*. Suppliers are held to the PO price. Every decision is on record for audit |
 | **Measured** | **All 4** planted discrepancies caught and the control line matched, in **~7 s** server time (notebook 04; 18.4 s in the earlier capture, evidence/11) |
 | **Databricks behind it** | **Claude through Unity AI Gateway** reads the PDF: permissioned, rate-limited and logged. Matching is deterministic code. The approval is written to **Delta** (system of record) and through to **Lakebase**, so the dashboard updates. The invoice is stored in a **UC Volume** |
 
@@ -111,7 +124,7 @@ serves it, Genie and the Unity AI Gateway put AI on it, and MLflow measures it.*
 |---|---|
 | **Before** | Prep is based on experience and a weather app. Over-prepare and milk is thrown away; under-prepare and the rush runs out |
 | **After** | *"How should I prepare for today?"* returns a per-drink plan. The baseline is an **ML demand forecast** (weekday, weekend, holiday and recent-demand patterns); the plan adjusts it only for live weather, and adds stock and overdue POs |
-| **Business impact** | Less perishable waste and fewer stockouts on busy days. New managers plan as well as experienced ones |
+| **Business impact** (COO) | Less perishable waste and fewer stockouts on busy days. New managers plan as well as experienced ones |
 | **Measured** | Forecaster beats the same-weekday average by **9.3%** (MAE 1.42 vs 1.57, 14-day holdout) and is registered `@champion` in Unity Catalog (notebook 05). Live plan: *"ML model (UC demand_forecaster v2) + weather adjustment"*, drizzle → hot drinks up (notebook 04) |
 | **Databricks behind it** | A model trained on **gold Delta** demand, tracked in **MLflow**, registered in **Unity Catalog**, scored daily by a **Lakeflow job** into **Lakebase**. Weather and holidays from an **MCP service on Unity AI Gateway**. The plan is written by Claude through the gateway; MLflow traces every step |
 
@@ -133,14 +146,14 @@ answer is governed and measured.
 
 *Projections from stated assumptions. No measured customer outcome yet; the pilot replaces them.*
 
-| Capability | Value driver | Annual ($) | Key assumption |
-|---|---|---:|---|
-| **Ask + See** | Manager time gathering data: 15 min saved per day | $32,200 | 37 managers, ₹800/hr loaded cost |
-| **See + Plan** | Fewer stockouts | $14,200 | 60% fewer, on a 3.5% store-day baseline |
-| **Plan** | Less perishable waste | $3,100 | 25% less, on ₹28k/store/year |
-| **Act** | Invoice-check time: 25 min saved per delivery | $107,000 | 2 deliveries/store/day, ₹800/hr |
-| **Act** | Invoice leakage stopped | $108,000 | 12% exception rate, ₹2,800 average slip-through |
-| | **Total** | **~$264,500 (₹2.2 crore)** | |
+| Capability | Value driver | Owner (P&L line) | Annual ($) | Key assumption |
+|---|---|---|---:|---|
+| **Ask + See** | Manager time gathering data: 15 min saved per day | VP Store Ops (labour) | $32,200 | 37 managers, ₹800/hr loaded cost |
+| **See + Plan** | Fewer stockouts | COO (lost sales) | $14,200 | 60% fewer, on a 3.5% store-day baseline |
+| **Plan** | Less perishable waste | COO (food cost) | $3,100 | 25% less, on ₹28k/store/year (measured in data: ₹55k, so conservative) |
+| **Act** | Invoice-check time: 25 min saved per delivery | VP Store Ops (labour) | $107,000 | 2 deliveries/store/day, ₹800/hr |
+| **Act** | Invoice leakage stopped | CFO (COGS) | $108,000 | 12% exception rate, ₹2,800 average slip-through |
+| | **Total** | | **~$264,500 (₹2.2 crore)** | |
 
 | | |
 |---|---|
@@ -151,14 +164,17 @@ answer is governed and measured.
 
 **KPI targets (12 months)**
 
-| KPI | Capability | Today | Target |
-|---|---|---|---|
-| Manager time gathering data | Ask + See | ~45 min/day | < 5 min/day |
-| Stockouts (% of store-days) | See + Plan | 3.5% | < 1.5% |
-| Perishable waste (% of cost) | Plan | ~4% | < 3% |
-| Invoice check time | Act | 25–30 min | < 2 min |
-| Missed invoice errors | Act | ~12% | < 3% |
-| Supplier on-time delivery | See (supplier scorecard) | 80.5–86.4% (measured) | > 92% |
+| KPI | Owner | Capability | Today | Target |
+|---|---|---|---|---|
+| Stockouts (% of store-days) | COO | See + Plan | 3.5% *[assumption]* | < 1.5% |
+| Ingredient waste per store | COO | Plan | ₹4,572/month *(measured)* | −25% |
+| Missed invoice errors | CFO | Act | ~12% *[assumption]* | < 3% |
+| Food cost % of sales | CFO | Act + Plan | 23.1% *(measured)* | held while volume grows |
+| Invoice check time | VP Store Ops | Act | 25–30 min *[assumption]* | < 2 min |
+| Manager time gathering data | VP Store Ops | Ask + See | ~45 min/day *[assumption]* | < 5 min/day |
+| Supplier on-time delivery | Head of Procurement | See (supplier scorecard) | 83.8% chain, 80.5–86.4% by supplier *(measured)* | > 92% |
+| Value in overdue POs | Head of Procurement | See | ₹8.9 lakh, 147 POs *(measured)* | halved |
+| AI correctness (app, daily) | CIO | Platform | 0.90–1.00 *(measured, 10 questions)* | ≥ 0.80 on the customer's own 30+ |
 
 **What's not in the number**
 - Consistent recipes and allergen handling across 37 stores.
@@ -169,6 +185,11 @@ answer is governed and measured.
 > **Say:** "Invoices are the biggest cash line, but the daily habit is Ask and See: that's what
 > managers open every morning. The platform is shared, so each new workflow costs a fraction of
 > the first." Full calculation: `evidence/10_business_kpi_calculations.md`.
+>
+> **To the CFO:** "81% of the value is the invoice line: $215k a year of time and leakage. If only
+> that line delivers, payback is about 5 months: $70k ÷ ($215k − $50k) × 12."
+> **To the COO:** "The stockout and waste lines are small on purpose. The data shows ₹55k of waste
+> per store a year, double what we assumed, so this line is conservative."
 
 ---
 
@@ -180,11 +201,15 @@ answer is governed and measured.
 | **3–4 · Live** | App live in 5 stores, each manager mapped to their store (row-level security); trained in ~1 hour. The daily job already chains pipeline → forecast → briefs → sync → evaluation | Real usage |
 | **5–6 · Measure** | Re-time invoice checks; re-run the AI evaluation on the customer's own SOP questions; count stockouts | Pilot scorecard |
 
-**Go / no-go**
-- ≥ 50% less time on invoice checks and data gathering (measured).
-- AI correctness ≥ 0.80 with safety at 1.00 on the customer's own questions (the daily job tracks it; 0.90–1.00 on today's synthetic set).
-- No increase in stockouts.
-- Managers using the app on most store days.
+**Go / no-go: each criterion has an executive who signs it off**
+
+| Criterion | Signs off |
+|---|---|
+| Invoice exceptions caught before payment ≥ the manual baseline, and measured leakage ≥ ₹2,800 per exception | **CFO** |
+| No increase in stockout store-days; waste per store not up | **COO** |
+| ≥ 50% less manager time on invoice checks and data gathering; app used on most store days | **VP Store Operations** |
+| Supplier on-time and overdue-PO value reported weekly from the scorecard | **Head of Procurement** |
+| AI correctness ≥ 0.80, safety 1.00 on the customer's own questions; 0 cross-store data leaks; cost per store within ±20% of plan | **CIO** |
 
 **Next steps**
 1. Agree on the 5 pilot stores and the baseline method.
@@ -192,6 +217,9 @@ answer is governed and measured.
 3. Week-2 review of the pipeline and evaluation on the customer's own data.
 
 > **Say:** "We're not asking you to believe the ₹2.2 crore. We're asking for 6 weeks to measure it."
+>
+> **To the COO:** "Pick the 5 stores with the worst stockout days; that's where you'll see it first."
+> **To the CFO:** "Either way you leave with your real invoice exception rate, a number nobody measures today."
 
 ---
 ---

@@ -1,7 +1,8 @@
 # Kaapi Bricks — Demo Script (15 minutes)
 
-**Audience:** a business stakeholder (the executive who funds it) and a technical stakeholder
-(the architect who must run it).
+**Audience:** the **COO** (economic buyer; stockouts and waste), with the **CFO's** questions in
+mind (invoice leakage, payback), and the **CIO / Head of Data Platform** (the architect who must run
+it). Each executive's metric is in `ROLEPLAY_PREP.md`, "Who owns which number".
 **Story:** one day in the life of Priya, store manager at Kaapi Bricks Koramangala. Today she runs
 the store from five or six disconnected tools. In the demo she runs it from one app:
 **Ask · See · Act · Plan**.
@@ -183,7 +184,10 @@ controls all of it. Everything is deployed from code."
 
 ## Close — value and next step (1 min)
 
-> "Each capability removes a different cost: Ask and See give managers their time back and prevent
+> "Each capability lands on someone's scorecard. For the COO: stockout days and waste per store.
+> For the CFO: invoice leakage, with food cost at 23% of sales, plus a payback of about four months.
+> For the VP of Store Operations: an hour a day back per manager. For Procurement: a live supplier
+> on-time scorecard, 83.8% today. Ask and See give managers their time back and prevent
 > stockouts, Act stops invoice leakage, Plan cuts waste. Together we project about ₹2.2 crore a
 > year, a payback of about four months. Those are assumptions and every one is written down. So the
 > next step is a six-week pilot in five stores, measured before and after, and you decide on

@@ -6,8 +6,25 @@ Two personas in one session:
 - **Technical stakeholder**, the **Head of Data Platform** who must run it: cares about architecture,
   data quality, security, integration, and failure handling.
 
-Name who owns each number: stockouts and waste → COO; invoice leakage and payback → CFO; adoption
-across 37 stores → Head of Store Operations; platform cost and reliability → Head of Data Platform.
+### Who owns which number (say the title, then their metric)
+
+| Executive | Personally measured on | Today | Their line |
+|---|---|---|---|
+| **COO** | Stockout store-days; waste ₹/store | 3.5% *[assumption]*; ₹4,572/store/month *(measured)* | "Fewer empty shelves at 8am and less milk in the bin, store by store." |
+| **CFO** | Invoice leakage; food cost % of sales; payback | ~12% exceptions *[assumption]*; 23.1% *(measured)*; 3.9 months | "Stop paying for what didn't arrive; the invoice line alone pays back in about 5 months." |
+| **VP Store Operations** | Manager admin hours; SOP compliance; adoption | ~45 min/day + 25–30 min per invoice *[assumption]* | "Your managers get an hour a day back, and every store follows the same SOPs." |
+| **Head of Procurement** | Supplier on-time rate; ₹ in overdue POs | 83.8% *(measured)*; ₹8.9 lakh in 147 POs *(measured)* | "A live supplier scorecard you can negotiate with, instead of anecdotes." |
+| **CIO / Head of Data Platform** | Cost per store; data incidents; AI quality | ≈ $113/store/month; RLS proven; 0.90–1.00 daily eval | "One platform, one permission model, measured every morning." |
+
+**Dual-executive pattern.** When the COO and CFO are both in the room, answer every value question
+twice, in one breath: the operational number for the COO, then the money for the CFO. Example:
+*"Stockouts go from 3.5% to under 1.5% of store-days; for you, that's $14k a year of recovered
+sales, and it's the smallest line, so we haven't leaned on it."*
+
+**QSR unit economics to have ready (measured in gold):** average order ₹148; ₹8,009 revenue per
+store-day, ~₹10.8 crore a year chain-wide; food cost 23.1% of sales, so one point of food cost is
+~₹10.8 lakh a year; 147 open POs (₹8.9 lakh) past their expected date; ₹10.1 lakh of ingredient
+waste in the data window.
 
 Rule of thumb: answer the business persona in one or two sentences with a number and a decision;
 answer the technical persona with the mechanism, the trade-off, and what you'd change in production.

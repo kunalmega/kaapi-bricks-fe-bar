@@ -136,17 +136,41 @@ These two formulas are the only payback and ROI definitions used in this reposit
 
 ---
 
-## Industry KPI Targets (post-deployment)
+## Industry KPI Targets (post-deployment), with the executive who owns each
 
-| KPI | Current (baseline) | Target (12 months) |
+| KPI | Owner | Current (baseline) | Target (12 months) |
+|---|---|---|---|
+| Invoice exception rate | CFO | 12% *[assumption]* | < 3% |
+| Food cost % of sales | CFO | 23.1% *(measured, synthetic)* | held while volume grows |
+| Stockout rate (store-days) | COO | 3.5% *[assumption]* | < 1.5% |
+| Ingredient waste per store | COO | ₹4,572/month, 0.66% of purchases *(measured, synthetic)* | −25% |
+| Manager minutes per delivery reconciliation | VP Store Operations | 25 min *[assumption]* | < 2 min |
+| Supplier on-time rate | Head of Procurement | 83.8% chain, 80.5–86.4% by supplier *(measured)* | > 92% |
+| Value in POs past expected date | Head of Procurement | ₹8,91,514 in 147 POs *(measured)* | halved |
+| Forecast error, store × drink × day | COO | WAPE 0.47 model vs 0.52 same-weekday heuristic *(measured, notebook 05)* | beat the heuristic on every retrain (champion gate) |
+| Genie answer latency | CIO | N/A (manual) | < 5 s cached / table questions; SOP questions ~15–25 s in Agent mode (notebook 03) |
+| AI correctness, app end to end | CIO | 0.90–1.00 on 10 questions *(measured daily, notebook 07)* | ≥ 0.80 on the customer's own 30+ questions |
+
+Earlier versions of this table listed waste as "~4% of ingredient cost" and a forecast target of
+"MAPE < 15%". Both were replaced with measured values: daily store × drink demand is small and
+noisy (a few units), so a per-cell percentage error is the wrong yardstick; the honest bar is
+"better than the heuristic managers use today".
+
+## Measured cross-checks of the value model (gold tables, 2026-10-23)
+
+| Metric | Value | SQL (schema `kaapi_bricks`) |
 |---|---|---|
-| Invoice exception rate | 12% | < 3% |
-| Stockout rate (store-days) | 3.5% | < 1.5% |
-| Waste rate (% of ingredient cost) | ~4% | < 3% |
-| Supplier on-time rate | 80–86% (range across 8 suppliers, per gold_supplier_performance) | > 92% |
-| Manager minutes per delivery reconciliation | 25 min | < 2 min |
-| Genie answer latency | N/A (manual) | < 5 sec for cached / table questions; document (SOP) questions measured at ~23 s in Agent mode (see evidence/09) |
-| Forecast error (MAPE) | no forecast | < 15% |
+| Food cost % of sales | 23.1% | `SUM(products.cost) / SUM(order_items.item_price)` |
+| Average order value | ₹147.9 | `SUM(revenue) / SUM(orders)` on `gold_store_daily_kpis` |
+| Revenue per store-day | ₹8,009 (~₹10.8 crore/year for 37 stores) | `AVG(revenue)` on `gold_store_daily_kpis` |
+| Ingredient waste | ₹10,07,123 total; ₹4,572 per store per month; 0.66% of purchase value | `inventory_transactions` where `transaction_type = 'waste'` |
+| Supplier on-time / fill rate (chain, PO-weighted) | 83.8% / 91.7% | `gold_supplier_performance` |
+| Late / cancelled deliveries | 321 / 18 of 2,000 POs | `gold_delivery_exceptions` |
+| Open POs past expected date | 147, ₹8,91,514 | `gold_open_purchase_orders` |
+
+**What this changes:** the waste value line assumes ₹28k per store per year; the data shows ~₹55k,
+so the $3,100 waste line is conservative. The total ($264,500) is left unchanged so that the payback
+and ROI formulas above stay the single source.
 
 ---
 
