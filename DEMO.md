@@ -1,145 +1,187 @@
-# Kaapi Bricks — Demo Script (12–15 minutes)
+# Kaapi Bricks — Demo Script (15 minutes)
 
 **Audience:** a business stakeholder (the executive who funds it) and a technical stakeholder
 (the architect who must run it).
-**Story:** one morning in the life of Priya, store manager at Kaapi Bricks Koramangala.
-**Structure:** every scene is Tell → Show → Tell. Prepared answers to likely questions are in
-`ROLEPLAY_PREP.md`.
+**Story:** one day in the life of Priya, store manager at Kaapi Bricks Koramangala. Today she runs
+the store from five or six disconnected tools. In the demo she runs it from one app:
+**Ask · See · Act · Plan**.
+**Structure:** every scene is Tell → Show → Tell. Each scene ends with its **business impact** and
+the **Databricks technology** behind it. Prepared answers are in `ROLEPLAY_PREP.md`.
 
 ---
 
 ## Before you start (5 min)
 
 Open these tabs:
-1. **Kaapi Bricks app** — main chat, store set to Koramangala, Bangalore
-2. **Kaapi Bricks app** — Delivery & Invoice tab
-3. **Invoice PDF** — `sample-invoices/invoice_complex_coorg.pdf`
-4. **MLflow experiment** — the evaluation runs (see `evidence/09` for run IDs)
-5. **Unity Catalog** — lineage view of `gold_inventory_position`
-6. Optional backup: `deck/FE_BAR_DECK.md`
+1. **Kaapi Bricks app**: main chat, store set to Koramangala, Bangalore.
+2. **Kaapi Bricks app**: 📊 Live Dashboard, store Koramangala (STR-001).
+3. **Kaapi Bricks app**: Delivery & Invoice tab.
+4. **Invoice PDF**: `sample-invoices/invoice_mysore_po01057.pdf` (matches open PO-01057).
+5. **MLflow experiment**: the evaluation runs (run IDs in `evidence/09`).
+6. **Unity Catalog**: lineage of `gold_inventory_position`, plus the gateway services.
+7. Optional backup: `deck/FE_BAR_DECK.md`.
 
-Warm the answer cache so the first answers are instant: `python prewarm_cache.py <app URL>`.
-Document questions in Agent mode take ~20–25 s when not cached; the cache avoids waiting on stage.
+Warm the answer cache: `python apps/main-chat-app/prewarm_cache.py <app URL>`. Uncached
+document answers take ~20–25 s; the cache makes them instant on stage.
+
+The demo invoice is reusable only if PO-01057 is still open. After a rehearsal approval, delete the
+test rows and re-sync Lakebase (see `evidence/12`, "Test clean-up").
 
 ---
 
-## Opening — frame before you show (1 min)
+## Opening — frame before you show (1 min, no screen)
 
-> "Kaapi Bricks runs 37 filter-coffee stores. Each manager receives about two supplier deliveries a
-> day, and today checks every invoice against its purchase order by hand. We estimate 25 to 30
-> minutes per delivery. That is an assumption we'd confirm with a timed baseline in a pilot.
+> "Kaapi Bricks runs 37 filter-coffee stores. Every morning each manager makes the same decisions:
+> how much to prepare, what to reorder, whether a delivery is right, how to answer a new barista.
+> The information for those decisions is spread across a sales dashboard, a stock spreadsheet,
+> supplier emails, paper invoices and six SOP PDFs. Managers spend their time finding information
+> instead of running the store.
 >
-> I'll show you three things: how Priya gets answers from her data and her company's SOPs in one
-> place, how an invoice check goes from a manual cross-check to a reviewed result, and how we know
-> the AI's answers are correct. Then I'll show you the value model and what a pilot looks like."
+> I'll show you one app that replaces that with four things: **ask** any question, **see** the
+> store live, **act** on a delivery in seconds, and **plan** the day. Then I'll show how we know the
+> AI is right, what it's worth, and how we'd prove it in a pilot."
 
 ---
 
-## Scene 1 — Morning questions (3 min)
+## Scene 1 — ASK: morning questions (3 min)
 
-**TELL:** "It's 7am. Priya has questions about her numbers and about how to run the shift. She asks
-both in plain English."
+**TELL:** "It's 7am. Priya has questions about her numbers and about how to run the shift. Today
+that means four tools and a phone call. Watch her ask in plain English."
 
 **SHOW:** main chat
 1. "Which ingredients are below reorder threshold? Show store and days of cover."
-   → SQL over `gold_inventory_position`; 27 positions below threshold across stores, the most urgent
-   at under 2 days of cover (evidence/05).
+   → SQL over `gold_inventory_position`: 27 positions below threshold, the most urgent at under 2
+   days of cover (evidence/05). Expand the SQL.
 2. "How long can prepared decoction be kept before discarding?"
-   → "Maximum of 4 hours … after 4 hours the coffee oxidizes and tastes stale", from the drink
-   recipes SOP PDF (evidence/07).
-3. "What were our top-selling drinks from February to May?"
-   → Classic Filter Coffee first with 44,375 units (evidence/05).
+   → "Maximum of 4 hours …", from the drink-recipes SOP PDF, with the source cited (evidence/07).
+3. "Which supplier is late most often?"
+   → Organic Alternatives India, 80.5% on time (evidence/05).
 
-**TELL:** "One assistant. The numbers come from governed tables through SQL she can inspect. The
-procedures come from her company's own documents, with the source cited. For the business, that
-means fewer calls to the area manager and faster onboarding for new baristas."
+**TELL (impact):** "Answers in seconds instead of opening four tools, so decisions are made on data
+rather than memory. New baristas look up recipes and allergen rules themselves, so procedures stay
+the same in all 37 stores."
+
+**TELL (technology, one line):** "That's **Genie Agent mode** writing SQL over **Unity Catalog**
+tables and reading the SOP PDFs in a governed Volume. Repeat questions come from a semantic cache in
+**Lakebase** in about a second."
 
 ---
 
-## Scene 2 — The delivery (4 min) ⭐
+## Scene 2 — SEE: the live store dashboard (2 min)
 
-**TELL:** "It's 9am. A truck from Mysore Sweet Works arrives with a paper invoice."
+**TELL:** "Today Priya finds out she's low on stock when she counts it, and that a delivery is late
+when the shelf is empty."
+
+**SHOW:** 📊 Live Dashboard, Koramangala
+1. Top tiles: items below reorder, **8 overdue POs worth ₹31,065**, late deliveries, units sold.
+2. Stock cover by ingredient: ⛔ below reorder · ⚠ under 21 days · ✓ OK.
+3. The overdue-PO table, with days late computed live.
+4. The status card: LIVE, "updated a few seconds ago", Lakebase query time of a few tens of
+   milliseconds.
+
+**TELL (impact):** "She sees the problem days before it hits the counter and chases the supplier
+before the morning-rush stockout. The money tied up in late orders is on screen."
+
+**TELL (technology):** "**Lakeflow** builds the gold stock, order and delivery views with 45
+data-quality checks. **Lakebase** serves them per store in 23–37 milliseconds and refreshes every
+10 seconds, which an analytics warehouse isn't built for. Keep this tab open: in the next scene it
+changes."
+
+---
+
+## Scene 3 — ACT: the delivery (4 min) ⭐
+
+**TELL:** "It's 9am. A truck from Mysore Sweet Works arrives with a paper invoice. Today that's 25
+to 30 minutes of line-by-line checking. That's our assumption, to confirm in the pilot."
 
 **SHOW:** Delivery & Invoice tab
-1. Upload `invoice_mysore_po01057.pdf` (it matches the real open PO-01057) and click **Parse Invoice**.
-2. The PDF is parsed and structured (lines, rates, GST) in one governed call through the
-   **Unity AI Gateway** (`kaapi_llm`).
-3. The app finds the matching purchase order and compares each line with `po_line_items`.
-4. Walk through the flagged lines on screen: matches, quantity differences, price differences,
-   and items not on the PO. Expected (measured, evidence/11): Rose Syrup price +₹30, Jaggery quantity
-   +1.3 kg, Sugar not on the PO, Palm Jaggery missing, and Badam Paste as the clean control line.
-   About 18 s.
-5. Click **View Current Inventory**. The panel is served from Lakebase.
-6. Click **Approve**. The receipt is written to `app_inventory_receipts` and the PO approval to
-   `app_po_approvals`.
+1. Upload `invoice_mysore_po01057.pdf` and click **Parse Invoice** (~18 s).
+2. The app extracts the lines, finds PO-01057 and compares each line against `po_line_items`.
+3. Walk the flagged lines (measured, evidence/11):
+   - Rose Syrup: price +₹30.
+   - Jaggery: quantity +1.3 kg.
+   - Sugar: not on the PO.
+   - Palm Jaggery: missing from the delivery.
+   - Badam Paste: matches (the control line).
+4. Click **Approve**. The 3 lines that are on the PO are received, and PO-01057 is closed.
+5. **Switch to the Live Dashboard tab:**
+   - Badam Paste, Rose Syrup and Jaggery stock go up.
+   - Overdue POs drop from 8 to 7.
+   - The activity feed shows "PO-01057 … invoice approved and closed" (evidence/12).
 
-**TELL:** "The system does the comparison; Priya still makes the decision. Every discrepancy is on
-record, which is where invoice leakage stops. One thing to be precise about: the approved receipt
-flows into the inventory numbers after the next pipeline refresh and Lakebase sync, not instantly."
+**TELL (impact):** "The system compares; Priya decides. The check goes from half an hour to under
+two minutes, the overcharge doesn't get paid, and every decision is on record. That's the biggest
+cash line in the business case."
+
+**TELL (technology):** "The invoice is read by Claude through **Unity AI Gateway**, which means
+permissioned, rate-limited and logged. The matching is plain code, not the model. The approval goes
+to **Delta**, the system of record, and is written straight through to **Lakebase**, which is why
+the dashboard moved without waiting for a pipeline run."
 
 ---
 
-## Scene 2b — Today's preparation plan (2 min)
+## Scene 4 — PLAN: today's preparation (2 min)
 
-**TELL:** "Before the lunch rush Priya wants to know how to prepare, and today it's raining."
+**TELL:** "Before the lunch rush, Priya wants to know how much to prepare, and it's raining. Today
+that's gut feel and a weather app."
 
 **SHOW:** main chat → "How should I prepare for today?"
-- The same-weekday demand baseline comes from gold (SQL); stock and overdue POs come from Lakebase.
-- The operations advisor is called through the **Unity AI Gateway MCP service**; it pulls live
-  weather and the holiday calendar and writes the plan through `kaapi_llm`.
-- Captured on a Tuesday (evidence/11): thunderstorm, 21 mm → hot drinks up, cold down; Classic
-  Filter Coffee typical 12.1 → forecast 14–15. Point at the "Store data used" block under the plan.
-- About 35 s; preparation plans are never cached because the weather changes.
+- The same-weekday baseline comes from gold; stock and overdue POs come from Lakebase.
+- Live weather and holidays come from the operations advisor, through the **gateway MCP service**.
+- Captured on a Tuesday (evidence/11): thunderstorm, 21 mm → Filter Coffee 12.1 → 14–15, Cold
+  Coffee 3.6 → 2–3. Point at the "Store data used" block.
+- About 35 s. Plans are never cached, because the weather changes.
 
-**TELL:** "Her own history for this weekday sets the numbers; the model only adjusts for today's
-weather and writes it up. Every AI call in this plan went through the governed gateway."
+**TELL (impact):** "Less milk thrown away on slow days, and no running out on busy ones. A new
+manager plans like an experienced one."
+
+**TELL (technology):** "Her own history from **gold Delta** sets the numbers; **Lakebase** adds
+current stock; the weather comes through an **MCP service on the gateway**. **MLflow** traces
+every step."
 
 ---
 
-## Scene 3 — How we know it's correct (3 min)
+## Scene 5 — How we know it's correct (2 min)
 
-**TELL:** "You can't put an AI assistant in front of 37 store managers on trust. You have to measure it."
+**TELL:** "You can't put AI in front of 37 store managers on trust. You have to measure it."
 
 **SHOW:** MLflow experiment
-1. The test set: 10 real store-manager questions, 32 expected facts.
-2. Run 1 (baseline): Correctness 0.00. The agent was called through the Chat-mode API, which
-   cannot read documents, so it declined every SOP question. It didn't make anything up:
-   Safety 1.00.
-3. Run 2 (after switching to Genie Agent mode): Correctness 0.50, Relevance 1.00, Safety 1.00.
-   Run 5 (the deployed app end to end, with the governed menu-price lookup): Correctness 0.70.
-4. Open one failed case and read the judge's reason (e.g. the recipe was right but the price was
-   missing). The latest iteration is in `evidence/09`.
+1. The test set: 10 store-manager questions, 32 expected facts.
+2. Run 1: Correctness 0.00. The Chat-mode API can't read documents, so it declined; it didn't make
+   anything up (Safety 1.00).
+3. After the switch to Genie Agent mode: 0.50. End to end through the app, with prices from the
+   governed products table: **0.70**, Relevance 1.00, Safety 1.00.
+4. Open one failed case and read the judge's reason (evidence/09).
 
-**TELL:** "We found the root cause, fixed it, and measured again. We're not at our 0.80 target yet,
-and I'd rather show you that than a perfect score we can't defend. In a pilot, this same test set
-becomes your team's quality gate before any change ships."
+**TELL:** "We found the root cause, fixed it and measured again. We're below our 0.80 target and
+we know why. In a pilot, this test set becomes your quality gate before any change ships."
 
 ---
 
-## Scene 4 — Under the hood (2 min, for the architect)
+## Scene 6 — Under the hood (1 min, for the architect)
 
-**TELL:** "Here's how the pieces connect. It's one integrated journey, not six demos."
+**TELL:** "One integrated journey, not six demos."
 
-**SHOW:** Unity Catalog lineage on `gold_inventory_position`, then the architecture in `ARCHITECTURE.md`:
-raw volume → Lakeflow bronze/silver/gold (45 quality checks, all passed) → Lakebase for the app →
-Genie Agent over the same governed tables plus the SOP volume → the app.
-Then the **Unity AI Gateway** in Catalog Explorer: `kaapi_llm`, `kaapi_embed` and the MCP service
-`kaapi_ops_advisor` with their `EXECUTE` grants and rate limits. Open `kaapi_llm_payload`: rows from
-both the main app (invoice parse) and the MCP app (plan writing). A real 429 from the rate-limit test
-is in `evidence/11`.
-Mention `evidence/08`: one purchase order, PO-00006, traced through every layer.
+**SHOW:** the Unity Catalog lineage on `gold_inventory_position`, then the gateway services.
+- The flow: raw volume → Lakeflow bronze / silver / gold (45 checks passed) → Lakebase serving
+  → Genie Agent over the same tables plus SOPs → the app.
+- Gateway services: `kaapi_llm`, `kaapi_embed` and `kaapi_ops_advisor`, with their `EXECUTE`
+  grants and rate limits.
+- `kaapi_llm_payload`: rows from both apps.
+- Mention `evidence/08`: PO-00006 traced through every layer.
 
-**TELL:** "Everything is governed in one place, runs serverless, and the pipeline, the Genie
-configuration, and the app are all deployed from code."
+**TELL:** "Delta computes, Lakebase serves, Genie answers, the gateway governs, and Unity Catalog
+controls all of it. Everything is deployed from code."
 
 ---
 
 ## Close — value and next step (1 min)
 
-> "We projected about ₹2.2 crore a year across 37 stores, with a payback of about four months. Those
-> are assumptions, and every one is written down. So the next step isn't a rollout. It's a
-> six-week pilot in five stores: time ten invoice checks per store before and after, run this
-> evaluation on your own SOPs, and decide on measured numbers."
+> "Each capability removes a different cost: Ask and See give managers their time back and prevent
+> stockouts, Act stops invoice leakage, Plan cuts waste. Together we project about ₹2.2 crore a
+> year, a payback of about four months. Those are assumptions and every one is written down. So the
+> next step is a six-week pilot in five stores, measured before and after, and you decide on
+> the numbers."
 
 ---
 
@@ -148,11 +190,12 @@ configuration, and the app are all deployed from code."
 | Part | Minutes |
 |---|---|
 | Opening | 1 |
-| Scene 1 — Morning questions | 3 |
-| Scene 2 — The delivery | 4 |
-| Scene 2b — Preparation plan | 2 |
-| Scene 3 — Evaluation | 3 |
-| Scene 4 — Under the hood | 2 |
+| Scene 1 — Ask | 3 |
+| Scene 2 — See | 2 |
+| Scene 3 — Act | 4 |
+| Scene 4 — Plan | 2 |
+| Scene 5 — Evaluation | 2 |
+| Scene 6 — Under the hood | 1 |
 | Close | 1 |
 | **Total** | **~16**, leaving time for questions |
 
@@ -161,15 +204,17 @@ configuration, and the app are all deployed from code."
 | Problem | Recovery |
 |---|---|
 | A document answer is slow (~20–25 s) | Narrate: "It's reading our SOP documents and citing them." Use a pre-warmed question next. |
-| Chat returns an error | Ask a table question (inventory, suppliers); those are fast. Show the answer in `evidence/05`. |
-| Invoice parse is slow | Narrate the steps (governed parse, match). If it fails, walk through `evidence/11` §4.1. |
-| Preparation plan errors | Show the captured plan in `evidence/11` §4.2; explain the gateway MCP call. |
-| Gateway returns 429 | That's the rate limit working; wait a minute and retry, and use it as a governance talking point. |
-| Inventory panel is empty | Lakebase permissions or sync; fall back to `evidence/07` and explain the sync step. |
+| Chat returns an error | Ask a table question (inventory, suppliers); those are fast. Show `evidence/05`. |
+| Dashboard shows OFFLINE | Lakebase permissions or the instance; show `evidence/12` and its screenshot. |
+| PO-01057 already approved | Show the before/after table in `evidence/12`; clean up after the session. |
+| Invoice parse is slow or fails | Narrate the steps (governed read, PO match); walk through `evidence/11` §4.1. |
+| Preparation plan errors | Show the captured plan in `evidence/11` §4.2. |
+| Gateway returns 429 | That's the rate limit working. Wait a minute, and use it as a governance talking point. |
 
 ## Rules
 
 1. Lead with Priya and the outcome, not the technology.
-2. Pause after each answer so people can read it.
-3. Say which numbers are measured and which are assumptions.
-4. Answer at the altitude of the person who asked.
+2. End every scene with the business impact first, then one line of technology.
+3. Pause after each answer so people can read it.
+4. Say which numbers are measured and which are assumptions.
+5. Answer at the altitude of the person who asked.

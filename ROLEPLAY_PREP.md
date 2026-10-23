@@ -16,17 +16,28 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
 
 ## Opening (60–90 seconds, before any screen)
 
-> "Kaapi Bricks runs 37 filter-coffee stores. Every store gets about two supplier deliveries a day,
-> and the manager checks each paper invoice against the PO by hand. We estimate 25 to 30 minutes
-> each. That's an assumption we'd confirm in a pilot, and it's where invoice overcharges slip
-> through.
+> "Kaapi Bricks runs 37 filter-coffee stores. Every morning each manager makes the same decisions:
+> how much to prepare, what to reorder, whether a delivery is right, how to answer a new barista.
+> The information for those decisions is spread across a sales dashboard, a stock spreadsheet,
+> supplier emails, paper invoices and six SOP PDFs. Managers spend their time finding information
+> instead of running the store.
 >
-> In the next 12 minutes I'll show three things: a manager getting answers from both her data and
-> her company's SOPs in one place; an invoice check that flags every discrepancy for her to approve;
-> and how we measure whether the AI is right, including where it isn't yet.
+> In the next 15 minutes I'll show one app that does four things on one governed copy of the data:
+> **ask** any question about the store in plain language, **see** the store live, **act** on a
+> delivery in seconds, and **plan** the day. Then how we measure whether the AI is right, including
+> where it isn't yet.
 >
-> I'll close with the value model: roughly ₹2.2 crore a year, projected from assumptions I'll show
-> you, and a five-store pilot to turn those assumptions into measurements."
+> I'll close with the value model: roughly ₹2.2 crore a year across those four, projected from
+> assumptions I'll show you, and a five-store pilot to turn those assumptions into measurements."
+
+### The four capabilities in one breath
+
+| Capability | Business impact | Databricks behind it |
+|---|---|---|
+| **Ask** | Answers in seconds instead of four tools; consistent procedures | Genie Agent mode over Unity Catalog tables + SOP PDFs; Lakebase answer cache |
+| **See** | Low stock and late orders visible days earlier; fewer stockouts | Lakeflow gold views served by Lakebase in milliseconds |
+| **Act** | Invoice check 25–30 min → < 2 min; overcharges caught | Claude via Unity AI Gateway; Delta system of record; Lakebase write-through |
+| **Plan** | Less waste; ready for the rush | Gold history + Lakebase stock + gateway MCP (weather, holidays) |
 
 ---
 
@@ -34,34 +45,49 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
 
 | Scene | Tell (what you'll see) | Show | Tell (what it means) |
 |---|---|---|---|
-| 1. Morning questions | "Priya asks about her numbers and her procedures in plain English." | Below-reorder items (SQL on gold) → decoction hold time (SOP PDF, cited) → top drinks | "Data and SOPs in one governed assistant: fewer escalations, faster barista onboarding." |
-| 2. Delivery | "A supplier invoice arrives on paper." | Upload → governed parse through the Unity AI Gateway (`kaapi_llm`) → PO match → 4 flagged lines + 1 clean match → Lakebase inventory → approve | "The system compares; the manager decides. Every discrepancy is recorded. This is the leakage and labor line of the business case." |
-| 2b. Preparation | "How should Priya prepare for today?" | Same-weekday baseline (SQL) + Lakebase stock → gateway MCP service (live weather, holidays) → plan | "Her own history sets the numbers; today's weather adjusts them. Every AI call went through the governed gateway." |
-| 3. Evaluation | "How do we know it's right?" | MLflow: 0.00 → 0.50 → 0.70 Correctness (app end to end), Relevance 1.00, Safety 1.00; a failed case with the judge's reason | "We found the root cause and fixed it. We're below our 0.80 target and we know why. This becomes your quality gate." |
-| 4. Architecture | "One journey, not six demos." | UC lineage, PO-00006 trace raw → app, gateway services + payload log | "Governed in one place, serverless, deployed from code." |
-| 5. Close | "What it's worth and how to prove it." | Value table with assumptions | "Next step is a six-week, five-store pilot with a timed baseline." |
+| 1. Ask | "Priya asks about her numbers and her procedures in plain English." | Below-reorder items (SQL on gold) → decoction hold time (SOP PDF, cited) → late supplier | "Seconds instead of four tools. Data and SOPs in one governed assistant: fewer escalations, faster barista onboarding." |
+| 2. See | "Today she finds out she's low when the shelf is empty." | Live Dashboard: 8 overdue POs worth ₹31,065, stock cover per ingredient, late deliveries | "She sees the problem days earlier and chases the supplier before the stockout. Served from Lakebase in milliseconds." |
+| 3. Act | "A supplier invoice arrives on paper." | Upload → governed read through the Unity AI Gateway (`kaapi_llm`) → PO match → 4 flagged lines + 1 clean match → approve → **the dashboard updates** | "The system compares; the manager decides. Every discrepancy is recorded. This is the leakage and labour line of the business case." |
+| 4. Plan | "How should Priya prepare for today?" | Same-weekday baseline (SQL) + Lakebase stock → gateway MCP service (live weather, holidays) → plan | "Her own history sets the numbers; today's weather adjusts them. Less waste, ready for the rush." |
+| 5. Evaluation | "How do we know it's right?" | MLflow: 0.00 → 0.50 → 0.70 Correctness (app end to end), Relevance 1.00, Safety 1.00; a failed case with the judge's reason | "We found the root cause and fixed it. We're below our 0.80 target and we know why. This becomes your quality gate." |
+| 6. Architecture | "One journey, not six demos." | UC lineage, PO-00006 trace raw → app, gateway services + payload log | "Delta computes, Lakebase serves, Genie answers, the gateway governs." |
+| 7. Close | "What it's worth and how to prove it." | Value table by capability, with assumptions | "Next step is a six-week, five-store pilot with a timed baseline." |
 
 ---
 
 ## Prepared answers
 
 ### Data freshness and Lakebase sync timing
-- **Business:** "Inventory and delivery data is as fresh as the last pipeline run, today a
-  triggered run that takes about a minute. In a pilot we'd run it on a schedule, for example every
-  15 minutes during store hours, and managers see updates within that window."
+- **Business:** "Anything the manager does in the app, like approving a delivery, shows on the
+  dashboard within seconds. Data from other systems (sales, supplier files) is as fresh as the last
+  pipeline run, today a triggered run of about a minute. In a pilot we'd schedule it, for example
+  every 15 minutes during store hours."
 - **Technical:** "Raw files land in a Unity Catalog volume; Lakeflow Auto Loader ingests them into
   bronze; silver and gold are materialized views. The full run took ~61 s serverless (evidence/01).
-  Lakebase is loaded by a truncate-and-reload script after each run. That's a snapshot, so
-  freshness equals pipeline cadence plus sync. For production I'd make the sync a job task that
-  runs right after the pipeline, or move to Lakebase synced tables so there is no custom sync code."
+  Lakebase is loaded by a truncate-and-reload script after each run, and invoice approvals write
+  through to Lakebase immediately. One caveat: if the sync runs after an approval but before the
+  next pipeline refresh, it reloads the pre-approval value until the pipeline catches up. For
+  production I'd make the sync a job task that runs right after the pipeline, or move to Lakebase
+  synced tables so there is no custom sync code."
+
+### "Why Lakebase? Why not read gold directly?"
+- **Business:** "Managers get instant screens all day without us paying for a large analytics
+  engine to stay awake."
+- **Technical:** "Delta and the SQL warehouse are built for scans and aggregation. The app makes
+  per-store point lookups every 10 seconds from up to 37 stores, and it needs row-level writes when
+  an invoice is approved. Lakebase is Postgres: the whole dashboard is 6 queries in 23–37 ms, and
+  approvals update stock in a transaction. It also holds the app's own state: chat history, the
+  semantic cache and the activity feed. Delta stays the system of record; Lakebase is the serving
+  copy. Trend and cross-store analysis still goes to Genie over gold."
 
 ### Invoice human approval and the write path
 - **Business:** "Nothing is posted without the manager clicking approve. The AI prepares the
   comparison; accountability stays with a person."
 - **Technical:** "Silver and gold tables are owned by the pipeline and read-only to the app. An
-  approval writes to two separate Delta tables, `app_inventory_receipts` and `app_po_approvals`.
-  Gold unions them in, so stock and open-PO numbers reflect the approval after the next refresh.
-  That separation means a pipeline full-refresh can never erase an approval, and the app can never
+  approval writes to two separate Delta tables, `app_inventory_receipts` and `app_po_approvals`,
+  and in the same request writes through to Lakebase: stock updated, PO closed, activity logged.
+  So the dashboard reflects it within one refresh, and gold catches up on the next pipeline run
+  because it unions the app tables in. That separation means a pipeline full-refresh can never erase an approval, and the app can never
   corrupt pipeline tables. Parsing is one governed call: the PDF goes to `kaapi_llm` through the
   Unity AI Gateway, which returns the structured fields (18.4 s server time, all 4 planted
   discrepancies caught, evidence/11). The PO comparison itself is deterministic code, not the model."
@@ -193,7 +219,8 @@ Be explicit about what is **measured** (from `evidence/`) and what is an **assum
 
 ## Rehearsal checklist
 - [ ] Opening delivered in under 90 seconds, no screen
-- [ ] Each scene ends with a business "so what", not a feature
+- [ ] Each scene ends with a business "so what", then one line on the Databricks technology
+- [ ] Mention all four capabilities' impact, not just invoices
 - [ ] Say "projected" or "assumed" every time you quote the value model
 - [ ] Practice the 0.70 answer out loud until it sounds confident, not defensive
 - [ ] Practice switching altitude mid-answer ("for the platform team: …")
