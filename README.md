@@ -14,6 +14,8 @@ live, **Act** on deliveries, and **Plan** the day.
 
 Every notebook in [`notebooks/`](notebooks/) was **executed against the live workspace on
 2026-10-23/24 and committed with its outputs**. Open any of them on GitHub to read what actually ran.
+For text-only review, the same output cells are collected in
+[`evidence/13_executed_notebook_outputs.txt`](evidence/13_executed_notebook_outputs.txt).
 
 | Notebook | What it shows (real output) |
 |---|---|

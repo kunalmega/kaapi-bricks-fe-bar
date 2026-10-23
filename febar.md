@@ -56,6 +56,7 @@ credential file were left out.
 - [x] 09 MLflow evaluation: baseline and re-test run IDs, per-question traces, failure analysis
 - [x] 10 value model with every assumption labeled
 - [x] 11 Unity AI Gateway: services, grants, gateway invoice / preparation plan / cache captures, payload-log rows, 429
+- [x] 13 plain-text extraction of executed notebook outputs 01–07 for text-only evaluation
 - [x] Evaluation source: `src/jobs/evaluate_app.py` (daily job and notebook 07) and
       `scripts/run_genie_evaluation.py`; September history committed as text in evidence/09. The
       retired KA/MAS evaluation notebooks were removed from the tree.

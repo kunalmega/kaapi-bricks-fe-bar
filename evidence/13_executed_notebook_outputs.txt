@@ -1,0 +1,601 @@
+# Executed notebook outputs — 2026-10-23/24
+
+This file is a plain-text extraction of the committed output cells in notebooks/01–07.
+The extraction strips terminal color codes and converts carriage returns to line breaks;
+it does not alter the result values. See each notebook for code and full output metadata.
+
+
+==============================================================================
+01_pipeline_and_data_quality.ipynb
+==============================================================================
+
+Cell 1 (execution_count=1)
+------------------------------------------------------------------------------
+catalog.schema: fevm_cme_conde_catalog.kaapi_bricks
+
+Cell 2 (execution_count=2)
+------------------------------------------------------------------------------
+pipeline: [dev kunal_gaurav] kaapi_bricks_medallion | id: 86ecf20f-fb31-43da-a626-db630e1dfa4b | state: PipelineState.IDLE
+serverless: True | catalog.schema: fevm_cme_conde_catalog.kaapi_bricks
+
+latest updates:
+3f04af09-d618-4ff6-ab57-a57983a116a9  COMPLETED  2026-10-23 17:59 UTC  cause=JOB_TASK
+  4ae7fa51-c681-47b9-a776-f4672e792546  COMPLETED  2026-10-23 17:46 UTC  cause=API_CALL
+  065d6a70-b298-4ccc-be9f-9c0433da45ea  COMPLETED  2026-09-27 09:25 UTC  cause=API_CALL
+  8754e418-b66a-4cb7-ad14-b8b3143d5db9  FAILED     2026-09-27 09:24 UTC  cause=API_CALL
+  e7f060ec-6df5-4972-8b05-f461036881a8  FAILED     2026-09-27 09:23 UTC  cause=API_CALL
+
+Cell 4 (execution_count=3)
+------------------------------------------------------------------------------
+update: 3f04af09-d618-4ff6-ab57-a57983a116a9
+               timestamp      event_type                                 message
+2026-10-23T17:59:28.109Z   create_update      Update 3f04af started by JOB_TASK.
+2026-10-23T17:59:30.497Z update_progress Update 3f04af is WAITING_FOR_RESOURCES.
+2026-10-23T17:59:41.243Z update_progress          Update 3f04af is INITIALIZING.
+2026-10-23T17:59:59.983Z update_progress     Update 3f04af is SETTING_UP_TABLES.
+2026-10-23T18:00:04.494Z update_progress               Update 3f04af is RUNNING.
+2026-10-23T18:00:41.323Z update_progress             Update 3f04af is COMPLETED.
+
+Cell 6 (execution_count=4)
+------------------------------------------------------------------------------
+tables     rows
+layer                  
+bronze      14  1014636
+gold         7    91521
+silver      14  1014636
+
+ layer                    table_name        table_type   rows
+bronze              bronze_customers   STREAMING_TABLE  15000
+bronze            bronze_ingredients   STREAMING_TABLE     22
+bronze bronze_inventory_transactions   STREAMING_TABLE 171163
+bronze    bronze_order_item_toppings   STREAMING_TABLE 261124
+bronze            bronze_order_items   STREAMING_TABLE 325765
+bronze                 bronze_orders   STREAMING_TABLE 200000
+bronze          bronze_po_line_items   STREAMING_TABLE   3493
+bronze               bronze_products   STREAMING_TABLE     28
+bronze  bronze_promotion_redemptions   STREAMING_TABLE  35969
+bronze             bronze_promotions   STREAMING_TABLE     15
+bronze        bronze_purchase_orders   STREAMING_TABLE   2000
+bronze                 bronze_stores   STREAMING_TABLE     37
+bronze              bronze_suppliers   STREAMING_TABLE      8
+bronze               bronze_toppings   STREAMING_TABLE     12
+  gold      gold_delivery_exceptions MATERIALIZED_VIEW    339
+  gold       gold_inventory_position MATERIALIZED_VIEW    814
+  gold     gold_open_purchase_orders MATERIALIZED_VIEW    147
+  gold           gold_product_demand MATERIALIZED_VIEW  85710
+  gold         gold_store_daily_kpis MATERIALIZED_VIEW   3693
+  gold     gold_supplier_performance MATERIALIZED_VIEW      8
+  gold            gold_waste_summary MATERIALIZED_VIEW    810
+silver                     customers MATERIALIZED_VIEW  15000
+silver                   ingredients MATERIALIZED_VIEW     22
+silver        inventory_transactions MATERIALIZED_VIEW 171163
+silver           order_item_toppings MATERIALIZED_VIEW 261124
+silver                   order_items MATERIALIZED_VIEW 325765
+silver                        orders MATERIALIZED_VIEW 200000
+silver                 po_line_items MATERIALIZED_VIEW   3493
+silver                      products MATERIALIZED_VIEW     28
+silver         promotion_redemptions MATERIALIZED_VIEW  35969
+silver                    promotions MATERIALIZED_VIEW     15
+silver               purchase_orders MATERIALIZED_VIEW   2000
+silver                        stores MATERIALIZED_VIEW     37
+silver                     suppliers MATERIALIZED_VIEW      8
+silver                      toppings MATERIALIZED_VIEW     12
+
+Cell 8 (execution_count=5)
+------------------------------------------------------------------------------
+expectations evaluated: 45 | passed (0 failed rows): 45 | failed: 0
+               dataset         expectation  passed  failed
+             customers      has_home_store   15000       0
+             customers   valid_customer_id   15000       0
+             customers          valid_tier   15000       0
+           ingredients        has_supplier      22       0
+           ingredients   non_negative_cost      22       0
+           ingredients valid_ingredient_id      22       0
+inventory_transactions        non_neg_cost  171163       0
+inventory_transactions        valid_txn_id  171163       0
+inventory_transactions          valid_type  171163       0
+   order_item_toppings       non_neg_price  261124       0
+   order_item_toppings          valid_item  261124       0
+   order_item_toppings        valid_oit_id  261124       0
+   order_item_toppings       valid_topping  261124       0
+           order_items      positive_price  325765       0
+           order_items       valid_item_id  325765       0
+           order_items         valid_order  325765       0
+           order_items       valid_product  325765       0
+                orders    non_neg_subtotal  200000       0
+                orders       non_neg_total  200000       0
+                orders          valid_keys  200000       0
+                orders      valid_order_id  200000       0
+                orders        valid_status  200000       0
+         po_line_items      positive_price    3493       0
+         po_line_items        positive_qty    3493       0
+         po_line_items       valid_line_id    3493       0
+         po_line_items         valid_po_id    3493       0
+              products       cost_le_price      28       0
+              products      positive_price      28       0
+              products    valid_product_id      28       0
+ promotion_redemptions    non_neg_discount   35969       0
+ promotion_redemptions valid_redemption_id   35969       0
+ promotion_redemptions          valid_refs   35969       0
+            promotions      valid_discount      15       0
+            promotions  valid_promotion_id      15       0
+            promotions        valid_window      15       0
+       purchase_orders     positive_amount    2000       0
+       purchase_orders      valid_delivery    2000       0
+       purchase_orders         valid_po_id    2000       0
+       purchase_orders        valid_status    2000       0
+                stores       positive_sqft      37       0
+                stores      valid_store_id      37       0
+             suppliers   valid_reliability       8       0
+             suppliers   valid_supplier_id       8       0
+              toppings  non_negative_price      12       0
+              toppings    valid_topping_id      12       0
+
+==============================================================================
+02_row_level_security.ipynb
+==============================================================================
+
+Cell 1 (execution_count=1)
+------------------------------------------------------------------------------
+catalog.schema: fevm_cme_conde_catalog.kaapi_bricks
+
+Cell 2 (execution_count=2)
+------------------------------------------------------------------------------
+role store_id
+app:kaapi-bricks-finale        *
+      app:kaapi-ops-mcp        *
+                   eval        *
+                     hq        *
+          store_manager  STR-001
+Function: fevm_cme_conde_catalog.kaapi_bricks.store_row_filter
+Input: row_store_id STRING
+Returns: BOOLEAN
+Comment: Row filter: TRUE when the current principal is HQ (*) or mapped to this store.
+Body: EXISTS ( SELECT 1 FROM store_access a WHERE a.principal = current_user() AND (a.store_id = '*' OR a.store_id = row_store_id) )
+tables with the row filter attached (10): gold_delivery_exceptions, gold_inventory_position, gold_open_purchase_orders, gold_product_demand, gold_store_daily_kpis, gold_waste_summary, inventory_transactions, orders, promotion_redemptions, purchase_orders
+
+Cell 3 (execution_count=3)
+------------------------------------------------------------------------------
+As HQ:
+table_name stores   rows
+                   orders     36 200000
+  gold_inventory_position     37    814
+gold_open_purchase_orders     37    147
+    gold_store_daily_kpis     36   3693
+
+As the Koramangala store manager (STR-001):
+table_name stores rows
+                   orders      1 6606
+  gold_inventory_position      1   22
+gold_open_purchase_orders      1    8
+    gold_store_daily_kpis      1  103
+
+Cell 5 (execution_count=4)
+------------------------------------------------------------------------------
+=== HQ  (completed, 14.4 s) ===
+## Store Revenue — April 2026
+
+A total of **36 stores** have sales data recorded overall. For April 2026 specifically, here are the top 5 stores by total revenue:
+
+**Top 5 stores by revenue April 2026 and total store count with sales**
+
+| store_id | total_revenue | total_stores |
+| --- | --- | --- |
+| STR-003 | 344262.75 | 36 |
+| STR-011 | 342765.0 | 36 |
+| STR-002 | 336926.75 | 36 |
+| STR-021 | 324260.25 | 36 |
+| STR-001 | 323557.5 | 36 |
+
+Store **STR-003** led with $344,262.75 in revenue, followed closely by STR-011 ($342,765.00) and STR-002 ($336,926.75).
+=== Koramangala store manager  (completed, 15.8 s) ===
+Only one store appears in this dataset.
+
+## Only One Store Has Sales Data
+
+The dataset contains sales data for just **1 store** (STR-001), so there isn't a top-5 to show — the single store's total revenue in April 2026 was **$323,557.50**.
+
+**Revenue per store, April 2026**
+
+| store_id | total_revenue |
+| --- | --- |
+| STR-001 | 323557.5 |
+
+==============================================================================
+03_genie_agent.ipynb
+==============================================================================
+
+Cell 1 (execution_count=1)
+------------------------------------------------------------------------------
+catalog.schema: fevm_cme_conde_catalog.kaapi_bricks
+
+Cell 2 (execution_count=2)
+------------------------------------------------------------------------------
+Q: Which 5 store-ingredient positions are most urgently below reorder threshold? Show store, ingredient, stock, threshold and days of cover.
+   status=completed  13.5 s  tools used=['execute_sql']
+   SQL: SELECT store_id, ingredient_name, current_stock, reorder_threshold, days_cover FROM `fevm_cme_conde_catalog`.`kaapi_bricks`.`gold_inventory_position` WHERE below_reorder = true AND days_cover IS NOT NULL ORDER BY days_cover ASC LIMIT 5
+A: ## Most Urgent Below-Reorder Store-Ingredient Positions
+   
+   Ranked by lowest days of inventory cover remaining:
+   
+   **Top 5 urgent below-reorder positions**
+   
+   | store_id | ingredient_name | current_stock | reorder_threshold | days_cover |
+   | --- | --- | --- | --- | --- |
+   | STR-010 | Cocoa Powder | 0.38 | 4.0 | 1.4 |
+   | STR-031 | Jaggery | 2.86 | 20.0 | 3.5 |
+   | STR-011 | Badam Paste | 3.89 | 5.0 | 13.1 |
+   | STR-011 | Nannari Syrup | 3.81 | 6.0 | 13.1 |
+   | STR-016 | Jaggery | 16.45 | 20.0 | 13.4 |
+   
+   **STR-010's Cocoa Powder** is the most critical, with only **0.38 units** on hand against a **4.0 threshold** — just **1.4 days of cover** left. **STR-031's Jaggery** follows with **3.5 days** of cover. **STR-011** appears twice (Badam Paste and Nannari Syrup, both ~13.1 days), and **STR-016's Jaggery** rounds out the list at 13.4 days.
+----------------------------------------------------------------------------------------------------
+Q: Which supplier has the lowest on-time delivery rate, and what is it?
+   status=completed  12.5 s  tools used=['execute_sql']
+   SQL: SELECT supplier_id, supplier_name, category, on_time_rate, total_pos, delivered_pos FROM `fevm_cme_conde_catalog`.`kaapi_bricks`.`gold_supplier_performance` WHERE on_time_rate IS NOT NULL ORDER BY on_time_rate ASC LIMIT 5
+A: ## Lowest On-Time Delivery Rate
+   
+   **Organic Alternatives India** (SUP-008, Alt Milks category) has the lowest on-time delivery rate at **80.49%**, having delivered on time for 225 of 246 purchase orders. This is the lowest among all suppliers, slightly below Kerala Spice Traders (82.9%) and Chennai Packaging Co. (83.1%).
+   
+   **Lowest on-time delivery rate suppliers**
+   
+   | supplier_id | supplier_name | category | on_time_rate | total_pos | delivered_pos |
+   | --- | --- | --- | --- | --- | --- |
+   | SUP-008 | Organic Alternatives India | Alt Milks | 0.8049 | 246 | 225 |
+   | SUP-005 | Kerala Spice Traders | Spices & Flavors | 0.8288 | 222 | 203 |
+   | SUP-007 | Chennai Packaging Co. | Cups & Packaging | 0.8305 | 236 | 219 |
+   | SUP-002 | Chikmagalur Plantations | Robusta & Chicory | 0.8326 | 233 | 215 |
+   | SUP-004 | Nandini Dairy | Dairy & Milks | 0.8345 | 278 | 255 |
+----------------------------------------------------------------------------------------------------
+Q: How long can prepared filter coffee decoction be kept before it must be discarded?
+   status=completed  13.5 s  tools used=['search_context_files']
+A: ## Filter Coffee Decoction Hold Time
+   
+   Prepared filter coffee decoction must be discarded after a **maximum of 4 hours**. This is a firm limit — after 4 hours the decoction oxidizes, turns bitter, and loses its aroma, so it must be discarded regardless of how it looks or smells.
+   
+   This standard is consistent across the Food Safety Policy and the Drink Recipes SOP, and is reinforced in closing procedures: at the end of each shift, baristas must discard all remaining prepared decoction rather than carry it over to the next day.
+----------------------------------------------------------------------------------------------------
+Q: What are the allergen handling steps when a customer reports a nut allergy?
+   status=completed  15.4 s  tools used=['search_context_files']
+A: ## Nut Allergy Handling Procedure
+   
+   Per the Kaapi Bricks Food Safety Policy, nut allergens in the menu include almond milk, badam milk (PRD-020), pistachio in Pista Kaapi (PRD-026), and hazelnut syrup. When a customer reports a nut allergy, staff follow the **Allergen Communication Protocol**:
+   
+   1. **Confirm the specific allergen** — verify it is a tree nut allergy and which nut(s) specifically.
+   2. **Check all ingredients, including syrups and add-ons** — review the full recipe (e.g., hazelnut syrup, badam/pistachio paste, almond milk) for hidden nut content.
+   3. **Use freshly cleaned equipment to prevent cross-contact** — the blender must be cleaned between orders when switching between nut-based and dairy milks, and almond milk/coconut milk must be stored and dispensed separately from dairy milk.
+   4. **If unsure, consult the manager before preparing the drink.**
+   
+   If an allergic reaction ac
+----------------------------------------------------------------------------------------------------
+
+==============================================================================
+04_app_lakebase_and_ai_workflows.ipynb
+==============================================================================
+
+Cell 1 (execution_count=1)
+------------------------------------------------------------------------------
+catalog.schema: fevm_cme_conde_catalog.kaapi_bricks
+
+Cell 2 (execution_count=2)
+------------------------------------------------------------------------------
+app: kaapi-bricks-finale | app status: RUNNING | compute: ACTIVE
+GET /api/stores -> 200 | 37 stores, e.g. ['Koramangala, Bangalore', 'Indiranagar, Bangalore', 'Jayanagar, Bangalore']
+
+Cell 4 (execution_count=3)
+------------------------------------------------------------------------------
+Lakebase query time (6 queries + brief + forecast), ms: min 29.9  median 33.1  max 38.1
+round trip from this notebook, ms: median 1674
+KPIs: {"below_reorder": 0, "lowest_cover": {"ingredient_id": "ING-002", "ingredient_name": "Chikmagalur Robusta Beans", "unit": "kg", "current_stock": 69.93, "reorder_threshold": 15.0, "below_reorder": false, "days_cover": 18.2, "avg_daily_usage": 3.836, "last_txn_date": "2026-07-31"}, "overdue_pos": 8, "overdue_value": 31065.06, "late_deliveries": 9, "avg_days_late": 1.6, "units_7d": 744}
+
+Today's action plan: Friday push: chase 8 overdue POs worth ₹31065 and prep for above-average demand. (numbers verified 23/23)
+  1. Escalate PO-00816 with Mysore Sweet Works; payment of ₹6017 is 182 days overdue.  — PO-00816 to Mysore Sweet Works is the oldest overdue at 182 days, risking supplier relationship.
+  2. Follow up PO-00951 with Mysore Sweet Works for ₹4967 overdue 136 days.  — Second overdue PO to same supplier; 8 total overdue POs worth ₹31065 need urgent resolution.
+  3. Chase PO-01314 with Coorg Coffee Estates for ₹6341 overdue 130 days.  — PO-01314 is 130 days overdue and remains unresolved.
+  4. Prep extra Classic Filter Coffee and Masala Chai batches for today's higher-than-usual demand.  — Classic Filter forecast 14.1 vs usual 12.3; Masala Chai forecast 9.8 vs usual 7.3 on Friday.
+  5. Review Chikmagalur Robusta Beans prep quantities to cut ₹4544 waste this week.  — Chikmagalur Robusta Beans is the top waste item at ₹4544 waste cost.
+
+Today's demand forecast (model vs usual for this weekday):
+            product_name  forecast_units  baseline_same_weekday
+   Classic Filter Coffee           14.08                  12.25
+        Strong Decoction           10.63                  11.25
+             Masala Chai            9.76                   7.25
+           Degree Coffee            8.33                   7.00
+   Bella Kaapi (Jaggery)            6.60                   8.00
+             Cold Coffee            5.26                   5.50
+    Mysore Filter Coffee            4.94                   3.25
+Kumbakonam Degree Coffee            4.49                   4.75
+
+Cell 6 (execution_count=4)
+------------------------------------------------------------------------------
+HTTP 200 | 8.4 s round trip | server 7.1 s
+extracted by kaapi_llm (gateway): {'supplier_name': 'Mysore Sweet Works', 'invoice_number': 'MSW-INV-2026-0729', 'invoice_date': '2026-07-29', 'po_reference': 'PO-01057', 'total_amount': 4761.44}
+matched PO: PO-01057 | warnings: []
+  invoice_name  invoice_qty  po_qty  invoice_rate  po_rate  status                                           issues
+   Badam Paste         2.15    2.15         800.0    800.0   match                                               []
+    Rose Syrup         6.39    6.39         230.0    200.0   error [Price: contract ₹200.0, invoiced ₹230.0 (+₹30)]
+Jaggery Blocks        14.00   12.69          80.0     80.0 warning       [Qty: ordered 12.69, invoiced 14.0 (+1.3)]
+         Sugar         5.00     NaN          45.0      NaN   extra                         [Not in PO — extra item]
+  Palm Jaggery          NaN    5.76           NaN    150.0 missing    [In PO but not in invoice — missing delivery]
+
+status counts: {'match': 1, 'error': 1, 'warning': 1, 'extra': 1, 'missing': 1}
+
+Cell 8 (execution_count=5)
+------------------------------------------------------------------------------
+27.2 s | trace tr-2fd2dc1ece7a33e25b5aab90793d6229 | cached=False
+# ☕ Kaapi Bricks Koramangala (STR-001) — Preparation Plan
+**Saturday, 26 October 2026** | Generated by Kaapi Bricks Operations Advisor
+
+---
+
+## 📋 Situation Summary
+
+| Factor | Detail |
+|---|---|
+| **Day Type** | Saturday (Weekend) |
+| **Holiday** | None |
+| **Weather** | Moderate drizzle, 20.6–27.3°C |
+| **Forecast Basis** | ML model (UC demand_forecaster v2) + weather adjustment |
+
+> **How forecasts are built:** The ML model already accounts for weekday/weekend patterns, holidays, and recent demand trends. The same-weekday averages are shown for reference. The only manual adjustment applied here is for **weather**, which the model does not include.
+
+---
+
+## 🌦️ Weather Impact Assessment
+
+**Condition: Moderate Drizzle | Low: 20.6°C | High: 27.3°C**
+
+Bangalore drizzle on a Saturday is a **net positive** for footfall — customers seek warm shelter and a hot cup. Expect:
+
+| Signal | Impact |
+|---|---|
+| 🌧️ Rain/drizzle | **Hot drinks ↑ ~10–15%** |
+| 🌡️ Mild temps (20–27°C) | **Cold drinks ↓ ~10–15%** |
+| ☂️ Weekend + rain | Longer dwell time, higher add-on potential |
+| 🏠 Delivery orders | Likely spike — ensure packaging stock is ready |
+
+---
+
+## 📊 Product Forecast — Saturday 2026-10-24
+
+*ML baseline → Weather-adjusted final target shown. Same-weekday average included for context.*
+
+| Drink | Same-Sat Avg | ML Baseline | Weather Adj | **Final Target** | Direction |
+|---|---|---|---|---|---|
+| Classic Filter Coffee | 15.5 | 17.04 | +10% | **~19** | ☕ Hot ↑ |
+| Strong Decoction | 13.75 | 14.16 | +12% | **~16** | ☕ Hot ↑ |
+| Masala Chai | 13.0 | 12.61 | +12% | **~14** | ☕ Hot ↑ |
+| Degree Coffee | 10.25 | 11.55 | +10% | **~13** | ☕ Hot ↑ |
+| Bella Kaapi (Jaggery) | 6.0 | 8.14 | +10% | **~9** | ☕ Hot ↑ |
+| Mysore Filter Coffee | 4.0 | 6.68 | +10% | **~7** | ☕ Hot ↑ |
+| Kumbakonam Degree Coffee | 5.75 | 5.86 | +8% | **~6** | ☕ Mild ↑ |
+| Cold Coffee | 8.0 | 7.05 | −12% | **~6** | 🧊 Cold ↓ |
+| Kaapi Frappe | — | *(not in ML output)* | −12% | **~4** | 🧊 Cold ↓ |
+
+> **Total estimated orders: ~94** (ML baseline ~83 units across listed drinks, weather-adjusted upward on hot items; weekend baseline of 77 orders from history is the floor)
+
+---
+
+## 🧂 Ingredient & Stock Readiness
+
+### ✅ Stock Cover — No Immediate Risk
+All flagged items have comfortable cover for today's service:
+
+| Ingredient | Stock | Cover |
+|---|---|---|
+| Chikmagalur Robusta Beans | 69.93 kg | 18.2 days ✅ |
+| Almond Milk | 67.49 L | 28.2 days ✅ |
+| Chicory | 45.06 kg | 31.1 days ✅ |
+| Rose Syrup | 16.79 L | 35.0 days ✅ |
+
+> With hot drink volumes running ~10–12% above ML baseline today, **Robusta Beans and Chicory consumption will be slightly elevated**. No risk for today, but flag for weekly reorder review — Robusta at 18.2 days is the tightest cover.
+
+### ⚠️ Overdue Purchase Orders — Escalation Required
+
+**5 POs are significantly overdue.** Two suppliers (Mysore Sweet Works) account for Rs. 8,481 combined and are 142–182 days overdue. This is a **supply chain risk**, not just an admin issue.
+
+==============================================================================
+05_demand_forecast_model.ipynb
+==============================================================================
+
+Cell 1 (execution_count=1)
+------------------------------------------------------------------------------
+catalog.schema: fevm_cme_conde_catalog.kaapi_bricks
+
+Cell 2 (execution_count=2)
+------------------------------------------------------------------------------
+UC model: fevm_cme_conde_catalog.kaapi_bricks.demand_forecaster | @champion = version 2 | status READY
+training run: 43a399e3f4d14072bdc381d122a2827d | holdout days: 14 | train rows: 77700 | holdout rows: 14504
+features: store_idx,product_idx,dow,is_weekend,is_holiday,lag_7,mean_28,same_dow_mean_4
+
+               method   MAE  WAPE
+                model 1.423 0.473
+baseline_same_weekday 1.569 0.521
+    baseline_28d_mean 1.489 0.495
+
+MAE improvement vs same-weekday baseline: 9.3%
+
+Cell 3 (execution_count=3)
+------------------------------------------------------------------------------
+All registered versions:
+v2  aliases=['champion']  run=43a399e3f4d14072bdc381d122a2827d
+v1  aliases=[]  run=c7fd690743e24549a342bb1cd959cb6d
+
+Scored forecast (next 7 days):
+first_day   last_day rows stores drinks model_version                scored_at
+2026-10-23 2026-10-29 7252     37     28             2 2026-10-23T18:06:51.000Z
+
+Koramangala, today:
+product_name forecast_units baseline_same_weekday is_weekend is_holiday
+   Classic Filter Coffee          14.08                 12.25          0          0
+        Strong Decoction          10.63                 11.25          0          0
+             Masala Chai           9.76                  7.25          0          0
+           Degree Coffee           8.33                   7.0          0          0
+   Bella Kaapi (Jaggery)            6.6                   8.0          0          0
+             Cold Coffee           5.26                   5.5          0          0
+    Mysore Filter Coffee           4.94                  3.25          0          0
+Kumbakonam Degree Coffee           4.49                  4.75          0          0
+
+==============================================================================
+06_store_briefs_and_ai_gateway.ipynb
+==============================================================================
+
+Cell 1 (execution_count=1)
+------------------------------------------------------------------------------
+catalog.schema: fevm_cme_conde_catalog.kaapi_bricks
+
+Cell 2 (execution_count=2)
+------------------------------------------------------------------------------
+briefs: 37 stores | numbers verified against facts: 882/884
+store_id                    store_name  numbers_grounded  numbers_checked                                                                                    headline
+ STR-001      Kaapi Bricks Koramangala                23               23            Friday push: chase 8 overdue POs worth ₹31065 and prep for above-average demand.
+ STR-002      Kaapi Bricks Indiranagar                26               26                Friday at Indiranagar: clear 7 overdue POs worth ₹49,893 and cut bean waste.
+ STR-003        Kaapi Bricks Jayanagar                22               22       Friday: clear overdue POs totalling ₹38,540 and prep for above-average coffee demand.
+ STR-004       Kaapi Bricks Whitefield                20               20             Friday at Whitefield: reorder Vanilla Extract, chase overdue POs worth ₹12,865.
+ STR-005          Kaapi Bricks MG Road                23               23   Friday at MG Road: chase 6 overdue POs worth ₹29,117 and prep for Strong Decoction spike.
+ STR-006       Kaapi Bricks HSR Layout                24               24  Friday: Chase two overdue Chennai Packaging Co. POs and manage Degree Coffee demand spike.
+ STR-007     Kaapi Bricks Malleshwaram                18               18                  Chase 2 overdue POs worth ₹13736 and prep for above-average Friday demand.
+ STR-008     Kaapi Bricks Basavanagudi                26               26     Friday surge expected for Classic Filter Coffee; clear ₹13,887 in overdue POs urgently.
+ STR-009  Kaapi Bricks Electronic City                24               24                    Chase 7 overdue POs worth ₹23,048 and reorder two low-stock items today.
+ STR-010         Kaapi Bricks JP Nagar                28               28        Friday alert: Cocoa Powder critically low and ₹11,060 overdue across 4 supplier POs.
+ STR-011 Kaapi Bricks Chennai T. Nagar                26               27 Friday: clear 3 overdue Organic Alternatives POs and reorder Badam Paste and Nannari Syrup.
+ STR-012    Kaapi Bricks Chennai Adyar                24               24     Reorder Vanilla Extract and chase Coorg Coffee Estates for 3 overdue POs worth ₹45,961.
+
+Cell 3 (execution_count=3)
+------------------------------------------------------------------------------
+Koramangala — Friday push: chase 8 overdue POs worth ₹31065 and prep for above-average demand. | MLflow trace tr-937be1218fc3a920259daf418e69542d
+  1. Escalate PO-00816 with Mysore Sweet Works; payment of ₹6017 is 182 days overdue.
+     why: PO-00816 to Mysore Sweet Works is the oldest overdue at 182 days, risking supplier relationship.
+  2. Follow up PO-00951 with Mysore Sweet Works for ₹4967 overdue 136 days.
+     why: Second overdue PO to same supplier; 8 total overdue POs worth ₹31065 need urgent resolution.
+  3. Chase PO-01314 with Coorg Coffee Estates for ₹6341 overdue 130 days.
+     why: PO-01314 is 130 days overdue and remains unresolved.
+  4. Prep extra Classic Filter Coffee and Masala Chai batches for today's higher-than-usual demand.
+     why: Classic Filter forecast 14.1 vs usual 12.3; Masala Chai forecast 9.8 vs usual 7.3 on Friday.
+  5. Review Chikmagalur Robusta Beans prep quantities to cut ₹4544 waste this week.
+     why: Chikmagalur Robusta Beans is the top waste item at ₹4544 waste cost.
+
+Facts the model was given (computed in SQL):
+{
+ "store": "Kaapi Bricks Koramangala",
+ "date": "2026-10-23",
+ "weekday": "Friday",
+ "low_stock": [],
+ "overdue_pos": [
+  {
+   "po": "PO-01314",
+   "supplier": "Coorg Coffee Estates",
+   "amount_inr": 6341,
+   "days_overdue": 130
+  },
+  {
+   "po": "PO-00816",
+   "supplier": "Mysore Sweet Works",
+   "amount_inr": 6017,
+   "days_overdue": 182
+  },
+  {
+   "po": "PO-00951",
+   "supplier": "Mysore Sweet Works",
+   "amount_inr": 4967,
+   "days_overdue": 136
+  }
+ ],
+ "today_forecast": [
+  {
+   "drink": "Classic Filter Coffee",
+   "forecast_units": 14.1,
+   "usual_for_this_weekday": 12.3,
+   "holiday": false
+  },
+  {
+   "drink": "Strong Decoction",
+   "forecast_units": 10.6,
+   "usual_for_this_weekday": 11.3,
+   "holiday": false
+  },
+  {
+   "drink": "Masala Chai",
+   "forecast_units": 9.8,
+   "usual_for_this_weekday": 7.3,
+   "holiday": false
+  },
+  {
+   "drink": "Degree Coffee",
+   "forecast_units": 8.3,
+   "usual_for_this_weekday": 7.0,
+   "holiday": false
+  }
+ ],
+ "top_waste": {
+  "item": "Chikmagalur Robusta Beans",
+  "waste_cost_inr": 4544
+ },
+ "overdue_total": {
+  "count": 8,
+  "value_inr": 31065
+ }
+}
+
+Cell 5 (execution_count=4)
+------------------------------------------------------------------------------
+kaapi_llm_payload
+                   requester destination_model requests  ok median_latency_ms                last_call
+ops job / notebook (HQ user)           primary      104 104              3956 2026-10-23T18:08:17.472Z
+     app kaapi-bricks-finale           primary        3   3              3828 2026-10-23T18:14:38.635Z
+           app kaapi-ops-mcp           primary        2   2             21876 2026-10-23T18:14:55.838Z
+ops job / notebook (HQ user)               NaN        2   0                 0 2026-09-29T12:24:17.308Z
+kaapi_embed_payload
+              requester destination_model requests ok median_latency_ms                last_call
+app kaapi-bricks-finale           primary        4  4               666 2026-10-06T06:58:09.833Z
+
+==============================================================================
+07_evaluation_over_time.ipynb
+==============================================================================
+
+Cell 1 (execution_count=1)
+------------------------------------------------------------------------------
+catalog.schema: fevm_cme_conde_catalog.kaapi_bricks
+
+Cell 2 (execution_count=2)
+------------------------------------------------------------------------------
+If you are using MLflow Tracing, you can migrate your traces to Unity Catalog for unlimited storage, fine-grained access controls, and queryability from notebooks, SQL, and dashboards. Learn more: https://docs.databricks.com/aws/en/mlflow3/genai/tracing/migrate-traces-to-uc
+2026/10/23 23:55:16 INFO mlflow.genai.utils.data_validation: Testing model prediction with the first sample in the dataset. To disable this check, set the MLFLOW_GENAI_EVAL_SKIP_TRACE_VALIDATION environment variable to True.
+Evaluating:   0%|          | 0/10 [Elapsed: 00:00, Remaining: ?]
+Evaluating:  10%|█         | 1/10 [Elapsed: 02:53, Remaining: 26:04]
+Evaluating:  20%|██        | 2/10 [Elapsed: 03:19, Remaining: 13:18]
+Evaluating:  30%|███       | 3/10 [Elapsed: 03:19, Remaining: 07:46]
+Evaluating:  40%|████      | 4/10 [Elapsed: 03:20, Remaining: 05:00]
+Evaluating:  60%|██████    | 6/10 [Elapsed: 03:35, Remaining: 02:23]
+Evaluating:  70%|███████   | 7/10 [Elapsed: 03:36, Remaining: 01:32]
+Evaluating:  80%|████████  | 8/10 [Elapsed: 03:36, Remaining: 00:54]
+Evaluating:  90%|█████████ | 9/10 [Elapsed: 03:36, Remaining: 00:24]
+Evaluating: 100%|██████████| 10/10 [Elapsed: 03:38, Remaining: 00:00]
+Evaluating: 100%|██████████| 10/10 [Elapsed: 03:38, Remaining: 00:00] [predict_fn: 91%, scorers: 9%]
+Evaluating: 100%|██████████| 10/10 [Elapsed: 03:38, Remaining: 00:00] [predict_fn: 91%, scorers: 9%]
+<IPython.core.display.HTML object>
+run_id cad908b6a24e4613906ae5f2c22a0bf9
+  correctness/mean: 1.000
+  relevance_to_query/mean: 1.000
+  safety/mean: 1.000
+
+Cell 3 (execution_count=3)
+------------------------------------------------------------------------------
+evaluated_at    source n_questions correctness relevance safety                    mlflow_run_id
+2026-10-23T18:14:04.000Z scheduled          10         0.9       1.0    1.0 ebb37806d793445e97afc05e411eb18c
+2026-10-23T18:23:51.000Z  notebook          10         1.0       1.0    1.0 188687d80bbf47799752b735447855a7
+2026-10-23T18:29:40.000Z  notebook          10         1.0       1.0    1.0 cad908b6a24e4613906ae5f2c22a0bf9
+
+Cell 4 (execution_count=4)
+------------------------------------------------------------------------------
+question  expected_facts safety correctness relevance_to_query                                                           answer_start
+                       How do I make a Classic Filter Coffee?             NaN    yes         yes                yes ## Classic Filter Coffee (PRD-001) — Rs.60 This is Kaapi Bricks' best-
+              What is the correct decoction ratio and timing?             NaN    yes         yes                yes ## Decoction Ratio & Timing (Kaapi Bricks House Blend) **Coffee-to-wat
+What should a barista do if a customer reports a nut allergy?             NaN    yes         yes                yes ## Barista Allergen Protocol — Nut Allergy Per Kaapi Bricks' Food Safe
+                 How long does Coorg Arabica take to reorder?             NaN    yes         yes                yes ## Coorg Arabica Reorder Lead Time — Koramangala (STR-001) **Lead time
+                   At what temperature should milk be stored?             NaN    yes         yes                yes This storage guidance applies company-wide, including the Koramangala 
+                How do I clean the brass filter coffee maker?             NaN    yes         yes                yes ## Cleaning the Brass Filter Coffee Maker Clean it after every batch, 
+                     How can I open a Kaapi Bricks franchise?             NaN    yes         yes                yes ## How to Open a Kaapi Bricks Franchise Kaapi Bricks is expanding its 
+                                   How do I make Masala Chai?             NaN    yes         yes                yes ## Masala Chai (PRD-015) — Rs.50 Masala Chai is Kaapi Bricks' second m
+     Who supplies our milk and what are their delivery terms?             NaN    yes         yes                yes ## Milk Suppliers & Delivery Terms Kaapi Bricks sources milk from two 
+   How long can prepared decoction be kept before discarding?             NaN    yes         yes                yes ## Prepared Decoction Hold Time Prepared decoction (filter coffee) mus

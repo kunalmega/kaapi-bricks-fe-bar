@@ -11,9 +11,12 @@ Every result on this page was **captured** from the deployed app (`kaapi-bricks-
 | 3 | Demand-based preparation advice | `POST /api/chat` → Genie Agent mode | 2026-09-28 13:54:06 | 34.1 s client |
 | 4 | SOP question answered from PDFs | `POST /api/chat` → Genie Agent mode | 2026-09-28 (see evidence/07) | 22.9 s |
 
-Invoice pipeline: PDF → UC Volume `invoices/` → `ai_parse_document` → `databricks-claude-sonnet-4-6`
+Historical invoice pipeline for this 2026-09-28 capture: PDF → UC Volume `invoices/` → `ai_parse_document` → `databricks-claude-sonnet-4-6`
 structured extraction → supplier match → PO match (`purchase_orders`, `po_line_items`) → line-level comparison.
 A manager must approve before anything is written (to `app_inventory_receipts` / `app_po_approvals`).
+The current app sends the PDF through the governed `kaapi_llm` Unity AI Gateway model service;
+see `evidence/11_unity_ai_gateway.md` and the newer executed result in
+`notebooks/04_app_lakebase_and_ai_workflows.ipynb`.
 
 ---
 

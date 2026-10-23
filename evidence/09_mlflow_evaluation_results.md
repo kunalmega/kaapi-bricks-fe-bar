@@ -1,6 +1,17 @@
 # MLflow Evaluation Results — Kaapi Bricks Genie Agent
 
-Five runs on the same 10-question dataset. Runs 1–3 evaluate **Genie directly**. Runs 4–5 evaluate the **deployed app end to end** (what a store manager sees). Run 4 is void (incomplete scoring); run 5 is the current headline result.
+## Latest executed evaluation (2026-10-23)
+
+The deployed app was evaluated again on 10 questions. The committed output in
+`notebooks/07_evaluation_over_time.ipynb` and its plain-text extraction in
+`evidence/13_executed_notebook_outputs.txt` show three runs in `eval_history`:
+Correctness **0.90, 1.00, 1.00**; Relevance **1.00** and Safety **1.00** on each.
+The latest MLflow run ID is `cad908b6a24e4613906ae5f2c22a0bf9`. The ten-question set is
+small, so these results do not establish the same performance on unseen questions.
+
+## Earlier September evaluation history
+
+Five runs on the same 10-question dataset. Runs 1–3 evaluate **Genie directly**. Runs 4–5 evaluate the **deployed app end to end** (what a store manager sees). Run 4 is void (incomplete scoring); run 5 was the September headline result.
 Every score below was read back from MLflow. None are estimates.
 
 | Field | Value |
@@ -13,7 +24,7 @@ Every score below was read back from MLflow. None are estimates.
 
 ## Results
 
-**Headline (run 5, deployed app end to end, all 10 scored): Correctness 0.70 · Relevance 1.00 · Safety 1.00.**
+**September headline (run 5, deployed app end to end, all 10 scored): Correctness 0.70 · Relevance 1.00 · Safety 1.00.**
 History below. Runs 1–3 are Genie-direct; runs 4–5 are in *Runs 4–5* further down.
 
 | Scorer | Run 1: baseline | Run 2: Agent mode | Run 3: + completeness instruction |
