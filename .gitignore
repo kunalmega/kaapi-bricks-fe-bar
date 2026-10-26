@@ -32,3 +32,6 @@ build/
 # Local MLflow store created when no tracking URI is set
 mlflow.db
 mlruns/
+
+# Local agent tooling config
+.isaac/
