@@ -1397,6 +1397,58 @@ def lakebase_dashboard(store: str = "Koramangala, Bangalore"):
     }, default=str))
 
 
+# Architecture tab: deep links into the workspace for each diagram node, plus live counts.
+ARCH_IDS = {
+    "pipeline_id": "86ecf20f-fb31-43da-a626-db630e1dfa4b",
+    "daily_job_id": "9224989710103",
+    "trace_experiment": "3268449285627906",
+    "eval_experiment": "982411422225142",
+    "forecast_experiment": "1979412060431706",
+}
+
+
+@app.get("/api/arch")
+def architecture_info():
+    """Workspace links for the Architecture tab, and live counts from Lakebase (best effort)."""
+    try:
+        host = _get_ws_info()[0]
+    except Exception:
+        host = _get_workspace_client().config.host.rstrip("/")
+    cat, sch = CATALOG_SCHEMA.split(".")
+    explore = f"{host}/explore/data/{cat}/{sch}"
+    links = {
+        "app": f"{host}/apps/kaapi-bricks-finale",
+        "mcp": f"{host}/apps/kaapi-ops-mcp",
+        "gateway": explore,
+        "models": f"{explore}/kaapi_llm_payload",
+        "genie": f"{host}/genie/rooms/{GENIE_SPACE_ID}",
+        "lakebase": f"{host}/compute/database-instances/{LAKEBASE_INSTANCE_NAME}",
+        "uc": explore,
+        "pipeline": f"{host}/pipelines/{ARCH_IDS['pipeline_id']}",
+        "job": f"{host}/jobs/{ARCH_IDS['daily_job_id']}",
+        "mlflow": f"{host}/ml/experiments/{ARCH_IDS['eval_experiment']}",
+        "traces": f"{host}/ml/experiments/{ARCH_IDS['trace_experiment']}",
+        "forecast": f"{host}/explore/data/models/{cat}/{sch}/demand_forecaster",
+    }
+    stats = {}
+    try:
+        cur = get_conn().cursor()
+        for key, sql in (("cache_entries", "SELECT COUNT(*) FROM kaapi_mcp.qa_cache"),
+                         ("messages", "SELECT COUNT(*) FROM kaapi_mcp.messages"),
+                         ("approvals", "SELECT COUNT(*) FROM kaapi_mcp.activity_log"),
+                         ("forecast_rows", "SELECT COUNT(*) FROM lb_demand_forecast"),
+                         ("briefs", "SELECT COUNT(*) FROM lb_store_daily_brief"),
+                         ("serving_rows", "SELECT COALESCE(SUM(row_count), 0) FROM lb_sync_log")):
+            try:
+                cur.execute(sql)
+                stats[key] = int(cur.fetchone()[0])
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"[Arch] Lakebase stats unavailable: {e}")
+    return {"links": links, "stats": stats}
+
+
 # Serve static files and index.html
 @app.get("/", response_class=HTMLResponse)
 def serve_index():
