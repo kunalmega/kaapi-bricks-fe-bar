@@ -65,16 +65,20 @@ def lakebase():
                            sslmode="require", autocommit=True)
 
 
-def gateway_chat(messages: list[dict], max_tokens: int = 900, temperature: float = 0.2) -> dict:
-    """One chat completion through the Unity AI Gateway model service (kaapi_llm)."""
+def gateway_chat(messages: list[dict], max_tokens: int = 900) -> dict:
+    """One chat completion through the Unity AI Gateway model service (kaapi_llm).
+
+    No sampling parameters: the service may route to models that only accept their
+    defaults, and the brief's number check, not temperature, is what keeps it grounded.
+    """
     w = ws()
     headers = w.config.authenticate()
     headers["Content-Type"] = "application/json"
     resp = requests.post(f"{w.config.host.rstrip('/')}/ai-gateway/mlflow/v1/chat/completions",
                          headers=headers, timeout=180,
-                         json={"model": GW_LLM_MODEL, "messages": messages,
-                               "max_tokens": max_tokens, "temperature": temperature})
-    resp.raise_for_status()
+                         json={"model": GW_LLM_MODEL, "messages": messages, "max_tokens": max_tokens})
+    if not resp.ok:
+        raise RuntimeError(f"Unity AI Gateway {resp.status_code}: {resp.text[:400]}")
     return resp.json()
 
 

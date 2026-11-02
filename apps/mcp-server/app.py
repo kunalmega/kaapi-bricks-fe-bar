@@ -245,8 +245,11 @@ def _generate_ops_plan(query, store, model_endpoint, store_data=""):
             json={**({"model": GW_LLM_MODEL} if GW_LLM_MODEL else {}),
                   "messages": [{"role": "system", "content": OPS_SYSTEM_PROMPT},
                                {"role": "user", "content": f"{query}\n\n---\n{context}"}],
-                  "max_tokens": 2000, "temperature": 0.3}, timeout=120)
-        resp.raise_for_status()
+                  "max_tokens": 2000}, timeout=120)
+        if not resp.ok:
+            # Keep the gateway's reason: a bare "400 Bad Request" is undiagnosable.
+            print(f"[OpsPlan] gateway {resp.status_code}: {resp.text[:1000]}")
+            return f"Error generating plan: gateway {resp.status_code}: {resp.text[:300]}"
         data = resp.json()
         return data["choices"][0]["message"]["content"]
     except Exception as e:
