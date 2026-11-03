@@ -1,5 +1,25 @@
 # Yoodli Demo Roleplay Script, v2 — Kaapi Bricks (30 minutes)
 
+> ## ▶ SAY THIS FIRST: the bot's three set-up questions
+>
+> **1. "What are you going to show, and what's the use case?"**
+> "I'm demoing **Kaapi Bricks Store Operations**, built on the Databricks Data Intelligence
+> Platform. Kaapi Bricks is a 37-store filter-coffee chain. Today each store manager pieces the
+> day together from five or six tools: a sales dashboard, a stock spreadsheet, supplier emails,
+> paper invoices and SOP PDFs. The use case is **one app where the manager can ask, see, act and
+> plan**: questions answered from governed data and SOPs, a live store dashboard, supplier
+> invoices checked in seconds, and a prep plan from an ML forecast. We project about
+> **$264,000 a year**, and I'll show how we'd prove it in a pilot."
+>
+> **2. "What's the industry?"**
+> "**Retail and consumer goods**: specifically quick-service restaurants, a multi-store coffee chain."
+>
+> **3. "Which personas should we play?"**
+> "Alex, please be the **VP of Store Operations**: you own all 37 stores, you're measured on
+> stockouts, waste and consistency across stores, and you carry the savings target to the board.
+> Shreya, please be the **Head of Data Platform**: you'd run this in production, so governance,
+> deployment, reliability and integration are yours."
+
 **Personas:** Alex Morgan (business) · Shreya (technical)
 **What's scored** (last run's score in brackets):
 
