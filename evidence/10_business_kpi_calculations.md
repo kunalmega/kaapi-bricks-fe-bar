@@ -147,6 +147,8 @@ These two formulas are the only payback and ROI definitions used in this reposit
 | Manager minutes per delivery reconciliation | VP Store Operations | 25 min *[assumption]* | < 2 min |
 | Supplier on-time rate | Head of Procurement | 83.8% chain, 80.5–86.4% by supplier *(measured)* | > 92% |
 | Value in POs past expected date | Head of Procurement | ₹8,91,514 in 147 POs *(measured)* | halved |
+| Store-to-store waste spread (consistency) | VP Store Operations | ₹2,494–₹7,406 per store per month, 3× max/min, CV 30.2% *(measured)* | CV < 15% |
+| Stores with an item below reorder | VP Store Operations | 19 of 37 *(measured)* | 0 at opening |
 | Forecast error, store × drink × day | COO | WAPE 0.47 model vs 0.52 same-weekday heuristic *(measured, notebook 05)* | beat the heuristic on every retrain (champion gate) |
 | Genie answer latency | CIO | N/A (manual) | < 5 s cached / table questions; SOP questions ~15–25 s in Agent mode (notebook 03) |
 | AI correctness, app end to end | CIO | 0.90–1.00 on 10 questions *(measured daily, notebook 07)* | ≥ 0.80 on the customer's own 30+ questions |
@@ -167,6 +169,9 @@ noisy (a few units), so a per-cell percentage error is the wrong yardstick; the 
 | Supplier on-time / fill rate (chain, PO-weighted) | 83.8% / 91.7% | `gold_supplier_performance` |
 | Late / cancelled deliveries | 321 / 18 of 2,000 POs | `gold_delivery_exceptions` |
 | Open POs past expected date | 147, ₹8,91,514 | `gold_open_purchase_orders` |
+| Waste per store per month (consistency) | min ₹2,494 · median ₹4,201 · max ₹7,406; CV 30.2% | `gold_waste_summary` summed by `store_id`, divided by the months in `inventory_transactions` |
+| Overdue-PO value per store | ₹3,221 to ₹49,893 (median ₹23,048) | `gold_open_purchase_orders` where `is_overdue`, by `store_id` |
+| Stores with an item below reorder | 19 of 37 (max 3 items in one store) | `gold_inventory_position` where `below_reorder` |
 
 **What this changes:** the waste value line assumes ₹28k per store per year; the data shows ~₹55k,
 so the $3,100 waste line is conservative. The total ($264,500) is left unchanged so that the payback

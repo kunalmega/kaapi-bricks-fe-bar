@@ -34,7 +34,7 @@ question. The information for those decisions is spread across five or six disco
 |---|---|---|---|---|
 | **COO** (economic buyer) | Stockout store-days; ingredient waste ₹/store | 3.5% *[assumption]*; ₹4,572/store/month *(measured)* | < 1.5%; −25% | See + Plan |
 | **CFO** (signs the budget) | Invoice leakage; food cost % of sales; payback | ~12% of invoices *[assumption]*; 23.1% *(measured)* | < 3%; held; < 6 months | Act |
-| **VP Store Operations** (owns the 37 managers) | Manager hours on admin; SOP compliance | ~45 min/day + 25–30 min per invoice *[assumption]* | < 5 min/day; < 2 min | Ask + Act |
+| **VP Store Operations** (owns the 37 managers and consistency across stores) | Store-to-store spread in waste; stores below reorder; manager admin time | Waste per store **₹2,494–₹7,406/month, a 3× spread** *(measured)*; **19 of 37** stores with an item below reorder *(measured)*; ~45 min/day + 25–30 min per invoice *[assumption]* | Spread halved (CV 30% → < 15%); 0 stores below reorder at opening; < 5 min/day; < 2 min | Ask + See + Act |
 | **Head of Procurement** | Supplier on-time rate; ₹ in overdue POs | 83.8% chain *(measured)*; ₹8.9 lakh in 147 POs *(measured)* | > 92%; halved | See |
 | **CIO / Head of Data Platform** (the architect) | Cost per store; data incidents; AI quality | — | ≈ $113/store/month; 0 cross-store leaks; correctness ≥ 0.80 | Platform |
 
@@ -75,7 +75,7 @@ question. The information for those decisions is spread across five or six disco
 | **COO** | 27 store-ingredient positions below reorder right now; ₹10.1 lakh of ingredient waste in the data window (₹4,572 per store per month) |
 | **CFO** | Invoices checked by eye, so overbilling gets paid (~12% exception rate *[assumption]*); food cost runs at 23.1% of sales, so every leaked rupee comes straight off margin |
 | **Head of Procurement** | Chain on-time rate 83.8% (worst supplier 80.5%); 321 late and 18 cancelled deliveries; 147 open POs worth ₹8.9 lakh past their expected date |
-| **VP Store Operations** | ~45 min per manager per day gathering data *[assumption]*; 37 stores, 37 ways of working |
+| **VP Store Operations** | 37 stores, 37 ways of working: waste per store varies **3×** (Indiranagar ₹44,095 vs Hyderabad Jubilee ₹14,848 over the same months) and overdue-PO value per store **15×** (₹3,221 to ₹49,893); ~45 min per manager per day gathering data *[assumption]* |
 | **CIO** | Five tools per store with separate logins and no single permission model |
 
 > **Say:** "Your managers are the most information-dense role in the company, and they're working
@@ -166,6 +166,7 @@ answer is governed and measured.
 
 | KPI | Owner | Capability | Today | Target |
 |---|---|---|---|---|
+| Store-to-store waste spread (consistency) | VP Store Ops | Ask + See + Plan | 3× max/min, CV 30% *(measured)* | CV < 15% |
 | Stockouts (% of store-days) | COO | See + Plan | 3.5% *[assumption]* | < 1.5% |
 | Ingredient waste per store | COO | Plan | ₹4,572/month *(measured)* | −25% |
 | Missed invoice errors | CFO | Act | ~12% *[assumption]* | < 3% |
@@ -207,7 +208,7 @@ answer is governed and measured.
 |---|---|
 | Invoice exceptions caught before payment ≥ the manual baseline, and measured leakage ≥ ₹2,800 per exception | **CFO** |
 | No increase in stockout store-days; waste per store not up | **COO** |
-| ≥ 50% less manager time on invoice checks and data gathering; app used on most store days | **VP Store Operations** |
+| ≥ 50% less manager time on invoice checks and data gathering; app used on most store days; waste spread across the 5 pilot stores narrows | **VP Store Operations** |
 | Supplier on-time and overdue-PO value reported weekly from the scorecard | **Head of Procurement** |
 | AI correctness ≥ 0.80, safety 1.00 on the customer's own questions; 0 cross-store data leaks; cost per store within ±20% of plan | **CIO** |
 

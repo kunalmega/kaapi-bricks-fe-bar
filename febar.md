@@ -63,6 +63,12 @@ credential file were left out.
 
 ## Customer story
 
+- [x] **Named executive owners for every metric** (README, deck slides 1, 2, 4 and 5):
+      **VP Store Operations** owns consistency across the 37 stores (waste per store spread 3×,
+      ₹2,494–₹7,406/month; 19 of 37 stores below reorder, measured); **COO** owns stockouts and
+      waste; **CFO** owns invoice leakage, food cost (23.1%) and payback; **Head of Procurement**
+      owns supplier on-time (83.8%) and overdue POs (₹8.9 lakh); **CIO** owns cost per store and
+      AI quality
 - [x] Deck leads with the outcome and follows the required 10-section outline
 - [x] One payback formula and one ROI formula, used everywhere (3.9 months; 2.6× over 3 years)
 - [x] Value figures labeled as projections from assumptions, not measured outcomes

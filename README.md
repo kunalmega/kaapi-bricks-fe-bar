@@ -10,6 +10,21 @@ live, **Act** on deliveries, and **Plan** the day.
 
 ---
 
+## Who this is for: the executive who owns each number
+
+| Executive | Personally measured on | Today | 12-month target | Moved by |
+|---|---|---|---|---|
+| **VP Store Operations**: owns consistency across the 37 stores | Store-to-store spread in waste; stores below reorder; manager admin time | Waste per store ranges **₹2,494–₹7,406 a month, a 3× spread** *(measured)*; **19 of 37** stores have an item below reorder *(measured)*; ~45 min/day on data *[assumption]* | Spread halved (CV 30% → < 15%); 0 stores below reorder at opening; < 5 min/day | Ask · See · Plan |
+| **COO** (economic buyer) | Stockout store-days; waste ₹ per store | 3.5% *[assumption]*; ₹4,572/store/month *(measured)* | < 1.5%; −25% | See · Plan |
+| **CFO** (signs the budget) | Invoice leakage; food cost % of sales; payback | ~12% of invoices *[assumption]*; 23.1% *(measured)* | < 3%; held; 3.9 months | Act |
+| **Head of Procurement** | Supplier on-time rate; ₹ in overdue POs | 83.8% *(measured)*; ₹8.9 lakh in 147 POs *(measured)* | > 92%; halved | See |
+| **CIO / Head of Data Platform** | Cost per store; data incidents; AI quality | — | ≈ $113/store/month; 0 cross-store leaks; correctness ≥ 0.80 | Platform |
+
+Measured values come from the gold tables; the SQL is in `evidence/10_business_kpi_calculations.md`.
+Assumptions are labelled and are what the 6-week pilot measures first.
+
+---
+
 ## Proof it runs: executed notebooks (outputs committed)
 
 Every notebook in [`notebooks/`](notebooks/) was **executed against the live workspace on

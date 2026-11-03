@@ -12,7 +12,7 @@ Two personas in one session:
 |---|---|---|---|
 | **COO** | Stockout store-days; waste ₹/store | 3.5% *[assumption]*; ₹4,572/store/month *(measured)* | "Fewer empty shelves at 8am and less milk in the bin, store by store." |
 | **CFO** | Invoice leakage; food cost % of sales; payback | ~12% exceptions *[assumption]*; 23.1% *(measured)*; 3.9 months | "Stop paying for what didn't arrive; the invoice line alone pays back in about 5 months." |
-| **VP Store Operations** | Manager admin hours; SOP compliance; adoption | ~45 min/day + 25–30 min per invoice *[assumption]* | "Your managers get an hour a day back, and every store follows the same SOPs." |
+| **VP Store Operations** | Consistency across 37 stores; manager admin hours; adoption | Waste per store varies 3× (₹2,494–₹7,406/month) and 19 of 37 stores have an item below reorder *(measured)*; ~45 min/day *[assumption]* | "Today your best and worst stores differ 3× on waste. Every manager gets the same plan, the same SOPs and the same numbers, so we close that gap." |
 | **Head of Procurement** | Supplier on-time rate; ₹ in overdue POs | 83.8% *(measured)*; ₹8.9 lakh in 147 POs *(measured)* | "A live supplier scorecard you can negotiate with, instead of anecdotes." |
 | **CIO / Head of Data Platform** | Cost per store; data incidents; AI quality | ≈ $113/store/month; RLS proven; 0.90–1.00 daily eval | "One platform, one permission model, measured every morning." |
 
